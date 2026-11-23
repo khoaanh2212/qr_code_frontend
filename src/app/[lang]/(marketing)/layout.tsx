@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { baseMetadata, RootDocument } from "@/components/root-document";
 import { LOCALES, localizePath } from "@/i18n/config";
 import { getLocale, getMessages } from "@/i18n/server";
-import { SITE_NAME } from "@/lib/site";
 
 export function generateStaticParams() {
   return LOCALES.map((lang) => ({ lang }));
@@ -27,8 +27,8 @@ export default async function MarketingLayout({ children }: LayoutProps<"/[lang]
     <RootDocument locale={locale}>
       <header className="border-b border-border bg-header">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link href={localizePath(locale, "/")} className="inline-flex min-h-11 items-center font-semibold">
-            {SITE_NAME}
+          <Link href={localizePath(locale, "/")} className="inline-flex min-h-11 items-center">
+            <Logo />
           </Link>
           <div className="flex items-center gap-2 text-sm sm:gap-4">
             <LanguageSwitcher locale={locale} label={t.nav.language} />

@@ -16,7 +16,10 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const { locale, rest, explicit } = splitLocale(pathname);
 
-  if (explicit && locale === DEFAULT_LOCALE) {
+  // Metadata images are linked as /en/opengraph-image-…: serve them, a redirected og:image is
+  // flaky in link previews.
+  const metadataImage = /^\/(opengraph-image|twitter-image)[^/]*$/.test(rest);
+  if (explicit && locale === DEFAULT_LOCALE && !metadataImage) {
     const url = request.nextUrl.clone();
     url.pathname = rest;
     return NextResponse.redirect(url, 308);
@@ -64,6 +67,7 @@ export const config = {
   matcher: [
     // Every request except static assets, including prefetches: a request carrying a prefetch
     // header must not get a private page without its CSP and no-store.
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
+    // Root metadata files (icon, apple-icon) live outside app/[lang] and must not be rewritten.
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon|robots.txt|sitemap.xml).*)",
   ],
 };

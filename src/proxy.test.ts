@@ -73,5 +73,11 @@ describe("proxy", () => {
     const location = new URL(res.headers.get("location") ?? "");
     expect(location.pathname + location.search).toBe(want);
   });
+
+  it("serves the English share image under /en without a redirect", () => {
+    const res = run("/en/opengraph-image-1fzwx8?abc");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
 });
 

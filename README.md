@@ -1,6 +1,6 @@
-# QR Code Generator – Frontend
+# ProofQR – Frontend
 
-Customer web app for the QR code generator, built with Next.js 16 (App Router, Cache Components),
+Customer web app of ProofQR, the honest QR code generator, built with Next.js 16 (App Router, Cache Components),
 React 19, TypeScript and Tailwind CSS 4. It talks to the Go API in `qrcode_generator_backend`.
 
 ## Getting started

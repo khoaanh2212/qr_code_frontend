@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# QR Code Generator Frontend
+# ProofQR Frontend
 
 Next.js customer web app for the QR code generator: public pages (generator, per-type pages,
 pricing) and the logged-in app. The API is the Go backend `qrcode_generator_backend`; its

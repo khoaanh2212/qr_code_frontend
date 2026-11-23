@@ -1,5 +1,5 @@
 ---
-name: QR Code Generator
+name: ProofQR
 description: An honest QR code generator whose interface reads like a print proof.
 colors:
   paper: "#fafaf9"
@@ -119,7 +119,7 @@ components:
     height: "68px"
 ---
 
-# Design System: QR Code Generator
+# Design System: ProofQR
 
 ## Overview
 
@@ -280,6 +280,20 @@ the selected segment is Ink filled with Paper text, set in the spec voice.
   links right, every target 44px tall.
 - **Language menu:** a disclosure (languages icon, current language, chevron) opening a Float list
   of real links, each in its own language.
+
+### Brand mark
+The ProofQR mark is the proof frame in miniature: a QR finder pattern (7 × 7 modules, one-module
+ring, 3 × 3 centre) whose centre is Signal Teal, inside four crop marks.
+- **Component:** `LogoMark` / `Logo` (mark + name, 600 weight, tight tracking) in
+  `src/components/brand/logo.tsx`; ink follows `currentColor`, gaps are transparent, so it works on
+  paper and dark grounds. Headers show the full logo; it links home (public) or to the dashboard
+  (app).
+- **Files:** `src/app/icon.svg` and `src/app/favicon.ico` (paper tile; crop marks drawn 20% heavier
+  so they survive 16 px), `src/app/apple-icon.tsx` (180 px),
+  `src/app/[lang]/(marketing)/opengraph-image.tsx` (1200 × 630, mark + name + the page's promise in
+  its language).
+- **Rules:** never redraw it as a scannable code, never add modules, keep the teal centre the only
+  color, and keep it at least 16 px (the crop marks drop below that).
 
 ### Print Proof (signature)
 The preview of the code.
