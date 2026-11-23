@@ -1,18 +1,33 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { localizePath, splitLocale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError, sessionApi } from "@/lib/api";
 import type { MeResponse, User } from "@/lib/api/types";
 
-const SessionContext = createContext<User | null>(null);
+interface Session {
+  user: User;
+  /** Replaces the cached user after an update (e.g. a new display name). */
+  setUser: (user: User) => void;
+}
+
+const SessionContext = createContext<Session | null>(null);
+
+function useSession(): Session {
+  const session = useContext(SessionContext);
+  if (!session) throw new Error("must be used below <RequireSession>");
+  return session;
+}
 
 /** The logged-in user; only usable below <RequireSession>. */
 export function useUser(): User {
-  const user = useContext(SessionContext);
-  if (!user) throw new Error("useUser must be used below <RequireSession>");
-  return user;
+  return useSession().user;
+}
+
+/** Updates the cached user after a change made through the API. */
+export function useSetUser(): (user: User) => void {
+  return useSession().setUser;
 }
 
 type State = { kind: "loading" } | { kind: "ready"; user: User } | { kind: "error" };
@@ -55,6 +70,9 @@ export function RequireSession({
     return () => abort.abort();
   }, [attempt]);
 
+  const setUser = useCallback((user: User) => setState({ kind: "ready", user }), []);
+  const session = useMemo(() => (state.kind === "ready" ? { user: state.user, setUser } : null), [state, setUser]);
+
   if (state.kind === "loading") return <p className="p-4 text-sm">{t.loading}</p>;
   if (state.kind === "error") {
     return (
@@ -73,5 +91,9 @@ export function RequireSession({
       </div>
     );
   }
-  return <SessionContext.Provider value={state.user}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={session}>
+      {children}
+    </SessionContext.Provider>
+  );
 }

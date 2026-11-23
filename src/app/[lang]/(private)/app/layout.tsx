@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { UserRound } from "lucide-react";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { RequireSession } from "@/features/auth/require-session";
 import { localizePath } from "@/i18n/config";
 import { getLocale, getMessages } from "@/i18n/server";
+import { pageTitle } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getMessages();
-  return { title: t.nav.dashboard };
+  return { title: pageTitle(t.nav.dashboard) };
 }
 
 /** The logged-in app. */
@@ -23,6 +25,13 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]/app">
             {t.nav.dashboard}
           </Link>
           <div className="flex items-center gap-1 sm:gap-3">
+            <Link
+              href={localizePath(locale, "/app/account")}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm hover:bg-foreground/5"
+            >
+              <UserRound aria-hidden="true" className="size-4" />
+              {t.nav.account}
+            </Link>
             <LanguageSwitcher locale={locale} label={t.nav.language} />
             <LogoutButton t={t.auth} locale={locale} />
           </div>
