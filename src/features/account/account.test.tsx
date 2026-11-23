@@ -64,6 +64,20 @@ describe("Profile", () => {
   });
 });
 
+describe("Profile verification", () => {
+  it("sends a new link from the status line in one click", async () => {
+    withSession(<Profile t={t} auth={auth} locale="en" captcha={captcha} />);
+    await screen.findByText(t.unverified);
+    request.mockImplementation(async (path) => (path === "/v1/me" ? { user } : {}));
+    await click(t.sendNewLink);
+    expect(request).toHaveBeenCalledWith("/v1/auth/resend-verification", {
+      method: "POST",
+      body: { email: "an@example.com", captcha_token: "dev-token" },
+    });
+    expect(screen.getByText("A new link is on its way to an@example.com.")).toBeTruthy();
+  });
+});
+
 describe("Security", () => {
   it("changes the password and explains that other devices were logged out", async () => {
     render(<Security t={t} auth={auth} locale="en" />);
@@ -94,6 +108,15 @@ describe("Security", () => {
     await click(t.deleteSubmit);
     expect(requestVoid).toHaveBeenCalledWith("/v1/me", { method: "DELETE", body: { password: "my-password" } });
     expect(assign).toHaveBeenCalledWith("/vi");
+  });
+
+  it("closes the delete confirmation with Escape and returns focus", async () => {
+    render(<Security t={t} auth={auth} locale="en" />);
+    await click(t.deleteStart);
+    const field = screen.getByLabelText(new RegExp(t.deleteConfirm));
+    fireEvent.keyDown(field, { key: "Escape" });
+    expect(screen.queryByLabelText(new RegExp(t.deleteConfirm))).toBeNull();
+    expect(document.activeElement?.textContent).toBe(t.deleteStart);
   });
 
   it("explains why the last admin cannot leave", async () => {
@@ -147,16 +170,20 @@ describe("Devices", () => {
     await click("Log out Safari on iOS");
     expect(requestVoid).toHaveBeenCalledWith("/v1/me/sessions/s2", { method: "DELETE" });
     expect(screen.queryByText("Safari on iOS")).toBeNull();
-    expect(screen.getByText(t.deviceLoggedOut)).toBeTruthy();
+    expect(screen.getByText("Safari on iOS has been logged out.")).toBeTruthy();
     await act(async () => void (await new Promise((r) => requestAnimationFrame(r))));
     expect(document.activeElement).toBe(screen.getByRole("list", { name: t.devicesTitle }));
   });
 
-  it("logging out this device goes to the login page", async () => {
-    render(<Devices t={t} auth={auth} locale="de" />);
+  it("offers no log-out button on this device's row, and logs out all the others", async () => {
+    render(<Devices t={t} auth={auth} locale="en" />);
     await screen.findByText("Chrome on macOS");
-    await click("Log out Chrome on macOS");
-    expect(assign).toHaveBeenCalledWith("/de/login");
+    expect(screen.queryByRole("button", { name: "Log out Chrome on macOS" })).toBeNull();
+    await click(t.logoutOthers);
+    expect(requestVoid).toHaveBeenCalledTimes(1);
+    expect(requestVoid).toHaveBeenCalledWith("/v1/me/sessions/s2", { method: "DELETE" });
+    expect(screen.getByText(t.othersLoggedOut)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: t.logoutOthers })).toBeNull(); // nobody else left
   });
 });
 

@@ -38,7 +38,11 @@ export function LanguageSwitcher({ locale, label }: { locale: Locale; label: str
       <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-md px-2 hover:bg-foreground/5">
         <span className="sr-only">{label}: </span>
         <Languages aria-hidden="true" className="size-4" />
-        {LOCALE_NAMES[locale]}
+        {/* Phones show the language code, wider screens its name. */}
+        <span aria-hidden="true" className="font-mono text-xs uppercase sm:hidden">
+          {locale}
+        </span>
+        <span className="sr-only sm:not-sr-only">{LOCALE_NAMES[locale]}</span>
         <ChevronDown aria-hidden="true" className="size-3.5 text-muted" />
       </summary>
       <nav aria-label={label} className="absolute right-0 z-30 mt-1 min-w-44 rounded-md border border-border bg-surface py-1 shadow-[0_8px_24px_rgb(0_0_0/0.12)]">

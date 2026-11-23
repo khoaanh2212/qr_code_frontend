@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { authFailure } from "@/features/auth/form-rules";
 import { FormAlert } from "@/features/auth/form-bits";
-import { format, localizePath, type Locale } from "@/i18n/config";
+import { format, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { redirectToLogin } from "@/features/auth/require-session";
 import { ApiError, sessionApi } from "@/lib/api";
@@ -28,6 +28,12 @@ export interface DeviceSession {
 type State = { kind: "loading" } | { kind: "ready"; sessions: DeviceSession[] } | { kind: "error"; error: unknown };
 
 const MOBILE = new Set(["iOS", "iPadOS", "Android"]);
+
+function deviceLabel(t: T, ua: string): string {
+  const name = describeUserAgent(ua);
+  if (!name) return t.unknownDevice;
+  return name.os ? format(t.browserOn, { browser: name.browser, os: name.os }) : name.browser;
+}
 
 export function Devices({ t, auth, locale }: { t: T; auth: AuthT; locale: Locale }) {
   const [attempt, setAttempt] = useState(0);
@@ -63,12 +69,8 @@ export function Devices({ t, auth, locale }: { t: T; auth: AuthT; locale: Locale
     setAlert(undefined);
     try {
       await sessionApi.requestVoid(`/v1/me/sessions/${encodeURIComponent(session.id)}`, { method: "DELETE" });
-      if (session.current) {
-        window.location.assign(localizePath(locale, "/login"));
-        return;
-      }
       drop(session.id);
-      setNotice(t.deviceLoggedOut);
+      setNotice(format(t.deviceLoggedOutNamed, { device: deviceLabel(t, session.user_agent) }));
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return redirectToLogin();
       // Already gone (404): drop it from the list as well.
@@ -79,10 +81,29 @@ export function Devices({ t, auth, locale }: { t: T; auth: AuthT; locale: Locale
     }
   }
 
+  /** Every session but this one, one request each (the API has no bulk call). */
+  async function logOutOthers(others: DeviceSession[]) {
+    if (busyId) return;
+    setBusyId("others");
+    setNotice(undefined);
+    setAlert(undefined);
+    const results = await Promise.allSettled(
+      others.map((s) => sessionApi.requestVoid(`/v1/me/sessions/${encodeURIComponent(s.id)}`, { method: "DELETE" })),
+    );
+    const isGone = (r: PromiseSettledResult<void>) =>
+      r.status === "fulfilled" || (r.reason instanceof ApiError && r.reason.status === 404);
+    const failed = results.find((r): r is PromiseRejectedResult => !isGone(r));
+    if (failed?.reason instanceof ApiError && failed.reason.status === 401) return redirectToLogin();
+    const gone = new Set(others.filter((_, i) => isGone(results[i])).map((s) => s.id));
+    setState((prev) => (prev.kind === "ready" ? { kind: "ready", sessions: prev.sessions.filter((s) => !gone.has(s.id)) } : prev));
+    if (failed) setAlert(authFailure(failed.reason, auth).message);
+    else setNotice(t.othersLoggedOut);
+    setBusyId(null);
+    requestAnimationFrame(() => listRef.current?.focus());
+  }
+
   return (
     <Section title={t.devicesTitle} description={t.devicesIntro}>
-      <SavedNote message={notice} />
-      <FormAlert message={alert} />
       {state.kind === "loading" && (
         <div role="status" aria-busy="true" className="flex flex-col gap-3">
           <span className="sr-only">{auth.working}</span>
@@ -108,44 +129,62 @@ export function Devices({ t, auth, locale }: { t: T; auth: AuthT; locale: Locale
         </div>
       )}
       {state.kind === "ready" && (
-        <ul
-          ref={listRef}
-          tabIndex={-1}
-          aria-label={t.devicesTitle}
-          className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface outline-none"
-        >
-          {state.sessions.map((s) => {
-            const name = describeUserAgent(s.user_agent);
-            const label = name ? (name.os ? format(t.browserOn, { browser: name.browser, os: name.os }) : name.browser) : t.unknownDevice;
-            const Icon = name?.os && MOBILE.has(name.os) ? Smartphone : Monitor;
-            return (
-              <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
-                <Icon aria-hidden="true" className="size-5 shrink-0 text-muted" strokeWidth={1.75} />
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                    <span className="break-words">{label}</span>
-                    {s.current && (
-                      <span className="rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-foreground">{t.thisDevice}</span>
-                    )}
-                  </p>
-                  <p className="flex flex-wrap gap-x-3 text-xs text-muted">
-                    <span>{format(t.lastActive, { when: formatRelative(s.last_seen_at, locale) })}</span>
-                    <span>{format(t.loggedIn, { when: formatRelative(s.created_at, locale) })}</span>
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  busy={busyId === s.id}
-                  onClick={() => logOut(s)}
-                  aria-label={format(t.logoutDeviceNamed, { device: label })}
-                >
-                  {t.logoutDevice}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <ul
+            ref={listRef}
+            tabIndex={-1}
+            aria-label={t.devicesTitle}
+            className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface outline-none"
+          >
+            {state.sessions.map((s) => {
+              const name = describeUserAgent(s.user_agent);
+              const label = deviceLabel(t, s.user_agent);
+              const Icon = name?.os && MOBILE.has(name.os) ? Smartphone : Monitor;
+              return (
+                <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
+                  <Icon aria-hidden="true" className="size-5 shrink-0 text-muted" strokeWidth={1.75} />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                      <span className="break-words">{label}</span>
+                      {s.current && (
+                        <span className="rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-foreground">{t.thisDevice}</span>
+                      )}
+                    </p>
+                    <p className="flex flex-wrap gap-x-3 text-xs text-muted">
+                      <span>{format(t.lastActive, { when: formatRelative(s.last_seen_at, locale) })}</span>
+                      <span>{format(t.loggedIn, { when: formatRelative(s.created_at, locale) })}</span>
+                    </p>
+                  </div>
+                  {/* This device logs out from the header, like everywhere else in the app. */}
+                  {!s.current && (
+                    <Button
+                      variant="secondary"
+                      busy={busyId === s.id}
+                      onClick={() => logOut(s)}
+                      aria-label={format(t.logoutDeviceNamed, { device: label })}
+                    >
+                      {t.logoutDevice}
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {state.sessions.some((s) => !s.current) && (
+            <Button
+              variant="secondary"
+              className="self-start"
+              busy={busyId === "others"}
+              onClick={() => logOutOthers(state.sessions.filter((s) => !s.current))}
+            >
+              {t.logoutOthers}
+            </Button>
+          )}
+        </>
       )}
+      {/* Outcomes sit under the list, next to the action that caused them. */}
+      <SavedNote message={notice} />
+      <FormAlert message={alert} />
     </Section>
   );
 }

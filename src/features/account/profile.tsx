@@ -8,8 +8,8 @@ import { redirectToLogin, useSetUser, useUser } from "@/features/auth/require-se
 import type { CaptchaConfig } from "@/features/auth/captcha";
 import { authFailure } from "@/features/auth/form-rules";
 import { FormAlert } from "@/features/auth/form-bits";
-import { ResendForm } from "@/features/auth/resend-form";
-import type { Locale } from "@/i18n/config";
+import { Captcha } from "@/features/auth/captcha";
+import { format, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError, sessionApi } from "@/lib/api";
 import type { MeResponse } from "@/lib/api/types";
@@ -28,52 +28,90 @@ export function Profile({ t, auth, locale, captcha }: { t: T; auth: AuthT; local
           <dt className="text-muted">{t.email}</dt>
           <dd className="font-medium break-all">{user.email}</dd>
           <dt className="text-muted">{t.status}</dt>
-          <dd className="flex items-center gap-1.5 font-medium">
+          <dd className="flex flex-col gap-2">
             {user.email_verified ? (
-              <>
+              <span className="flex items-center gap-1.5 font-medium">
                 <CircleCheck aria-hidden="true" className="size-4 text-accent" />
                 {t.verified}
-              </>
+              </span>
             ) : (
               <>
-                <TriangleAlert aria-hidden="true" className="size-4 text-warning" />
-                {t.unverified}
+                <span className="flex items-center gap-1.5 font-medium">
+                  <TriangleAlert aria-hidden="true" className="size-4 text-warning" />
+                  {t.unverified}
+                </span>
+                <ResendInline t={t} auth={auth} locale={locale} captcha={captcha} email={user.email} />
               </>
             )}
           </dd>
           <dt className="text-muted">{t.memberSince}</dt>
           <dd className="font-medium">{formatDate(user.created_at, locale)}</dd>
         </dl>
-        {!user.email_verified && <VerifyBanner t={t} auth={auth} locale={locale} captcha={captcha} email={user.email} />}
       </Section>
       <DisplayNameForm t={t} auth={auth} />
     </>
   );
 }
 
-/** Unverified address: says so, and offers a new link (the captcha loads only when asked). */
-function VerifyBanner({ t, auth, locale, captcha, email }: { t: T; auth: AuthT; locale: Locale; captcha: CaptchaConfig; email: string }) {
-  const [open, setOpen] = useState(false);
-  const formRef = useRef<HTMLDivElement>(null);
-  // The button that opened the form is gone: continue from the form.
+/**
+ * Unverified address, in the status line: one click sends a new link. With Turnstile on, the
+ * check appears inline and the request goes out as soon as it passes.
+ */
+function ResendInline({ t, auth, locale, captcha, email }: { t: T; auth: AuthT; locale: Locale; captcha: CaptchaConfig; email: string }) {
+  const [phase, setPhase] = useState<"idle" | "checking" | "sending" | "sent">("idle");
+  const [alert, setAlert] = useState<string>();
+  const [reset, setReset] = useState(0);
+  const phaseRef = useRef(phase);
   useEffect(() => {
-    if (open) formRef.current?.focus();
-  }, [open]);
+    phaseRef.current = phase;
+  });
+
+  async function send(token: string) {
+    setPhase("sending");
+    setAlert(undefined);
+    try {
+      await sessionApi.request("/v1/auth/resend-verification", { method: "POST", body: { email, captcha_token: token } });
+      setPhase("sent");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return redirectToLogin();
+      setAlert(authFailure(err, auth).message);
+      setPhase("idle");
+      setReset((n) => n + 1);
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-warning/50 bg-surface p-4">
-      <p className="flex gap-2 text-sm text-pretty">
-        <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
-        {t.unverifiedBanner}
-      </p>
-      {open ? (
-        <div ref={formRef} tabIndex={-1} className="outline-none">
-          <ResendForm t={auth} locale={locale} captcha={captcha} fixedEmail={email} />
-        </div>
-      ) : (
-        <Button variant="secondary" className="self-start" onClick={() => setOpen(true)}>
-          {auth.resendSubmit}
-        </Button>
+    <div className="flex flex-col gap-1">
+      <p className="text-xs text-pretty text-muted">{t.unverifiedBanner}</p>
+      {phase === "idle" && (
+        <button
+          type="button"
+          onClick={() => {
+            setAlert(undefined);
+            if (captcha.devToken && !captcha.siteKey) void send(captcha.devToken);
+            else setPhase("checking");
+          }}
+          className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-accent underline-offset-4 hover:underline"
+        >
+          {t.sendNewLink}
+        </button>
       )}
+      {(phase === "checking" || phase === "sending") && captcha.siteKey && (
+        <Captcha
+          config={captcha}
+          locale={locale}
+          labels={{ label: auth.captchaLabel, loadFailed: auth.captchaLoadFailed, retry: auth.retry }}
+          resetSignal={reset}
+          onToken={(token) => {
+            if (token && phaseRef.current === "checking") void send(token);
+          }}
+        />
+      )}
+      {phase === "sending" && <p className="text-sm text-muted">{auth.working}</p>}
+      <p role="status" className="text-sm text-pretty">
+        {phase === "sent" ? format(t.linkSent, { email }) : ""}
+      </p>
+      <FormAlert message={alert} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { UserRound } from "lucide-react";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { AccountLink } from "@/features/app-shell/account-link";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { RequireSession } from "@/features/auth/require-session";
 import { localizePath } from "@/i18n/config";
@@ -24,14 +24,8 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]/app">
           <Link href={localizePath(locale, "/app")} className="inline-flex min-h-11 items-center font-semibold">
             {t.nav.dashboard}
           </Link>
-          <div className="flex items-center gap-1 sm:gap-3">
-            <Link
-              href={localizePath(locale, "/app/account")}
-              className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm hover:bg-foreground/5"
-            >
-              <UserRound aria-hidden="true" className="size-4" />
-              {t.nav.account}
-            </Link>
+          <div className="flex shrink-0 items-center gap-0.5 sm:gap-3">
+            <AccountLink label={t.nav.account} locale={locale} />
             <LanguageSwitcher locale={locale} label={t.nav.language} />
             <LogoutButton t={t.auth} locale={locale} />
           </div>

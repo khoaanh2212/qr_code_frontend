@@ -39,10 +39,11 @@ export function LogoutButton({ t, locale }: { t: AuthMessages; locale: Locale })
         }
         window.location.assign(localizePath(locale, "/"));
       }}
-      className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm hover:bg-foreground/5 disabled:opacity-60"
+      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-sm hover:bg-foreground/5 disabled:opacity-60"
     >
       <LogOut aria-hidden="true" className="size-4" />
-      {label}
+      {/* Icon-only on phones, so long translations fit the header. */}
+      <span className="sr-only sm:not-sr-only">{label}</span>
     </button>
     </div>
   );

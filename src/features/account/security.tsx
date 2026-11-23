@@ -158,7 +158,20 @@ function DeleteAccount({ t, auth, locale }: { t: T; auth: AuthT; locale: Locale 
   return (
     <Section title={t.deleteTitle} description={t.deleteIntro} danger>
       {open ? (
-        <form noValidate onSubmit={submit} className="flex flex-col gap-4">
+        <form
+          noValidate
+          onSubmit={submit}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && !busy) {
+              e.preventDefault();
+              setOpen(false);
+              setPassword("");
+              setError(undefined);
+              setAlert(undefined);
+            }
+          }}
+          className="flex flex-col gap-4"
+        >
           <PasswordField
             ref={passwordRef}
             label={t.deleteConfirm}
@@ -193,14 +206,15 @@ function DeleteAccount({ t, auth, locale }: { t: T; auth: AuthT; locale: Locale 
           </div>
         </form>
       ) : (
-        <Button
+        // A quiet trigger, like the reference's "close my account" link; the red is for the final step.
+        <button
           ref={openRef}
-          variant="secondary"
-          className="self-start"
+          type="button"
           onClick={() => setOpen(true)}
+          className="inline-flex min-h-11 w-fit items-center text-sm text-muted underline underline-offset-4 hover:text-danger"
         >
           {t.deleteStart}
-        </Button>
+        </button>
       )}
     </Section>
   );
