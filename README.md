@@ -109,6 +109,29 @@ Every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 
 `NEXT_PUBLIC_*` values are inlined into the browser bundle at build time: never put secrets there.
 
+## Docker
+
+One image serves both the public pages and `/app` (they are one Next.js app with two root layouts;
+see "Site structure"). The `Dockerfile` builds the standalone server (`output: "standalone"`) and
+runs it on distroless Node 22 as a non-root user, with a healthcheck on `/robots.txt`.
+
+The `NEXT_PUBLIC_*` values are build arguments, so build one image per environment:
+
+```sh
+docker build -t proofqr-web \
+  --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 \
+  --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
+  --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA .
+
+docker run --rm -p 127.0.0.1:3000:3000 --read-only \
+  --tmpfs /app/.next/cache:uid=65532,gid=65532 --tmpfs /tmp \
+  --cap-drop ALL --security-opt no-new-privileges:true proofqr-web
+```
+
+The root filesystem can be read-only; Next.js only writes its cache to `/app/.next/cache`.
+Where it runs in production (VPS next to the API, or a managed host) is decided with the backend's
+deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
+
 ## Roadmap
 
 1. ~~Generator on the home page~~ Done (`src/features/qr-editor`): type forms built from

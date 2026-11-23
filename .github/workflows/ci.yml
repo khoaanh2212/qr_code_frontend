@@ -26,3 +26,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the production image
+        run: >-
+          docker build -t proofqr-web:ci
+          --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.com
+          --build-arg NEXT_PUBLIC_SITE_URL=https://www.example.com
+          --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+          .
+      - name: Start the image and check it serves pages
+        run: |
+          docker run -d --name web -p 127.0.0.1:3000:3000 --read-only \
+            --tmpfs /app/.next/cache:uid=65532,gid=65532 --tmpfs /tmp \
+            --cap-drop ALL --security-opt no-new-privileges:true proofqr-web:ci
+          curl --retry 15 --retry-all-errors --retry-delay 2 -fsS -o /dev/null localhost:3000/robots.txt
+          curl -fsS -o /dev/null localhost:3000/
+          curl -fsS -o /dev/null localhost:3000/vi
+      - name: Container logs
+        if: failure()
+        run: docker logs web

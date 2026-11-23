@@ -63,6 +63,10 @@ a page never keeps the other surface's Content Security Policy.
 - `pnpm test`: unit tests only.
 - `pnpm build` / `pnpm start`: production build and server. A production build needs
   `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_SITE_URL` (see `.env.example`).
+- `docker build` with the `NEXT_PUBLIC_*` build arguments: the production image (README, "Docker").
+  Keep the `Dockerfile` in step when the build changes (new required variable, files in `public/`).
+  `pnpm-workspace.yaml` blocks install scripts (`sharp` included): adding `next/image`
+  optimization needs `sharp` allowed and checked in the image.
 
 ## Smoke tests (mandatory)
 
