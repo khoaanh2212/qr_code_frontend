@@ -129,6 +129,8 @@ docker run --rm -p 127.0.0.1:3000:3000 --read-only \
 ```
 
 The root filesystem can be read-only; Next.js only writes its cache to `/app/.next/cache`.
+To run it next to the API, use `make up-web` in the backend repository: its compose `web` service
+builds this `Dockerfile` with local values.
 Where it runs in production (VPS next to the API, or a managed host) is decided with the backend's
 deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
 
