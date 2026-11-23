@@ -105,6 +105,7 @@ Every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 |---|---|
 | `NEXT_PUBLIC_API_BASE_URL` | Origin of the API. Required for production builds. |
 | `NEXT_PUBLIC_SITE_URL` | Public origin of this site (canonical URLs, sitemap). Required for production builds. |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key (sign-up, resend, forgot password). Required for production builds; empty locally. |
 
 `NEXT_PUBLIC_*` values are inlined into the browser bundle at build time: never put secrets there.
 
@@ -113,8 +114,10 @@ Every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 1. ~~Generator on the home page~~ Done (`src/features/qr-editor`): type forms built from
    `GET /v1/qr/types`, live preview (GET for plain content, POST for Wi-Fi, vCard and logos, so
    secrets never land in URLs), contrast check, logo upload, PNG/SVG download.
-2. Auth pages: sign-up (Turnstile), login with `return_to`, email verification and password reset
-   (tokens read from the URL fragment), logout.
+2. ~~Auth pages~~ Done (`src/features/auth`): sign-up with Turnstile and a check-email screen,
+   login with `return_to`, email verification and password reset (tokens read from the URL
+   fragment, then removed), forgot password, logout. Emails still link to English pages until the
+   backend stores the user's language (backend PLAN, later work).
 3. Account pages under `/app`: profile, password change, devices, account deletion.
 4. Per-type public pages (`/wifi-qr-code`, ...) for SEO.
 5. Deployment (with backend work item 11).
