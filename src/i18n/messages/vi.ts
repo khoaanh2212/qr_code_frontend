@@ -58,6 +58,8 @@ export const vi = {
     retry: "Thử lại",
     captchaLabel: "Kiểm tra bảo mật",
     captchaLoadFailed: "Không tải được bước kiểm tra bảo mật.",
+    didntGetIt: "Không nhận được email?",
+    useDifferentEmail: "Dùng email khác",
     logout: "Đăng xuất",
     errors: {
       required: "Bắt buộc.",

@@ -6,8 +6,9 @@ import { PasswordField, TextField } from "@/components/ui/text-field";
 import { localizePath, type Locale } from "@/i18n/config";
 import { sessionApi } from "@/lib/api";
 import { safeReturnTo } from "@/lib/navigation/return-to";
-import { FormAlert, TextLink } from "./form-bits";
+import { FormAlert, ReturnToLink } from "./form-bits";
 import { authFailure, emailError, type AuthMessages } from "./form-rules";
+import { rememberEmail, useRememberedEmail } from "./remembered-email";
 
 /** Where to go after logging in: `return_to` when it is safe, else the dashboard. */
 export function afterLoginTarget(locale: Locale): string {
@@ -15,12 +16,16 @@ export function afterLoginTarget(locale: Locale): string {
   return safeReturnTo(new URLSearchParams(window.location.search).get("return_to"), fallback);
 }
 
+type Errors = { email?: string; password?: string };
+
 export function LoginForm({ t, locale }: { t: AuthMessages; locale: Locale }) {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const [email, setEmail] = useState("");
+  const remembered = useRememberedEmail();
+  const [typedEmail, setEmail] = useState<string | null>(null);
+  const email = typedEmail ?? remembered;
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<Errors>({});
   const [alert, setAlert] = useState<string>();
   const [busy, setBusy] = useState(false);
 
@@ -33,7 +38,7 @@ export function LoginForm({ t, locale }: { t: AuthMessages; locale: Locale }) {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const found = { email: emailError(email, t), password: password === "" ? t.errors.required : undefined };
+    const found: Errors = { email: emailError(email, t), password: password === "" ? t.errors.required : undefined };
     setErrors(found);
     setAlert(undefined);
     if (found.email) return emailRef.current?.focus();
@@ -61,7 +66,12 @@ export function LoginForm({ t, locale }: { t: AuthMessages; locale: Locale }) {
         required
         value={email}
         error={errors.email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          setEmail(e.target.value);
+          rememberEmail(e.target.value);
+          setErrors((prev) => ({ ...prev, email: undefined }));
+        }}
+        onBlur={() => email && setErrors((prev) => ({ ...prev, email: emailError(email, t) }))}
       />
       <PasswordField
         ref={passwordRef}
@@ -71,10 +81,13 @@ export function LoginForm({ t, locale }: { t: AuthMessages; locale: Locale }) {
         value={password}
         error={errors.password}
         showLabel={t.showPassword}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          setErrors((prev) => ({ ...prev, password: undefined }));
+        }}
       />
-      <div className="-mt-1">
-        <TextLink href={localizePath(locale, "/forgot-password")}>{t.forgotLink}</TextLink>
+      <div className="-my-2">
+        <ReturnToLink href={localizePath(locale, "/forgot-password")}>{t.forgotLink}</ReturnToLink>
       </div>
       <FormAlert message={alert} />
       <Button type="submit" disabled={busy}>

@@ -58,6 +58,8 @@ export const es = {
     retry: "Reintentar",
     captchaLabel: "Verificación de seguridad",
     captchaLoadFailed: "No se pudo cargar la verificación de seguridad.",
+    didntGetIt: "¿No te llegó el correo?",
+    useDifferentEmail: "Usar otro correo",
     logout: "Cerrar sesión",
     errors: {
       required: "Obligatorio.",

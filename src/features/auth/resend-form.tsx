@@ -8,23 +8,25 @@ import { sessionApi } from "@/lib/api";
 import { Captcha, type CaptchaConfig } from "./captcha";
 import { FormAlert } from "./form-bits";
 import { authFailure, emailError, type AuthMessages } from "./form-rules";
+import { rememberEmail, useRememberedEmail } from "./remembered-email";
 
 /** Asks for a new verification link. Always answered the same way, whatever the address. */
 export function ResendForm({
   t,
   locale,
   captcha,
-  initialEmail = "",
-  askEmail = true,
+  fixedEmail,
 }: {
   t: AuthMessages;
   locale: Locale;
   captcha: CaptchaConfig;
-  initialEmail?: string;
-  askEmail?: boolean;
+  /** The address to resend to; without it the form asks for one. */
+  fixedEmail?: string;
 }) {
   const emailRef = useRef<HTMLInputElement>(null);
-  const [email, setEmail] = useState(initialEmail);
+  const remembered = useRememberedEmail();
+  const [typedEmail, setEmail] = useState<string | null>(null);
+  const email = fixedEmail ?? typedEmail ?? remembered;
   const [emailProblem, setEmailProblem] = useState<string>();
   const [token, setToken] = useState<string | null>(null);
   const [reset, setReset] = useState(0);
@@ -57,7 +59,7 @@ export function ResendForm({
 
   return (
     <form noValidate onSubmit={submit} className="flex flex-col gap-4">
-      {askEmail && (
+      {fixedEmail === undefined && (
         <TextField
           ref={emailRef}
           label={t.email}
@@ -67,7 +69,12 @@ export function ResendForm({
           required
           value={email}
           error={emailProblem}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            rememberEmail(e.target.value);
+            setEmailProblem(undefined);
+          }}
+          onBlur={() => email && setEmailProblem(emailError(email, t))}
         />
       )}
       <Captcha
@@ -81,7 +88,7 @@ export function ResendForm({
       <p role="status" className="text-sm text-muted empty:hidden">
         {sent ? t.resent : ""}
       </p>
-      <Button type="submit" variant={askEmail ? "primary" : "secondary"} disabled={busy}>
+      <Button type="submit" variant={fixedEmail === undefined ? "primary" : "secondary"} disabled={busy}>
         {busy ? t.working : t.resendSubmit}
       </Button>
     </form>

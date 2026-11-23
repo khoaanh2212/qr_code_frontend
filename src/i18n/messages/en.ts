@@ -61,6 +61,8 @@ export const en = {
     retry: "Try again",
     captchaLabel: "Security check",
     captchaLoadFailed: "The security check could not load.",
+    didntGetIt: "Didn’t get the email?",
+    useDifferentEmail: "Use a different email",
     logout: "Log out",
     errors: {
       required: "Required.",

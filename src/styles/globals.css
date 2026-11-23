@@ -91,6 +91,11 @@ a {
   outline-offset: 2px;
 }
 
+/* Regions focused by script (tabindex="-1", e.g. a form's outcome) are not controls: no ring. */
+[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

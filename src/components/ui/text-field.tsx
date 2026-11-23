@@ -19,7 +19,9 @@ interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
 /** Label, input, help and error, wired with aria-describedby (DESIGN.md "Inputs / Fields"). */
 export function TextField({ label, help, error, required, trailing, className = "", ...input }: FieldProps) {
   const id = useId();
-  const describedBy = [help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
+  // The error replaces the help while it shows, so a screen reader hears the rule once.
+  const showHelp = Boolean(help) && !error;
+  const describedBy = [showHelp && `${id}-help`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium">
@@ -40,9 +42,9 @@ export function TextField({ label, help, error, required, trailing, className = 
           className={`${control} ${trailing ? "pr-12" : ""} ${className}`}
           {...input}
         />
-        {trailing && <div className="absolute inset-y-0 right-0 flex items-center pr-1">{trailing}</div>}
+        {trailing && <div className="absolute inset-y-0 right-0 flex items-center">{trailing}</div>}
       </div>
-      {help && (
+      {showHelp && (
         <p id={`${id}-help`} className="text-xs text-muted">
           {help}
         </p>
@@ -74,7 +76,7 @@ export function PasswordField({ showLabel, ...props }: Omit<FieldProps, "type" |
           aria-label={showLabel}
           aria-pressed={visible}
           onClick={() => setVisible((v) => !v)}
-          className="inline-flex size-10 items-center justify-center rounded-md text-muted hover:bg-foreground/5 hover:text-foreground"
+          className="inline-flex size-11 items-center justify-center rounded-md text-muted hover:bg-foreground/5 hover:text-foreground"
         >
           {visible ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
         </button>

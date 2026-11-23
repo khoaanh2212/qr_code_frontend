@@ -58,6 +58,8 @@ export const de = {
     retry: "Erneut versuchen",
     captchaLabel: "Sicherheitsprüfung",
     captchaLoadFailed: "Die Sicherheitsprüfung konnte nicht geladen werden.",
+    didntGetIt: "Keine E-Mail erhalten?",
+    useDifferentEmail: "Andere E-Mail-Adresse verwenden",
     logout: "Abmelden",
     errors: {
       required: "Pflichtfeld.",

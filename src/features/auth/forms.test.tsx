@@ -32,6 +32,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  sessionStorage.clear();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -162,3 +163,51 @@ describe("VerifyEmail", () => {
     expect(screen.getByRole("button", { name: t.resendSubmit })).toBeTruthy();
   });
 });
+
+describe("critique fixes", () => {
+  it("clears a field's error as soon as it is edited", async () => {
+    render(<LoginForm t={t} locale="en" />);
+    await submit(t.loginSubmit);
+    expect(screen.getAllByText(t.errors.required)).toHaveLength(2);
+    type(/^Email/, "a@example.com");
+    expect(screen.getAllByText(t.errors.required)).toHaveLength(1);
+  });
+
+  it("offers the email typed on the login page on the forgot-password page", () => {
+    const { unmount } = render(<LoginForm t={t} locale="en" />);
+    type(/^Email/, "kept@example.com");
+    unmount();
+    render(<ForgotForm t={t} locale="en" captcha={noCaptcha} />);
+    expect((screen.getByLabelText(/^Email/) as HTMLInputElement).value).toBe("kept@example.com");
+  });
+
+  it("check-email: one heading, resend only on demand, and a way back to fix the address", async () => {
+    render(<RegisterForm t={t} locale="en" captcha={noCaptcha} />);
+    type(/^Email/, "typo@exmaple.com");
+    type(/^Password/, "long-enough-password");
+    await submit(t.registerSubmit);
+
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(t.checkEmailTitle);
+    expect(screen.getAllByText(t.toLogin)).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: t.resendSubmit })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: t.didntGetIt }));
+    expect(screen.getByRole("button", { name: t.resendSubmit })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: t.useDifferentEmail }));
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(t.registerTitle);
+    expect((screen.getByLabelText(/^Email/) as HTMLInputElement).value).toBe("typo@exmaple.com");
+  });
+
+  it("marks outcomes with an icon, not only color, and takes focus", async () => {
+    stubLocation("/reset-password", "", `#token=${TOKEN}`);
+    render(<ResetForm t={t} locale="en" />);
+    type(/^New password/, "brand-new-password");
+    await submit(t.resetSubmit);
+    const notice = screen.getByRole("status");
+    expect(notice.querySelector("svg")).toBeTruthy();
+    expect(document.activeElement).toBe(notice);
+    expect(screen.getByRole("link", { name: t.loginSubmit })).toBeTruthy();
+  });
+});
+
