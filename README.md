@@ -147,4 +147,6 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
    password change, account deletion, logged-in devices. Not in the API yet (backend PLAN):
    email change, personal data export, time zone, usage counters.
 4. Per-type public pages (`/wifi-qr-code`, ...) for SEO.
-5. Deployment (with backend work item 11).
+5. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+   above) and runs locally next to the API with the backend's `make up-web`; where it runs in
+   production is still open.
