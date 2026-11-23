@@ -42,5 +42,5 @@ next-env.d.ts
 !.env.example
 .playwright-mcp/
 
-# Impeccable local state (critique snapshots, config)
-/.impeccable/
+# Impeccable: per-machine settings (its runtime directories ignore themselves)
+/.impeccable/config.local.json
