@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { DEFAULT_LOCALE, splitLocale } from "@/i18n/config";
 import { config as appConfig } from "@/lib/config";
-import { buildCsp, surfaceFor } from "@/lib/security/csp";
+import { buildCsp, hostsCaptcha, surfaceFor } from "@/lib/security/csp";
 
 /**
  * 1. Locale routing: every route lives under app/[lang]. English URLs carry no prefix, so
@@ -26,6 +26,7 @@ export function proxy(request: NextRequest) {
   const nonce = surface === "private" ? newNonce() : undefined;
   const csp = buildCsp({
     surface,
+    captcha: hostsCaptcha(pathname),
     nonce,
     apiOrigin: appConfig.apiBaseUrl,
     dev: process.env.NODE_ENV === "development",
