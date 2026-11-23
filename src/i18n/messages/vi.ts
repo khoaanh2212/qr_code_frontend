@@ -114,6 +114,8 @@ export const vi = {
       empty: "Nhập nội dung để xem mã QR của bạn.",
       updating: "Đang cập nhật…",
       alt: "Xem trước mã QR của bạn",
+      fixField: "Sửa “{field}” để xem mã QR.",
+      jump: "Xem trước & tải về",
     },
     download: {
       format: "Định dạng",
@@ -121,10 +123,17 @@ export const vi = {
       sizeHelp: "Từ {min} đến {max} px.",
       button: "Tải {format}",
       working: "Đang chuẩn bị…",
+      saved: "Đã lưu {file}",
     },
     validation: {
       required: "Bắt buộc.",
       invalid: "Kiểm tra lại giá trị này.",
+      url: "Bắt đầu bằng https:// hoặc http://, ví dụ https://example.com.",
+      email: "Nhập địa chỉ email dạng ten@example.com.",
+      phone: "Dùng 3 đến 15 chữ số, có thể bắt đầu bằng +.",
+      ssidBytes: "Tên mạng quá dài (tối đa 32 byte; chữ có dấu tính gấp đôi).",
+      wpa: "Mật khẩu WPA có 8 đến 63 ký tự (hoặc là khoá hex 64 chữ số).",
+      vcardName: "Nhập tên, họ hoặc tổ chức.",
     },
     errors: {
       loadTypes: "Không tải được danh sách loại mã QR.",

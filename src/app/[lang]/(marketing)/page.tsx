@@ -19,7 +19,7 @@ export default async function HomePage() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-balance">{t.home.title}</h1>
-        <p className="max-w-prose text-muted">{t.home.intro}</p>
+        <p className="max-w-prose text-pretty text-muted">{t.home.intro}</p>
       </header>
       <QrEditor t={t.generator} />
     </div>

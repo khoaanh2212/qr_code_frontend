@@ -114,6 +114,8 @@ export const es = {
       empty: "Rellena el contenido para ver tu código QR.",
       updating: "Actualizando…",
       alt: "Vista previa de tu código QR",
+      fixField: "Corrige «{field}» para ver tu código QR.",
+      jump: "Vista previa y descarga",
     },
     download: {
       format: "Formato",
@@ -121,10 +123,17 @@ export const es = {
       sizeHelp: "De {min} a {max} px.",
       button: "Descargar {format}",
       working: "Preparando…",
+      saved: "Guardado: {file}",
     },
     validation: {
       required: "Obligatorio.",
       invalid: "Revisa este valor.",
+      url: "Empieza por https:// o http://, por ejemplo https://example.com.",
+      email: "Escribe un correo como nombre@example.com.",
+      phone: "Usa de 3 a 15 dígitos, opcionalmente con + al inicio.",
+      ssidBytes: "El nombre de la red es demasiado largo (máximo 32 bytes; las letras con tilde cuentan doble).",
+      wpa: "Una contraseña WPA tiene de 8 a 63 caracteres (o es una clave hexadecimal de 64 dígitos).",
+      vcardName: "Indica un nombre, apellido u organización.",
     },
     errors: {
       loadTypes: "No se pudieron cargar los tipos de código QR.",

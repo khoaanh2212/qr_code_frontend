@@ -66,18 +66,58 @@ describe("QrEditor", () => {
     await screen.findByLabelText(/Website address/);
     await settle();
     expect(blob).not.toHaveBeenCalled();
-    expect(screen.getByRole("status").textContent).toBe(t.preview.empty);
+    expect(screen.getByText(t.preview.empty)).toBeTruthy();
   });
 
-  it("shows the API's validation error on the field, translated", async () => {
-    blob.mockRejectedValue(new ApiError(422, "validation_error", "url must start with http", "url"));
+  it("blocks the download and hides the code when the API refuses the content", async () => {
+    blob.mockRejectedValue(new ApiError(422, "validation_error", "url must include a host", "url"));
     render(<QrEditor t={t} />);
     const input = await screen.findByLabelText(/Website address/);
-    fireEvent.change(input, { target: { value: "ftp://x" } });
+    fireEvent.change(input, { target: { value: "https://example.com" } });
     await settle();
     expect(input.getAttribute("aria-invalid")).toBe("true");
-    expect(screen.getAllByText(t.validation.invalid).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/must start with/)).toBeNull();
+    expect(screen.queryByText(/must include/)).toBeNull();
+    expect(screen.getByText(/Fix “Website address”/)).toBeTruthy();
+    expect(screen.queryByAltText(t.preview.alt)).toBeNull();
+    expect((screen.getByRole("button", { name: /Download/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("keeps the download available when only the preview hit a network error", async () => {
+    blob.mockRejectedValueOnce(new ApiError(0, "network_error", "down"));
+    render(<QrEditor t={t} />);
+    const input = await screen.findByLabelText(/Website address/);
+    fireEvent.change(input, { target: { value: "https://example.com" } });
+    await settle();
+    expect(screen.getByText(t.errors.network)).toBeTruthy();
+    expect((screen.getByRole("button", { name: /Download/ }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("explains a bad URL at the field without calling the API, and adds https:// to a bare domain", async () => {
+    render(<QrEditor t={t} />);
+    const input = (await screen.findByLabelText(/Website address/)) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "ftp://example.com" } });
+    fireEvent.blur(input);
+    await settle();
+    expect(blob).not.toHaveBeenCalled();
+    expect(screen.getByText(t.validation.url)).toBeTruthy();
+
+    fireEvent.change(input, { target: { value: "example.com" } });
+    fireEvent.blur(input);
+    expect(input.value).toBe("https://example.com");
+    await settle();
+    expect(blob).toHaveBeenCalledTimes(1);
+  });
+
+  it("checks the WPA password length before calling the API", async () => {
+    render(<QrEditor t={t} />);
+    fireEvent.click(await screen.findByLabelText("Wi-Fi"));
+    fireEvent.change(screen.getByLabelText(/Network name/), { target: { value: "Office" } });
+    const pw = screen.getByLabelText(/Password/);
+    fireEvent.change(pw, { target: { value: "short" } });
+    fireEvent.blur(pw);
+    await settle();
+    expect(blob).not.toHaveBeenCalled();
+    expect(screen.getByText(t.validation.wpa)).toBeTruthy();
   });
 
   it("posts Wi-Fi content and hides the password of an open network", async () => {

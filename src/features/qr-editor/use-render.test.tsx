@@ -44,8 +44,8 @@ const box: { latest: PreviewState; setMode: (m: "visible" | "hidden") => void } 
   latest: { src: null, pending: false, error: null },
   setMode: () => {},
 };
-function Probe({ path }: { path: string | null }) {
-  const state = useRenderPreview(path ? req(path) : null, path);
+function Probe({ path, scope = "url" }: { path: string | null; scope?: string }) {
+  const state = useRenderPreview(path ? req(path) : null, path, scope);
   useEffect(() => {
     box.latest = state;
   });
@@ -77,6 +77,15 @@ describe("useRenderPreview", () => {
     await tick(500);
     expect(box.latest.src).toBe("blob:2");
     expect(revoked).toContain("blob:1");
+  });
+
+  it("never shows another type's image", async () => {
+    const { rerender } = rtlRender(<Probe path="/a" scope="url" />);
+    await tick(500);
+    expect(box.latest.src).toBe("blob:1");
+    rerender(<Probe path="/w" scope="wifi" />);
+    expect(box.latest.src).toBeNull();
+    expect(box.latest.pending).toBe(true);
   });
 
   it("reports the error of the latest request", async () => {

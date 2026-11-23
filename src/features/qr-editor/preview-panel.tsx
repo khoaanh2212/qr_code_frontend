@@ -1,7 +1,7 @@
 "use client";
 
-import { Download } from "lucide-react";
-import { useId, useState } from "react";
+import { Check, Download, QrCode } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { format } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
@@ -12,8 +12,8 @@ import { render, type PreviewState } from "./use-render";
 
 type T = Messages["generator"];
 
-/** Why nothing can be rendered yet. */
-export type Blocker = "incomplete" | "lowContrast" | null;
+/** Why no printable code can be shown. */
+export type Blocker = "incomplete" | "invalid" | "lowContrast" | null;
 
 /** Saves a blob under `filename` through a temporary link. */
 function save(blob: Blob, filename: string) {
@@ -27,66 +27,86 @@ function save(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(href), 10_000);
 }
 
+/** Crop-mark color: the proof frame says whether what it holds can be printed. */
+const MARKS = {
+  ready: "border-foreground/40",
+  blocked: "border-warning/70",
+  error: "border-danger/70",
+} as const;
+
 export function PreviewPanel({
   t,
   preview,
   blocker,
+  invalidLabel,
+  contentKey,
   buildDownload,
   filename,
 }: {
   t: T;
   preview: PreviewState;
   blocker: Blocker;
+  /** Label of the field that blocks the code, for "invalid". */
+  invalidLabel?: string;
+  /** Changes whenever the content or design changes; clears download messages. */
+  contentKey: string;
   /** The POST request of a download in the chosen format and size. */
   buildDownload: (format: QrFormat, size: number) => RenderRequest;
+  /** File name without extension. */
   filename: string;
 }) {
   const ids = { size: useId(), sizeHelp: useId() };
   const [fmt, setFmt] = useState<QrFormat>("png");
   const [size, setSize] = useState(1024);
   const [busy, setBusy] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
-  const sizeOk = Number.isInteger(size) && size >= SIZE_MIN && size <= SIZE_MAX;
-  const ready = blocker === null;
-
-  // Announced: what blocks the preview, or why it failed. "Updating" is shown, not announced:
-  // it would be read out on every pause in typing.
-  let message = "";
-  let isError = false;
-  if (blocker === "incomplete") message = t.preview.empty;
-  else if (blocker === "lowContrast") message = t.design.lowContrast;
-  else if (preview.error) {
-    message = errorText(preview.error, t);
-    isError = true;
+  const [notice, setNotice] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
+  const [noticeFor, setNoticeFor] = useState(contentKey);
+  const latestKey = useRef(contentKey);
+  useEffect(() => {
+    latestKey.current = contentKey;
+  }, [contentKey]);
+  // A message about the previous content must not linger after an edit.
+  if (noticeFor !== contentKey) {
+    setNoticeFor(contentKey);
+    setNotice(null);
   }
 
-  const stale = preview.pending || Boolean(preview.error) || !ready;
+  const sizeOk = Number.isInteger(size) && size >= SIZE_MIN && size <= SIZE_MAX;
+  // Only a refused content blocks printing; a network hiccup on the preview does not stop a
+  // download that may well succeed.
+  const refused = preview.error?.code === "validation_error";
+  const printable = blocker === null && !refused;
+  const showImage = printable && preview.src !== null;
+
+  let message = "";
+  if (blocker === "incomplete") message = t.preview.empty;
+  else if (blocker === "invalid") message = invalidLabel ? format(t.preview.fixField, { field: invalidLabel }) : t.validation.invalid;
+  else if (blocker === "lowContrast") message = t.design.lowContrast;
+  else if (preview.error) message = errorText(preview.error, t);
+
+  const marks = blocker !== null ? MARKS.blocked : preview.error ? MARKS.error : MARKS.ready;
 
   return (
     <div className="flex flex-col gap-5">
       <h2 className="text-lg font-semibold">{t.preview.title}</h2>
 
-      {/* Crop marks frame the code like a print proof. */}
-      <div aria-busy={ready && preview.pending} className="relative mx-auto aspect-square w-full max-w-72 p-3">
-        <span aria-hidden="true" className="absolute top-0 left-0 size-4 border-t-2 border-l-2 border-foreground/40" />
-        <span aria-hidden="true" className="absolute top-0 right-0 size-4 border-t-2 border-r-2 border-foreground/40" />
-        <span aria-hidden="true" className="absolute bottom-0 left-0 size-4 border-b-2 border-l-2 border-foreground/40" />
-        <span aria-hidden="true" className="absolute right-0 bottom-0 size-4 border-r-2 border-b-2 border-foreground/40" />
-        <div className="flex size-full items-center justify-center overflow-hidden rounded-sm bg-surface">
-          {preview.src && ready ? (
+      {/* Crop marks frame the code like a print proof; their color carries its state. */}
+      <div aria-busy={blocker === null && preview.pending} className="relative mx-auto aspect-square w-full max-w-72 p-3">
+        <span aria-hidden="true" className={`absolute top-0 left-0 size-4 border-t-2 border-l-2 transition-colors duration-200 ${marks}`} />
+        <span aria-hidden="true" className={`absolute top-0 right-0 size-4 border-t-2 border-r-2 transition-colors duration-200 ${marks}`} />
+        <span aria-hidden="true" className={`absolute bottom-0 left-0 size-4 border-b-2 border-l-2 transition-colors duration-200 ${marks}`} />
+        <span aria-hidden="true" className={`absolute right-0 bottom-0 size-4 border-r-2 border-b-2 transition-colors duration-200 ${marks}`} />
+        <div className="flex size-full items-center justify-center overflow-hidden rounded-sm bg-white">
+          {showImage ? (
             // A blob: URL from the API; next/image cannot optimize it.
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={preview.src}
+              src={preview.src ?? undefined}
               alt={t.preview.alt}
-              className={`size-full object-contain transition-opacity duration-200 ${stale ? "opacity-40" : "opacity-100"}`}
+              className={`size-full object-contain transition-opacity duration-200 ${preview.pending ? "opacity-50" : "opacity-100"}`}
             />
           ) : (
-            <div aria-hidden="true" className="grid size-2/3 grid-cols-3 gap-2 opacity-15">
-              {Array.from({ length: 9 }, (_, i) => (
-                <div key={i} className={`rounded-sm bg-foreground ${i % 2 ? "opacity-0" : ""}`} />
-              ))}
-            </div>
+            <QrCode aria-hidden="true" className="size-20 text-stone-300" strokeWidth={1.25} />
           )}
         </div>
       </div>
@@ -96,10 +116,13 @@ export function PreviewPanel({
         {fmt.toUpperCase()} · {sizeOk ? `${size} × ${size} px` : "—"}
       </p>
 
-      <p role="status" className={`min-h-5 text-center text-sm ${isError ? "font-medium text-danger" : "text-muted"}`}>
+      <p
+        role="status"
+        className={`min-h-5 text-center text-sm text-pretty ${preview.error && blocker === null ? "font-medium text-danger" : "text-muted"}`}
+      >
         {message}
       </p>
-      {ready && preview.pending && !preview.error && (
+      {blocker === null && preview.pending && !preview.error && (
         <p aria-hidden="true" className="-mt-4 text-center text-xs text-muted">
           {t.preview.updating}
         </p>
@@ -114,7 +137,7 @@ export function PreviewPanel({
               {(["png", "svg"] as const).map((f) => (
                 <label
                   key={f}
-                  className="cursor-pointer px-3 py-2 font-mono text-sm uppercase has-checked:bg-foreground has-checked:text-background has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-accent"
+                  className="inline-flex min-h-11 cursor-pointer items-center px-4 font-mono text-sm uppercase has-checked:bg-foreground has-checked:text-background has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-accent"
                 >
                   <input type="radio" name="qr-format" value={f} checked={fmt === f} onChange={() => setFmt(f)} className="sr-only" />
                   {f}
@@ -137,7 +160,7 @@ export function PreviewPanel({
               aria-invalid={sizeOk ? undefined : true}
               aria-describedby={ids.sizeHelp}
               onChange={(e) => setSize(e.target.valueAsNumber)}
-              className="w-28 rounded-md border border-control bg-surface px-3 py-2 font-mono text-sm tabular-nums aria-[invalid=true]:border-danger"
+              className="min-h-11 w-28 rounded-md border border-control bg-surface px-3 font-mono text-sm tabular-nums aria-[invalid=true]:border-danger"
             />
             <p id={ids.sizeHelp} className={`text-xs ${sizeOk ? "text-muted" : "font-medium text-danger"}`}>
               {format(t.download.sizeHelp, { min: SIZE_MIN, max: SIZE_MAX })}
@@ -146,28 +169,38 @@ export function PreviewPanel({
         </div>
         <button
           type="button"
-          disabled={!ready || !sizeOk || busy}
+          data-qr-download
+          disabled={!printable || !sizeOk || busy}
           onClick={async () => {
             setBusy(true);
-            setDownloadError(null);
+            setNotice(null);
+            const file = `${filename}.${fmt}`;
+            const startedFor = contentKey;
             try {
-              save(await render(buildDownload(fmt, size)), `${filename}.${fmt}`);
+              const blob = await render(buildDownload(fmt, size));
+              save(blob, file);
+              // The content may have changed while the file was rendering: say nothing then.
+              if (latestKey.current === startedFor) setNotice({ kind: "saved", text: format(t.download.saved, { file }) });
             } catch (err) {
-              setDownloadError(errorText(err instanceof ApiError ? err : new ApiError(0, "network_error", ""), t));
+              const error = err instanceof ApiError ? err : new ApiError(0, "network_error", "");
+              if (latestKey.current === startedFor) setNotice({ kind: "error", text: errorText(error, t) });
             } finally {
               setBusy(false);
             }
           }}
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-3 font-semibold text-accent-foreground transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-4 font-semibold text-accent-foreground transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Download aria-hidden="true" className="size-4" />
           {busy ? t.download.working : format(t.download.button, { format: fmt.toUpperCase() })}
         </button>
-        {downloadError && (
-          <p role="alert" className="text-sm font-medium text-danger">
-            {downloadError}
-          </p>
-        )}
+        {/* Two live regions that stay mounted: one polite, one for errors. */}
+        <p role="status" className="flex min-h-5 items-start gap-1.5 text-sm break-words text-muted">
+          {notice?.kind === "saved" && <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent" />}
+          {notice?.kind === "saved" ? <span className="min-w-0">{notice.text}</span> : null}
+        </p>
+        <p role="alert" className="-mt-3 text-sm font-medium break-words text-danger empty:hidden">
+          {notice?.kind === "error" ? notice.text : ""}
+        </p>
       </div>
     </div>
   );

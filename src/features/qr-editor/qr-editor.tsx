@@ -5,10 +5,12 @@ import { useId, useMemo, useState } from "react";
 import type { Messages } from "@/i18n/messages";
 import { isScannable } from "@/lib/qr/color";
 import { buildRenderRequest, missingRequired, requestKey } from "@/lib/qr/render-request";
+import { downloadName, normalizeUrlInput, validateFields, type FieldProblem } from "@/lib/qr/validate";
 import { DEFAULT_DESIGN, type QrData, type QrDesign, type QrType } from "@/lib/qr/types";
 import { DesignPanel } from "./design-panel";
 import { errorText } from "./error-text";
-import { ContentFields, initialData } from "./fields";
+import { ContentFields, fieldText, initialData } from "./fields";
+import { MobilePreviewBar } from "./mobile-preview-bar";
 import { PreviewPanel, type Blocker } from "./preview-panel";
 import { TypePicker } from "./type-picker";
 import { useQrTypes } from "./use-qr-types";
@@ -17,6 +19,8 @@ import { useRenderPreview } from "./use-render";
 type T = Messages["generator"];
 
 const DESIGN_FIELDS = new Set(["fg", "bg", "margin", "ecc", "logo", "size"]);
+const URL_FIELDS = new Set(["url", "website"]);
+const PREVIEW_ID = "qr-preview";
 const PREVIEW_SIZE = 512;
 
 /**
@@ -56,34 +60,65 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
   const qrType = types.find((x) => x.type === typeName) ?? types[0];
   const data = useMemo(() => dataByType[qrType.type] ?? initialData(qrType), [dataByType, qrType]);
   const missing = missingRequired(qrType, data);
+  const problems = validateFields(qrType, data);
+  const problemNames = Object.keys(problems);
   const contrastOk = isScannable(design.fg, design.bg);
-  const blocker: Blocker = missing.length > 0 ? "incomplete" : contrastOk ? null : "lowContrast";
 
+  const canRender = missing.length === 0 && problemNames.length === 0 && contrastOk;
   const request = useMemo(
     () =>
-      blocker === null
-        ? buildRenderRequest({ type: qrType.type, data, design, format: "png", size: PREVIEW_SIZE })
-        : null,
-    [blocker, qrType.type, data, design],
+      canRender ? buildRenderRequest({ type: qrType.type, data, design, format: "png", size: PREVIEW_SIZE }) : null,
+    [canRender, qrType.type, data, design],
   );
   const key = useMemo(() => (request ? requestKey(request, design.logo?.id) : null), [request, design.logo?.id]);
-  const preview = useRenderPreview(request, key);
+  const preview = useRenderPreview(request, key, qrType.type);
 
-  // Field errors: required fields the user has left, then what the API rejected.
+  const serverField = preview.error?.code === "validation_error" ? preview.error.field : undefined;
+  const serverContentField = serverField && !DESIGN_FIELDS.has(serverField) ? serverField : undefined;
+
+  // What blocks a printable code, first problem first.
+  const touchedName = (name: string) => Boolean(touched[`${qrType.type}.${name}`]);
+  const invalidName = problemNames[0] ?? serverContentField;
+  let blocker: Blocker = null;
+  if (missing.length > 0) blocker = "incomplete";
+  else if (invalidName) blocker = "invalid";
+  else if (!contrastOk) blocker = "lowContrast";
+  else if (serverField) blocker = "invalid";
+  const invalidField = invalidName ? qrType.fields.find((f) => f.name === invalidName) : undefined;
+  const invalidLabel = invalidField ? fieldText(t, qrType.type, invalidField).label : undefined;
+
+  // Field messages: shown once, at the field, after the user has left it (or the API refused it).
+  const problemText: Record<FieldProblem, string> = {
+    url: t.validation.url,
+    email: t.validation.email,
+    phone: t.validation.phone,
+    ssidBytes: t.validation.ssidBytes,
+    wpa: t.validation.wpa,
+  };
   const fieldErrors: Record<string, string> = {};
   for (const name of missing) {
-    if (touched[`${qrType.type}.${name}`]) fieldErrors[name] = t.validation.required;
+    if (touchedName(name)) {
+      fieldErrors[name] = qrType.type === "vcard" && name === "first_name" ? t.validation.vcardName : t.validation.required;
+    }
   }
-  const serverField = preview.error?.code === "validation_error" ? preview.error.field : undefined;
-  if (serverField && !DESIGN_FIELDS.has(serverField)) fieldErrors[serverField] = t.validation.invalid;
+  for (const name of problemNames) {
+    if (touchedName(name)) fieldErrors[name] = problemText[problems[name]];
+  }
+  if (serverContentField) fieldErrors[serverContentField] ??= t.validation.invalid;
   const designError =
     serverField && DESIGN_FIELDS.has(serverField)
       ? { field: serverField, message: serverField === "logo" ? t.design.logoType : t.validation.invalid }
       : undefined;
 
+  const setField = (name: string, value: string) =>
+    setDataByType((prev) => ({
+      ...prev,
+      [qrType.type]: { ...(prev[qrType.type] ?? initialData(qrType)), [name]: value },
+    }));
+
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
-      <div className="flex flex-col gap-8">
+    <div className="grid gap-8 pb-24 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10 lg:pb-0">
+      <div className="flex min-w-0 flex-col gap-8">
         <TypePicker t={t} types={types} value={qrType.type} onChange={setTypeName} />
         <section aria-labelledby={headingIds.content} className="flex flex-col gap-4">
           <h2 id={headingIds.content} className="text-lg font-semibold">
@@ -94,35 +129,44 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
             qrType={qrType}
             data={data}
             errors={fieldErrors}
-            onChange={(name, value) =>
-              setDataByType((prev) => ({
-                ...prev,
-                [qrType.type]: { ...(prev[qrType.type] ?? initialData(qrType)), [name]: value },
-              }))
-            }
-            onBlur={(name) => setTouched((prev) => ({ ...prev, [`${qrType.type}.${name}`]: true }))}
+            onChange={setField}
+            onBlur={(name) => {
+              if (URL_FIELDS.has(name)) {
+                const value = data[name] ?? "";
+                const normalized = normalizeUrlInput(value);
+                if (normalized !== value) setField(name, normalized);
+              }
+              setTouched((prev) => ({ ...prev, [`${qrType.type}.${name}`]: true }));
+            }}
           />
         </section>
       </div>
 
-      <aside className="rounded-lg border border-border bg-surface p-5 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+      <section aria-labelledby={headingIds.design} className="flex flex-col gap-4 lg:col-start-1 lg:row-start-2">
+        <h2 id={headingIds.design} className="text-lg font-semibold">
+          {t.sections.design}
+        </h2>
+        <DesignPanel t={t} design={design} onChange={setDesign} contrastOk={contrastOk} error={designError} />
+      </section>
+
+      <aside
+        id={PREVIEW_ID}
+        className="scroll-mt-6 rounded-lg border border-border bg-surface p-5 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+      >
         <PreviewPanel
           t={t}
           preview={preview}
           blocker={blocker}
-          filename={`qr-code-${qrType.type}`}
+          invalidLabel={invalidLabel}
+          contentKey={key ?? blocker ?? ""}
+          filename={downloadName(qrType.type, data)}
           buildDownload={(format, size) =>
             buildRenderRequest({ type: qrType.type, data, design, format, size }, { post: true })
           }
         />
       </aside>
 
-      <section aria-labelledby={headingIds.design} className="flex flex-col gap-4 lg:col-start-1">
-        <h2 id={headingIds.design} className="text-lg font-semibold">
-          {t.sections.design}
-        </h2>
-        <DesignPanel t={t} design={design} onChange={setDesign} contrastOk={contrastOk} error={designError} />
-      </section>
+      <MobilePreviewBar t={t} src={blocker === null && !preview.error ? preview.src : null} targetId={PREVIEW_ID} />
     </div>
   );
 }

@@ -60,6 +60,13 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+/* Phones: the generator's preview bar is fixed at the bottom; focused fields scroll clear of it. */
+@media (max-width: 1023px) {
+  html {
+    scroll-padding-bottom: 6rem;
+  }
+}
+
 /* Browser surfaces carry the palette too. */
 ::selection {
   background: var(--accent);

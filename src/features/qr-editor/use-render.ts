@@ -22,6 +22,7 @@ export interface PreviewState {
 
 interface Result {
   key: string;
+  scope: string;
   blob: Blob | null;
   error: ApiError | null;
 }
@@ -29,13 +30,20 @@ interface Result {
 /**
  * Live preview: renders `request` once the user stops changing it for `delayMs`, and cancels
  * outdated requests. `key` identifies the request cheaply (the caller builds it without the
- * logo bytes); `null` means there is nothing to render yet.
+ * logo bytes); `null` means there is nothing to render yet. Within one `scope` the last image
+ * stays on screen (dimmed) while the next one loads; switching scope never shows the old one.
  *
  * The image is kept as a Blob in state and its object URL lives in an effect, so the URL is
  * revoked whenever the component hides (React <Activity>, used by Next.js for back/forward)
  * and recreated when it shows again.
  */
-export function useRenderPreview(request: RenderRequest | null, key: string | null, delayMs = 400): PreviewState {
+export function useRenderPreview(
+  request: RenderRequest | null,
+  key: string | null,
+  /** Results of another scope (another QR type) are never shown. */
+  scope = "",
+  delayMs = 400,
+): PreviewState {
   const [result, setResult] = useState<Result | null>(null);
   const requestRef = useRef(request);
   useEffect(() => {
@@ -50,21 +58,21 @@ export function useRenderPreview(request: RenderRequest | null, key: string | nu
       if (!current) return;
       render(current, abort.signal)
         .then((blob) => {
-          if (!abort.signal.aborted) setResult({ key, blob, error: null });
+          if (!abort.signal.aborted) setResult({ key, scope, blob, error: null });
         })
         .catch((err: unknown) => {
           if (abort.signal.aborted) return;
           const error = err instanceof ApiError ? err : new ApiError(0, "network_error", String(err));
-          setResult((prev) => ({ key, blob: prev?.blob ?? null, error }));
+          setResult((prev) => ({ key, scope, blob: prev?.scope === scope ? prev.blob : null, error }));
         });
     }, delayMs);
     return () => {
       clearTimeout(timer);
       abort.abort();
     };
-  }, [key, delayMs]);
+  }, [key, scope, delayMs]);
 
-  const src = useObjectUrl(result?.blob ?? null);
+  const src = useObjectUrl(result?.scope === scope ? result.blob : null);
 
   if (key === null) return { src: null, pending: false, error: null };
   const settled = result?.key === key;

@@ -103,6 +103,7 @@ describe("missingRequired", () => {
     expect(missingRequired(wifi, { ssid: "Office", encryption: "WPA" })).toEqual(["password"]);
     expect(missingRequired(wifi, { ssid: "Office", encryption: "WPA", password: "secret-pass" })).toEqual([]);
     expect(missingRequired(wifi, { ssid: "Office", encryption: "nopass" })).toEqual([]);
+    expect(missingRequired(wifi, { ssid: "Office", encryption: "WEP", password: "" })).toEqual(["password"]);
   });
 
   it("needs one of the vCard name fields", () => {

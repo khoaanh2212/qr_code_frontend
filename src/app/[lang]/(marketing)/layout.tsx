@@ -27,13 +27,17 @@ export default async function MarketingLayout({ children }: LayoutProps<"/[lang]
     <RootDocument locale={locale}>
       <header className="border-b border-border bg-header">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link href={localizePath(locale, "/")} className="font-semibold">
+          <Link href={localizePath(locale, "/")} className="inline-flex min-h-11 items-center font-semibold">
             {SITE_NAME}
           </Link>
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-2 text-sm sm:gap-4">
             <LanguageSwitcher locale={locale} label={t.nav.language} />
-            <Link href={localizePath(locale, "/login")}>{t.nav.login}</Link>
-            <Link href={localizePath(locale, "/register")}>{t.nav.signup}</Link>
+            <Link href={localizePath(locale, "/login")} className="inline-flex min-h-11 items-center px-1">
+              {t.nav.login}
+            </Link>
+            <Link href={localizePath(locale, "/register")} className="inline-flex min-h-11 items-center px-1">
+              {t.nav.signup}
+            </Link>
           </div>
         </nav>
       </header>

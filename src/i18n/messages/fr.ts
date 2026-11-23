@@ -114,6 +114,8 @@ export const fr = {
       empty: "Saisissez le contenu pour voir votre QR code.",
       updating: "Mise à jour…",
       alt: "Aperçu de votre QR code",
+      fixField: "Corrigez « {field} » pour voir votre QR code.",
+      jump: "Aperçu et téléchargement",
     },
     download: {
       format: "Format",
@@ -121,10 +123,17 @@ export const fr = {
       sizeHelp: "De {min} à {max} px.",
       button: "Télécharger en {format}",
       working: "Préparation…",
+      saved: "Enregistré : {file}",
     },
     validation: {
       required: "Obligatoire.",
       invalid: "Vérifiez cette valeur.",
+      url: "Commencez par https:// ou http://, par exemple https://example.com.",
+      email: "Saisissez une adresse e-mail comme nom@example.com.",
+      phone: "Utilisez de 3 à 15 chiffres, éventuellement précédés de +.",
+      ssidBytes: "Le nom du réseau est trop long (32 octets maximum ; les lettres accentuées comptent double).",
+      wpa: "Un mot de passe WPA comporte de 8 à 63 caractères (ou une clé hexadécimale de 64 chiffres).",
+      vcardName: "Indiquez un prénom, un nom ou une organisation.",
     },
     errors: {
       loadTypes: "Impossible de charger les types de QR code.",
