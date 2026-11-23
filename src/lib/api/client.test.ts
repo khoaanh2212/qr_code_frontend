@@ -93,4 +93,33 @@ describe("ApiClient", () => {
     }
     expect(f).not.toHaveBeenCalled();
   });
+
+  it("carries the field of a validation error and Retry-After", async () => {
+    const f = fakeFetch(json(422, { error: { code: "validation_error", message: "bad", field: "url" } }));
+    const client = new ApiClient({ baseUrl: "https://api.example.com", credentials: "omit", fetch: f });
+    await expect(client.request("/v1/qr/render")).rejects.toMatchObject({ status: 422, field: "url", retryAfter: undefined });
+
+    const limited = new Response(JSON.stringify({ error: { code: "rate_limited", message: "slow" } }), {
+      status: 429,
+      headers: { "Retry-After": "7" },
+    });
+    const g = fakeFetch(limited);
+    const c2 = new ApiClient({ baseUrl: "https://api.example.com", credentials: "omit", fetch: g });
+    await expect(c2.request("/v1/qr/render")).rejects.toMatchObject({ code: "rate_limited", retryAfter: 7 });
+  });
+
+  it("returns images as blobs", async () => {
+    const f = fakeFetch(new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { "Content-Type": "image/png" } }));
+    const client = new ApiClient({ baseUrl: "https://api.example.com", credentials: "omit", fetch: f });
+    const blob = await client.requestBlob("/v1/qr/render?type=url", {});
+    expect(blob.type).toBe("image/png");
+    expect(blob.size).toBe(3);
+    expect(new Headers(f.mock.calls[0][1]?.headers).get("Accept")).toBe("image/*");
+  });
+
+  it("maps errors of image requests like JSON ones", async () => {
+    const f = fakeFetch(json(503, { error: { code: "busy", message: "busy" } }));
+    const client = new ApiClient({ baseUrl: "https://api.example.com", credentials: "omit", fetch: f });
+    await expect(client.requestBlob("/v1/qr/render")).rejects.toMatchObject({ status: 503, code: "busy" });
+  });
 });

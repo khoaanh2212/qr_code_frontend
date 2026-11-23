@@ -110,8 +110,9 @@ Every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 
 ## Roadmap
 
-1. Generator on the home page (`features/qr-editor`): type forms built from `GET /v1/qr/types`,
-   preview through `GET /v1/qr/render`, download PNG/SVG through `POST /v1/qr/render`.
+1. ~~Generator on the home page~~ Done (`src/features/qr-editor`): type forms built from
+   `GET /v1/qr/types`, live preview (GET for plain content, POST for Wi-Fi, vCard and logos, so
+   secrets never land in URLs), contrast check, logo upload, PNG/SVG download.
 2. Auth pages: sign-up (Turnstile), login with `return_to`, email verification and password reset
    (tokens read from the URL fragment), logout.
 3. Account pages under `/app`: profile, password change, devices, account deletion.

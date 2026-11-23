@@ -25,8 +25,8 @@ export default async function MarketingLayout({ children }: LayoutProps<"/[lang]
   const t = await getMessages();
   return (
     <RootDocument locale={locale}>
-      <header className="border-b border-black/10 dark:border-white/10">
-        <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+      <header className="border-b border-border bg-header">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link href={localizePath(locale, "/")} className="font-semibold">
             {SITE_NAME}
           </Link>
@@ -37,8 +37,8 @@ export default async function MarketingLayout({ children }: LayoutProps<"/[lang]
           </div>
         </nav>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">{children}</main>
-      <footer className="border-t border-black/10 py-6 text-center text-sm text-black/60 dark:border-white/10 dark:text-white/60">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:py-10">{children}</main>
+      <footer className="border-t border-border py-6 text-center text-sm text-muted">
         {t.footer.staticForever}
       </footer>
     </RootDocument>

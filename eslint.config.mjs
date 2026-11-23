@@ -22,7 +22,7 @@ const eslintConfig = defineConfig([
   },
   {
     // Public pages are cached at the CDN and must not depend on the visitor's session.
-    files: ["src/app/[[]lang]/(marketing)/**/*.{ts,tsx}"],
+    files: ["src/app/[[]lang]/(marketing)/**/*.{ts,tsx}", "src/features/qr-editor/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",

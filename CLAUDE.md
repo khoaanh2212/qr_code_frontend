@@ -79,7 +79,7 @@ Load the matching skill before starting work of that kind.
 | Render performance, bundle size | `ecc:react-performance` |
 | Writing tests (tests first) | `ecc:tdd-workflow`, `ecc:react-testing` (`ecc:react-test`) |
 | End-to-end and browser checks | `ecc:e2e-testing` (agent `ecc:e2e-runner`), `ecc:browser-qa` |
-| Visual direction, layout, new screens | `ecc:frontend-design-direction`, `ecc:design-system`, `ecc:brand-discovery` |
+| Interface design: new screens, layout, critique, audit, polish | `impeccable` (installed per machine, see below), with `ecc:frontend-design-direction`, `ecc:design-system`, `ecc:brand-discovery` |
 | Polishing UI details | `ecc:taste`, `ecc:taste-application`, `ecc:make-interfaces-feel-better` |
 | Animation | `ecc:motion-foundations`, `ecc:motion-patterns` |
 | Iterating on a design with scoring | `ecc:gan-design` |
@@ -93,3 +93,15 @@ Load the matching skill before starting work of that kind.
 | CI/CD, deployment, Docker | `ecc:deployment-patterns`, `ecc:docker-patterns` |
 | Before committing or opening a PR | `ecc:verification-loop` |
 | Commits, branches, PRs | `ecc:git-workflow`, `ecc:prp-commit`, `ecc:pr` |
+
+## Design skill: impeccable
+
+UI design work uses the `impeccable` skill (https://github.com/pbakaus/impeccable, Apache-2.0). It is
+installed per machine, not committed: `npx impeccable install --providers=claude --scope=project`
+in this repo (interactive; answer the provider, scope and hook questions). Start a design task by
+loading it; it reads `PRODUCT.md` / `DESIGN.md` when they exist. The generator follows its Operate
+mode: standard controls, restrained palette with one accent, one signature detail (the preview's
+print-proof crop marks and spec line), every browser surface themed (selection, caret, focus,
+accent-color). Layout reference: the established QR generators (type row on top, content then
+design on the left, sticky preview and download on the right).
+

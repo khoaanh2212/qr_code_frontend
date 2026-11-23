@@ -12,6 +12,10 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    /** The offending input of a 422 `validation_error`. */
+    readonly field?: string,
+    /** Seconds to wait, from `Retry-After` on 429 and 503. */
+    readonly retryAfter?: number,
   ) {
     super(message);
     this.name = "ApiError";
@@ -49,9 +53,27 @@ export class ApiClient {
     return this.origin + path;
   }
 
-  async request<T = unknown>(path: string, { method = "GET", body, signal }: RequestOptions = {}): Promise<T> {
+  async request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
+    const res = await this.send(path, options, "application/json");
+    if (res.status === 204) return undefined as T;
+    try {
+      return (await res.json()) as T;
+    } catch (err) {
+      if (options.signal?.aborted) throw err;
+      throw new ApiError(res.status, "invalid_response", "The server sent an unreadable response.");
+    }
+  }
+
+  /** For binary responses (rendered images). */
+  async requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+    const res = await this.send(path, options, "image/*");
+    return res.blob();
+  }
+
+  /** Sends the request; resolves with an OK response or rejects with ApiError. */
+  private async send(path: string, { method = "GET", body, signal }: RequestOptions, accept: string): Promise<Response> {
     const url = this.url(path);
-    const headers = new Headers({ Accept: "application/json" });
+    const headers = new Headers({ Accept: accept });
     if (body !== undefined) headers.set("Content-Type", "application/json");
 
     let res: Response;
@@ -67,24 +89,20 @@ export class ApiClient {
       if (signal?.aborted) throw err;
       throw new ApiError(0, "network_error", "The server could not be reached.");
     }
-
-    if (res.ok && res.status === 204) return undefined as T;
+    if (res.ok) return res;
 
     let data: unknown;
     try {
       data = await res.json();
     } catch (err) {
       if (signal?.aborted) throw err;
-      if (res.ok) throw new ApiError(res.status, "invalid_response", "The server sent an unreadable response.");
-      data = undefined;
     }
-    if (!res.ok) {
-      const e = (data as { error?: { code?: unknown; message?: unknown } } | undefined)?.error;
-      const code = typeof e?.code === "string" ? e.code : `http_${res.status}`;
-      const message = typeof e?.message === "string" ? e.message : "Request failed.";
-      throw new ApiError(res.status, code, message);
-    }
-    return data as T;
+    const e = (data as { error?: { code?: unknown; message?: unknown; field?: unknown } } | undefined)?.error;
+    const code = typeof e?.code === "string" ? e.code : `http_${res.status}`;
+    const message = typeof e?.message === "string" ? e.message : "Request failed.";
+    const field = typeof e?.field === "string" ? e.field : undefined;
+    const retry = Number.parseInt(res.headers.get("Retry-After") ?? "", 10);
+    throw new ApiError(res.status, code, message, field, Number.isFinite(retry) && retry >= 0 ? retry : undefined);
   }
 
   /** For endpoints that answer 204 No Content. */

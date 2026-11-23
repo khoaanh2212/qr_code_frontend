@@ -15,12 +15,12 @@ function placeholders(s: string): string[] {
 describe("messages", async () => {
   const en = new Map(leaves(await loadMessages("en")));
 
-  it.each(LOCALES.filter((l) => l !== "en"))("%s has every English key, non-empty, same placeholders", async (locale) => {
+  it.each(LOCALES.filter((l) => l !== "en"))("%s has every English key, same placeholders, empty only where English is", async (locale) => {
     const other = new Map(leaves(await loadMessages(locale)));
     expect([...other.keys()].sort()).toEqual([...en.keys()].sort());
     for (const [key, value] of other) {
       expect(typeof value, key).toBe("string");
-      expect((value as string).trim(), key).not.toBe("");
+      expect((value as string).trim() === "", key).toBe((en.get(key) as string).trim() === "");
       expect(placeholders(value as string), key).toEqual(placeholders(en.get(key) as string));
     }
   });
