@@ -118,6 +118,8 @@ Every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
    login with `return_to`, email verification and password reset (tokens read from the URL
    fragment, then removed), forgot password, logout. Emails still link to English pages until the
    backend stores the user's language (backend PLAN, later work).
-3. Account pages under `/app`: profile, password change, devices, account deletion.
+3. ~~Account pages~~ Done (`src/features/account`, `/app/account`): profile and display name,
+   password change, account deletion, logged-in devices. Not in the API yet (backend PLAN):
+   email change, personal data export, time zone, usage counters.
 4. Per-type public pages (`/wifi-qr-code`, ...) for SEO.
 5. Deployment (with backend work item 11).
