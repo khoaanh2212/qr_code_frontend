@@ -96,6 +96,10 @@ Load the matching skill before starting work of that kind.
 
 ## Design skill: impeccable
 
+Product truth lives in `PRODUCT.md` and the visual system in `DESIGN.md` (its frontmatter tokens are
+normative; `.impeccable/design.json` carries the extensions). Read both before UI work and keep
+new screens inside that system; re-run `/impeccable document` when the system changes.
+
 UI design work uses the `impeccable` skill (https://github.com/pbakaus/impeccable, Apache-2.0). It is
 installed per machine, not committed: `npx impeccable install --providers=claude --scope=project`
 in this repo (interactive; answer the provider, scope and hook questions). Start a design task by
