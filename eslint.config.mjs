@@ -22,7 +22,7 @@ const eslintConfig = defineConfig([
   },
   {
     // Public pages are cached at the CDN and must not depend on the visitor's session.
-    files: ["src/app/(marketing)/**/*.{ts,tsx}"],
+    files: ["src/app/[[]lang]/(marketing)/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",

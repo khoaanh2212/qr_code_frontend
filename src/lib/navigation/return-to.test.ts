@@ -6,6 +6,8 @@ describe("safeReturnTo", () => {
     ["/app", "/app"],
     ["/app/codes/1?tab=stats#top", "/app/codes/1?tab=stats#top"],
     ["/wifi-qr-code", "/wifi-qr-code"],
+    ["/vi/app", "/vi/app"],
+    ["/de/app/codes/1", "/de/app/codes/1"],
   ])("keeps the in-site path %s", (raw, want) => {
     expect(safeReturnTo(raw)).toBe(want);
   });
@@ -28,6 +30,9 @@ describe("safeReturnTo", () => {
     "/login",
     "/login?return_to=/app",
     "/register",
+    "/vi/login",
+    "/de/register?x=1",
+    "/vi/%6cogin",
     "/.//evil.com",
     "/..//evil.com",
     "/a/..//evil.com",

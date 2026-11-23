@@ -17,15 +17,27 @@ pricing) and the logged-in app. The API is the Go backend `qrcode_generator_back
 - When an API request or response shape changes in the backend, update `src/lib/api/types.ts` in the
   same change.
 
+## Languages (mandatory)
+
+- Six languages: en (at the root, no prefix), vi, es, de, fr, pt (prefixed). See README,
+  "Languages".
+- No user-visible text in components: every string comes from `src/i18n/messages`. A new key is
+  added to all six catalogs in the same change (`tsc` fails otherwise); keep `{placeholders}`
+  identical.
+- Links are built with `localizePath(locale, path)`; never hard-code "/login" in a link.
+- API error messages are English: show a translated text chosen by the error `code`.
+- Public pages export `alternates: alternatesFor(locale, path)` and are listed in
+  `src/app/sitemap.ts`.
+
 ## Structure (mandatory)
 
 Two root layouts, one per security surface. Navigating between them is always a full page load, so
 a page never keeps the other surface's Content Security Policy.
 
-- `src/app/(marketing)/`: public pages. Prerendered and cached at the CDN, indexed. CSP without a
+- `src/app/[lang]/(marketing)/`: public pages. Prerendered and cached at the CDN, indexed. CSP without a
   nonce. Never render user-supplied content; use `publicApi` only (no cookies); never import
   `src/features/auth`.
-- `src/app/(private)/`: auth pages (`(auth)/`) and the logged-in app (`app/`, served at `/app`).
+- `src/app/[lang]/(private)/`: auth pages (`(auth)/`) and the logged-in app (`app/`, served at `/app`).
   Rendered per request with a nonce-based CSP, `noindex`, `Cache-Control: private, no-store`. Use
   `sessionApi`. No third-party scripts.
 - A new private path prefix must be added to `PRIVATE_PREFIXES` in `src/lib/security/csp.ts`,
@@ -73,6 +85,7 @@ Load the matching skill before starting work of that kind.
 | Iterating on a design with scoring | `ecc:gan-design` |
 | Accessibility | `ecc:accessibility`, `ecc:frontend-a11y` (agent `ecc:a11y-architect`) |
 | SEO (public pages) | `ecc:seo` (agent `ecc:seo-specialist`) |
+| Translations, adding or changing message keys | `ecc:i18n-sync` |
 | Calling or changing an API contract | `ecc:api-design` |
 | Build or type errors | `ecc:react-build` (agent `ecc:react-build-resolver`) |
 | After changing code | `ecc:react-review` (agents `ecc:react-reviewer`, `ecc:typescript-reviewer`) |

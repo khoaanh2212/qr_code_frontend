@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, sessionApi } from "@/lib/api";
+import { en } from "@/i18n/messages/en";
 import { RequireSession, useUser } from "./require-session";
 
 function Name() {
@@ -34,7 +35,7 @@ afterEach(() => {
 function renderGuard() {
   return render(
     <StrictMode>
-      <RequireSession>
+      <RequireSession messages={en.session}>
         <Name />
       </RequireSession>
     </StrictMode>,
@@ -54,6 +55,13 @@ describe("RequireSession", () => {
     await vi.waitFor(() => expect(replace).toHaveBeenCalled());
     expect(replace).toHaveBeenCalledWith("/login?return_to=%2Fapp%2Fcodes%3Ftab%3Dstats");
     expect(screen.queryByText(/hello/)).toBeNull();
+  });
+
+  it("keeps the language of the page in the login redirect", async () => {
+    vi.stubGlobal("location", { pathname: "/vi/app", search: "", replace });
+    vi.spyOn(sessionApi, "request").mockRejectedValue(new ApiError(401, "unauthenticated", "no"));
+    renderGuard();
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/vi/login?return_to=%2Fvi%2Fapp"));
   });
 
   it("ignores the request aborted by the strict-mode remount", async () => {

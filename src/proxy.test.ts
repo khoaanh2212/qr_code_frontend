@@ -11,7 +11,7 @@ function scriptSrc(csp: string | null): string {
 }
 
 describe("proxy", () => {
-  it.each(["/app", "/app/codes/1", "/login", "/verify-email"])("locks down the private page %s", (path) => {
+  it.each(["/app", "/app/codes/1", "/login", "/verify-email", "/vi/app", "/de/login"])("locks down the private page %s", (path) => {
     const res = run(path);
     expect(scriptSrc(res.headers.get("Content-Security-Policy"))).toMatch(/'nonce-[^']+' 'strict-dynamic'$/);
     expect(res.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
@@ -33,7 +33,7 @@ describe("proxy", () => {
     expect(a).not.toBe(b);
   });
 
-  it.each(["/", "/wifi-qr-code", "/apple"])("leaves the public page %s cacheable and without a nonce", (path) => {
+  it.each(["/", "/wifi-qr-code", "/apple", "/vi", "/fr/wifi-qr-code"])("leaves the public page %s cacheable and without a nonce", (path) => {
     const res = run(path);
     expect(res.headers.get("Content-Security-Policy")).not.toContain("nonce-");
     expect(res.headers.get("X-Robots-Tag")).toBeNull();
@@ -45,4 +45,33 @@ describe("proxy", () => {
     expect(res.headers.get("Content-Security-Policy")).toContain("nonce-");
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
   });
+
+  it.each([
+    ["/", "/en"],
+    ["/login", "/en/login"],
+    ["/app/codes/1", "/en/app/codes/1"],
+    ["/wifi-qr-code", "/en/wifi-qr-code"],
+  ])("serves the English page for %s from %s", (path, internal) => {
+    const res = run(path + "?x=1");
+    expect(new URL(res.headers.get("x-middleware-rewrite") ?? "").pathname).toBe(internal);
+    expect(new URL(res.headers.get("x-middleware-rewrite") ?? "").search).toBe("?x=1");
+  });
+
+  it.each(["/vi", "/vi/login", "/de/app"])("passes the prefixed path %s through", (path) => {
+    const res = run(path);
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it.each([
+    ["/en", "/"],
+    ["/en/login?return_to=%2Fapp", "/login?return_to=%2Fapp"],
+    ["/en/app/codes/1", "/app/codes/1"],
+  ])("redirects %s to the unprefixed URL %s", (path, want) => {
+    const res = run(path);
+    expect(res.status).toBe(308);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.pathname + location.search).toBe(want);
+  });
 });
+

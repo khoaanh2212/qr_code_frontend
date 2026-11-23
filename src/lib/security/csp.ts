@@ -8,9 +8,14 @@
  *   scripts, hence 'unsafe-inline'. These pages must never render user-supplied content.
  */
 
+import { splitLocale } from "@/i18n/config";
+
 export type Surface = "marketing" | "private";
 
-/** Path prefixes rendered as "private". Matched on whole segments: "/app" but not "/apple". */
+/**
+ * Path prefixes rendered as "private", without the locale prefix. Matched on whole segments:
+ * "/app" but not "/apple"; "/vi/app" is private too.
+ */
 export const PRIVATE_PREFIXES = [
   "/app",
   "/login",
@@ -20,11 +25,13 @@ export const PRIVATE_PREFIXES = [
   "/verify-email",
 ] as const;
 
+export function isPrivatePath(path: string): boolean {
+  return PRIVATE_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix + "/"));
+}
+
+/** The surface of a public URL path, with or without a locale prefix. */
 export function surfaceFor(pathname: string): Surface {
-  for (const prefix of PRIVATE_PREFIXES) {
-    if (pathname === prefix || pathname.startsWith(prefix + "/")) return "private";
-  }
-  return "marketing";
+  return isPrivatePath(splitLocale(pathname).rest) ? "private" : "marketing";
 }
 
 export interface CspOptions {

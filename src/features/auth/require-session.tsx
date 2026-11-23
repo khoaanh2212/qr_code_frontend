@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { localizePath, splitLocale } from "@/i18n/config";
+import type { Messages } from "@/i18n/messages";
 import { ApiError, sessionApi } from "@/lib/api";
 import type { MeResponse, User } from "@/lib/api/types";
 
@@ -15,10 +17,11 @@ export function useUser(): User {
 
 type State = { kind: "loading" } | { kind: "ready"; user: User } | { kind: "error" };
 
-/** Full page load to the login page (it uses the other root layout anyway). */
+/** Full page load to the login page in the current language. */
 export function redirectToLogin(): void {
   const here = window.location.pathname + window.location.search;
-  window.location.replace(`/login?return_to=${encodeURIComponent(here)}`);
+  const { locale } = splitLocale(window.location.pathname);
+  window.location.replace(`${localizePath(locale, "/login")}?return_to=${encodeURIComponent(here)}`);
 }
 
 /**
@@ -26,7 +29,13 @@ export function redirectToLogin(): void {
  * `return_to` back here. This is a convenience, not a security boundary: the API authorizes
  * every request itself, and server components under /app must not fetch per-user data.
  */
-export function RequireSession({ children }: { children: React.ReactNode }) {
+export function RequireSession({
+  messages: t,
+  children,
+}: {
+  messages: Messages["session"];
+  children: React.ReactNode;
+}) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
 
@@ -46,11 +55,11 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
     return () => abort.abort();
   }, [attempt]);
 
-  if (state.kind === "loading") return <p className="p-4 text-sm">Loading…</p>;
+  if (state.kind === "loading") return <p className="p-4 text-sm">{t.loading}</p>;
   if (state.kind === "error") {
     return (
       <div className="flex flex-col items-start gap-2 p-4 text-sm">
-        <p role="alert">We could not load your account.</p>
+        <p role="alert">{t.loadFailed}</p>
         <button
           type="button"
           className="underline"
@@ -59,7 +68,7 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
             setAttempt((n) => n + 1);
           }}
         >
-          Try again
+          {t.retry}
         </button>
       </div>
     );

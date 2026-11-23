@@ -23,13 +23,37 @@ already allows http://localhost:3000 (`CORS_ALLOWED_ORIGINS`).
 | `pnpm test` | Unit tests (Vitest) |
 | `pnpm build` / `pnpm start` | Production build and server |
 
+## Languages
+
+English, Tiếng Việt, Español, Deutsch, Français, Português. English lives at the root (`/`,
+`/login`); every other language has a prefix (`/vi`, `/vi/login`). Internally every route is under
+`src/app/[lang]`: `src/proxy.ts` rewrites unprefixed URLs to `/en/...` and redirects `/en/...` to
+the unprefixed URL, so each page has one URL. There is no redirect based on `Accept-Language`:
+pages stay cacheable and crawlers see what they asked for; visitors pick a language with the
+switcher. Public pages carry `hreflang` alternates (`x-default` = English) and the sitemap lists
+every language.
+
+Translations live in `src/i18n/messages/<locale>.ts`. English (`en.ts`) is the reference: the
+other files must have exactly its keys (`satisfies Messages`, checked by `tsc`) and the same
+`{placeholders}` (checked by a unit test). Server components read them with `getMessages()`;
+client components receive the part they need as props.
+
+The global 404 page has no route and so no locale on the server: it renders English and switches
+to the language of the URL in the browser, with its few texts in `src/i18n/not-found.ts`.
+
+> The `es`, `de`, `fr` and `pt` texts were written without a native speaker's review. Have them
+> reviewed before launch.
+
+To add a language: add it to `LOCALES` and `LOCALE_NAMES` in `src/i18n/config.ts`, add
+`src/i18n/messages/<locale>.ts`, and register it in `src/i18n/messages/index.ts`.
+
 ## Site structure
 
 Public pages and the logged-in app are two root layouts in one repository and one domain:
 
-| | `src/app/(marketing)` | `src/app/(private)` |
+| | `src/app/[lang]/(marketing)` | `src/app/[lang]/(private)` |
 |---|---|---|
-| Paths | `/`, per-type pages, pricing, legal | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`, `/app/...` |
+| Paths (any language prefix) | `/`, per-type pages, pricing, legal | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`, `/app/...` |
 | Rendering | Prerendered, cached at the CDN | Per request |
 | Login | Never required | Required under `/app` |
 | CSP | `script-src 'self' 'unsafe-inline'` (Next.js inline payload; a nonce cannot live in cached HTML) | `script-src 'nonce-…' 'strict-dynamic'`, fresh per request |
@@ -42,13 +66,15 @@ never keeps the other surface's CSP after a client-side navigation.
 ```
 src/
   app/
-    (marketing)/       public pages, root layout
-    (private)/         root layout rendered per request (nonce)
-      (auth)/          login, register, password reset, email verification
-      app/             /app/... – the logged-in app
+    [lang]/
+      (marketing)/     public pages, root layout, prerendered per language
+      (private)/       root layout rendered per request (nonce)
+        (auth)/        login, register, password reset, email verification
+        app/           /app/... – the logged-in app
     global-not-found.tsx
     robots.ts, sitemap.ts
-  proxy.ts             CSP per surface, noindex and no-store for private pages
+  proxy.ts             language routing, CSP per surface, noindex and no-store for private pages
+  i18n/                locales, message catalogs, hreflang helpers
   features/            one folder per feature (auth, dashboard, qr-editor, ...)
   lib/                 API client, config, security (CSP), navigation (return_to)
   components/          design system and the shared <html> document

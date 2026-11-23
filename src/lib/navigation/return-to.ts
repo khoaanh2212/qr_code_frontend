@@ -1,3 +1,4 @@
+import { splitLocale } from "@/i18n/config";
 import { PRIVATE_PREFIXES } from "@/lib/security/csp";
 
 const MAX_LENGTH = 2048;
@@ -9,7 +10,7 @@ const AUTH_PAGES = PRIVATE_PREFIXES.filter((p) => p !== "/app");
  * after login and sign-up, so it must never produce an open redirect: no scheme, no host, no
  * protocol-relative "//host", no backslashes (browsers read "/\host" as "//host"), no control
  * characters (the URL parser strips tabs and newlines, which can turn "/\t/host" into
- * "//host"). Auth pages are refused too, so a login never loops back to itself.
+ * "//host"). Auth pages are refused too, in every locale, so a login never loops back to itself.
  */
 export function safeReturnTo(raw: string | null | undefined, fallback = "/app"): string {
   if (!raw || raw.length > MAX_LENGTH) return fallback;
@@ -33,7 +34,8 @@ export function safeReturnTo(raw: string | null | undefined, fallback = "/app"):
     return fallback;
   }
   if (/[\\]|\/\.{1,2}(\/|$)|\/\//.test(decoded) || decoded !== decoded.trim()) return fallback;
-  if (AUTH_PAGES.some((p) => decoded === p || decoded.startsWith(p + "/"))) return fallback;
+  const { rest } = splitLocale(decoded);
+  if (AUTH_PAGES.some((p) => rest === p || rest.startsWith(p + "/"))) return fallback;
 
   const out = url.pathname + url.search + url.hash;
   // Last guard: whatever happened above, never hand back a protocol-relative URL.
