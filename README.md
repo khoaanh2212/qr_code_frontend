@@ -198,6 +198,11 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     with Turnstile, and sends `POST /v1/reports` without cookies. It promises a review, not an
     outcome (reports never switch a code off). Linked from the public footer and from the short
     link's notice pages.
-14. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+14. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
+    server so the generator is in the prerendered HTML instead of a skeleton (better LCP and first
+    input). It needs a server-side API URL (e.g. `API_INTERNAL_URL=http://api:8080` in compose),
+    a fallback to today's browser fetch when the API is unreachable at build or render time
+    (without caching the failure), and a cache lifetime for the catalog (how long a new backend
+    type may take to appear). Proposed in the 2026-11-24 review, postponed by decision. The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.
