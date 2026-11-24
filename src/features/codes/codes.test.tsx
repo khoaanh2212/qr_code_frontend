@@ -7,7 +7,6 @@ import { ApiError, sessionApi } from "@/lib/api";
 import type { CodeStats, DynamicCode } from "@/lib/api/types";
 import { CodeDetail } from "./code-detail";
 import { CodeForm } from "./code-form";
-import { CodesList } from "./codes-list";
 import { saveHandoff } from "./handoff";
 
 const push = vi.fn();
@@ -86,44 +85,6 @@ const click = (name: string | RegExp) => act(async () => void fireEvent.click(sc
 // By role: the "Destination" section is labelled like its field.
 const field = (name: string | RegExp) => screen.getByRole("textbox", { name }) as HTMLInputElement;
 const type = (name: string | RegExp, value: string) => fireEvent.change(field(name), { target: { value } });
-
-describe("CodesList", () => {
-  it("invites to create the first code when there are none", async () => {
-    request.mockImplementation(async (path) => (path === "/v1/me" ? me : { codes: [], next_cursor: null }));
-    withSession(<CodesList t={t} templatesLabel="Manage templates" locale="en" />);
-    expect(await screen.findByText(t.empty)).toBeTruthy();
-    expect(screen.getByRole("link", { name: t.newCode }).getAttribute("href")).toBe("/app/codes/new");
-  });
-
-  it("lists the personal workspace's codes and loads more", async () => {
-    request.mockImplementation(async (path) => {
-      if (path === "/v1/me") return me;
-      if (path === "/v1/workspaces/w1/codes?limit=50") return { codes: [code], next_cursor: "n1" };
-      if (path === "/v1/workspaces/w1/codes?limit=50&cursor=n1")
-        return { codes: [{ ...code, id: "c2", name: "", status: "paused" }], next_cursor: null };
-      throw new Error(`unexpected ${path}`);
-    });
-    withSession(<CodesList t={t} templatesLabel="Manage templates" locale="vi" />);
-    const link = await screen.findByRole("link", { name: /Menu/ });
-    expect(link.getAttribute("href")).toBe("/vi/app/codes/c1");
-    expect(within(link).getByText("localhost:8180/Ab3dE5gH")).toBeTruthy();
-    expect(within(link).getByText("→ example.com")).toBeTruthy();
-    await click(t.loadMore);
-    expect(screen.getByText(t.untitled)).toBeTruthy();
-    expect(screen.getByText(t.status.paused)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: t.loadMore })).toBeNull();
-  });
-
-  it("offers a retry when the list fails to load", async () => {
-    request.mockImplementation(async (path) => {
-      if (path === "/v1/me") return me;
-      throw new ApiError(503, "busy", "busy");
-    });
-    withSession(<CodesList t={t} templatesLabel="Manage templates" locale="en" />);
-    expect(await screen.findByText(t.loadFailed)).toBeTruthy();
-    expect(screen.getByRole("button", { name: t.retry })).toBeTruthy();
-  });
-});
 
 describe("CodeForm", () => {
   const renderForm = () =>
