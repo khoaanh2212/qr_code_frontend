@@ -178,6 +178,11 @@ describe("SearchField and Select", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "name" } });
     expect(onSort).toHaveBeenCalledWith("name");
   });
+
+  it("leaves the chevron to the global select style, so it is never drawn twice", () => {
+    const { container } = render(<Select label="Sort by" value="a" onChange={() => {}} options={[{ value: "a", label: "A" }]} />);
+    expect(container.querySelector("svg")).toBeNull();
+  });
 });
 
 describe("EmptyState", () => {
