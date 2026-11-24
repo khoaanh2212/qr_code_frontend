@@ -53,7 +53,7 @@ Public pages and the logged-in app are two root layouts in one repository and on
 
 | | `src/app/[lang]/(marketing)` | `src/app/[lang]/(private)` |
 |---|---|---|
-| Paths (any language prefix) | `/`, per-type pages, pricing, legal | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`, `/app/...` |
+| Paths (any language prefix) | `/`, per-type pages, pricing, legal | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`, `/report`, `/app/...` |
 | Rendering | Prerendered, cached at the CDN | Per request |
 | Login | Never required | Required under `/app` |
 | CSP | `script-src 'self' 'unsafe-inline'` (Next.js inline payload; a nonce cannot live in cached HTML) | `script-src 'nonce-…' 'strict-dynamic'`, fresh per request |
@@ -193,6 +193,11 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     sign-in), plus `/app/templates` with previews, rename and delete. Applying copies the design.
 12. ~~Restaurant frames~~ Done (backend item 49): beer, chef's hat, cloche, takeaway cup, menu and
     receipt, as a "Restaurants & cafés" group in the frame picker.
-13. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+13. ~~Abuse reports~~ Done (backend item 38, `src/features/report`): `/report` takes a short link
+    (the whole link or its 8-character code; `?code=` prefills it), a reason and optional details,
+    with Turnstile, and sends `POST /v1/reports` without cookies. It promises a review, not an
+    outcome (reports never switch a code off). Linked from the public footer and from the short
+    link's notice pages.
+14. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.
