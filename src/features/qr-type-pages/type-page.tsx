@@ -36,7 +36,7 @@ export async function TypePage({ type }: { type: TypePageType }) {
           <h1 className="text-3xl font-semibold tracking-tight text-balance">{text.title}</h1>
           <p className="max-w-prose text-pretty text-muted">{text.intro}</p>
         </header>
-        <QrEditor t={t.generator} initialType={type} locale={locale} />
+        <QrEditor t={t.generator} templates={t.templates} initialType={type} locale={locale} />
       </div>
       <TypeGuide t={t.typePages} type={type} />
       <TypeLinks locale={locale} t={t.typePages} current={type} />

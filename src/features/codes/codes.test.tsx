@@ -90,7 +90,7 @@ const type = (name: string | RegExp, value: string) => fireEvent.change(field(na
 describe("CodesList", () => {
   it("invites to create the first code when there are none", async () => {
     request.mockImplementation(async (path) => (path === "/v1/me" ? me : { codes: [], next_cursor: null }));
-    withSession(<CodesList t={t} locale="en" />);
+    withSession(<CodesList t={t} templatesLabel="Manage templates" locale="en" />);
     expect(await screen.findByText(t.empty)).toBeTruthy();
     expect(screen.getByRole("link", { name: t.newCode }).getAttribute("href")).toBe("/app/codes/new");
   });
@@ -103,7 +103,7 @@ describe("CodesList", () => {
         return { codes: [{ ...code, id: "c2", name: "", status: "paused" }], next_cursor: null };
       throw new Error(`unexpected ${path}`);
     });
-    withSession(<CodesList t={t} locale="vi" />);
+    withSession(<CodesList t={t} templatesLabel="Manage templates" locale="vi" />);
     const link = await screen.findByRole("link", { name: /Menu/ });
     expect(link.getAttribute("href")).toBe("/vi/app/codes/c1");
     expect(within(link).getByText("localhost:8180/Ab3dE5gH")).toBeTruthy();
@@ -119,7 +119,7 @@ describe("CodesList", () => {
       if (path === "/v1/me") return me;
       throw new ApiError(503, "busy", "busy");
     });
-    withSession(<CodesList t={t} locale="en" />);
+    withSession(<CodesList t={t} templatesLabel="Manage templates" locale="en" />);
     expect(await screen.findByText(t.loadFailed)).toBeTruthy();
     expect(screen.getByRole("button", { name: t.retry })).toBeTruthy();
   });
@@ -127,7 +127,7 @@ describe("CodesList", () => {
 
 describe("CodeForm", () => {
   const renderForm = () =>
-    withSession(<CodeForm t={t} generator={en.generator} auth={auth} locale="en" captcha={captcha} />);
+    withSession(<CodeForm t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" captcha={captcha} />);
 
   it("creates a code with the handed-over destination and opens it", async () => {
     saveHandoff({ url: "https://example.com/promo", fg: "#112233", bg: "#ffffff" });
@@ -176,7 +176,8 @@ describe("CodeForm", () => {
     await screen.findByRole("textbox", { name: new RegExp(t.target) });
     type(new RegExp(t.target), "https://example.com");
     await click(t.create);
-    expect(screen.getByRole("alert").textContent).toBe(t.errors.verifyFirst);
+    // Among the alerts (the templates bar has its own), the form's says why.
+    expect(screen.getAllByRole("alert").some((a) => a.textContent === t.errors.verifyFirst)).toBe(true);
     expect(push).not.toHaveBeenCalled();
   });
 });
@@ -194,7 +195,7 @@ describe("CodeDetail", () => {
 
   it("shows the short link, scans, top countries and devices", async () => {
     detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
     expect(await screen.findByRole("heading", { name: "Menu", level: 1 })).toBeTruthy();
     expect(screen.getByText(code.short_url)).toBeTruthy();
     expect(await screen.findByText("3 scans")).toBeTruthy();
@@ -209,7 +210,7 @@ describe("CodeDetail", () => {
 
   it("changes the destination and pauses the code", async () => {
     detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
     type(new RegExp(t.target), "https://example.com/new");
     await act(async () => void fireEvent.click(screen.getAllByRole("button", { name: t.save })[0]));
@@ -226,7 +227,7 @@ describe("CodeDetail", () => {
 
   it("restyles the code and draws its image again", async () => {
     detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
     const images = vi.mocked(sessionApi.requestBlob).mock.calls.length;
     await act(async () => void fireEvent.click(screen.getByRole("radio", { name: en.generator.design.styles.modules.dots })));
@@ -243,7 +244,7 @@ describe("CodeDetail", () => {
 
   it("deletes only after confirming, then returns to the list", async () => {
     detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
     await click(t.deleteStart);
     expect(requestVoid).not.toHaveBeenCalled();
@@ -254,7 +255,7 @@ describe("CodeDetail", () => {
 
   it("leaves a locked code read-only", async () => {
     detailApi({ status: "locked" });
-    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
     expect(screen.getByText(t.lockedIntro)).toBeTruthy();
     expect(field(new RegExp(t.target)).matches(":disabled")).toBe(true); // via the fieldset
@@ -267,7 +268,7 @@ describe("CodeDetail", () => {
       if (path === "/v1/me") return me;
       throw new ApiError(404, "not_found", "nope");
     });
-    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
     expect(await screen.findByText(t.notFound)).toBeTruthy();
   });
 });

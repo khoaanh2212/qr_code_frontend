@@ -5,7 +5,8 @@ import { LogoIconPicker } from "@/features/qr-editor/logo-icons";
 import { StylePicker } from "@/features/qr-editor/style-picker";
 import type { Messages } from "@/i18n/messages";
 import { isScannable } from "@/lib/qr/color";
-import { lookScannable, type CodeLook } from "./design";
+import { TemplateBar } from "@/features/templates/template-bar";
+import { designFromLook, lookFromDesign, lookScannable, type CodeLook } from "./design";
 import type { CodeField } from "./errors";
 
 /** Colors and style of a dynamic code, with the contrast and caption messages. */
@@ -15,16 +16,27 @@ export function LookFields({
   look,
   onChange,
   error,
+  templates,
 }: {
   t: Messages["codes"];
   generator: Messages["generator"];
   look: CodeLook;
   onChange: (update: (l: CodeLook) => CodeLook) => void;
   error?: { field?: CodeField; message: string } | null;
+  /** Offers the workspace's design templates above the fields. */
+  templates?: { t: Messages["templates"]; workspaceId: string };
 }) {
   const contrastOk = isScannable(look.fg, look.bg);
   return (
     <div className="flex flex-col gap-5">
+      {templates && (
+        <TemplateBar
+          t={templates.t}
+          workspaceId={templates.workspaceId}
+          currentDesign={() => designFromLook(look)}
+          onApply={(d) => onChange(() => lookFromDesign(d))}
+        />
+      )}
       <fieldset className="flex flex-col gap-3">
         <legend className="sr-only">
           {t.foreground}, {t.background}

@@ -187,6 +187,10 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
 10. ~~Built-in icons, JPG and PDF~~ Done (backend item 47): "Or pick an icon" under the logo upload
     (eight icons, exclusive with an uploaded logo, error correction locked to H), and JPG and PDF
     next to PNG and SVG in the generator and on a code's page.
-11. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+11. ~~Design templates~~ Done (backend item 48, `src/features/templates`): "Apply a template" and
+    "Save as template" in the new-code form, a code's Design section and the generator (the
+    generator reads the session only when the templates section is opened; signed out, it offers
+    sign-in), plus `/app/templates` with previews, rename and delete. Applying copies the design.
+12. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 import { saveHandoff } from "@/features/codes/handoff";
+import { applyTemplate, templateFromDesign } from "@/features/templates/convert";
+import { GeneratorTemplates } from "@/features/templates/generator-templates";
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { buildRenderRequest, missingRequired, requestKey } from "@/lib/qr/render-request";
@@ -47,7 +49,18 @@ const PREVIEW_SIZE = 512;
  * Public and session-free: talks to the API through `publicApi` only.
  * `initialType` opens it on that type (per-type pages); unknown types fall back to the first.
  */
-export function QrEditor({ t, initialType, locale }: { t: T; initialType?: string; locale: Locale }) {
+export function QrEditor({
+  t,
+  templates,
+  initialType,
+  locale,
+}: {
+  t: T;
+  /** Messages of design templates; without them the generator offers none. */
+  templates?: Messages["templates"];
+  initialType?: string;
+  locale: Locale;
+}) {
   const { state, reload } = useQrTypes();
 
   if (state.kind === "loading") return <EditorSkeleton label={t.loading} />;
@@ -67,10 +80,22 @@ export function QrEditor({ t, initialType, locale }: { t: T; initialType?: strin
       </div>
     );
   }
-  return <Editor t={t} types={state.catalog.types} initialType={initialType} locale={locale} />;
+  return <Editor t={t} templates={templates} types={state.catalog.types} initialType={initialType} locale={locale} />;
 }
 
-function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; initialType?: string; locale: Locale }) {
+function Editor({
+  t,
+  templates,
+  types,
+  initialType,
+  locale,
+}: {
+  t: T;
+  templates?: Messages["templates"];
+  types: QrType[];
+  initialType?: string;
+  locale: Locale;
+}) {
   const headingIds = { content: useId(), design: useId() };
   const [typeName, setTypeName] = useState(
     () => types.find((x) => x.type === initialType)?.type ?? types[0].type,
@@ -214,6 +239,14 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
         <h2 id={headingIds.design} className="text-lg font-semibold">
           {t.sections.design}
         </h2>
+        {templates && (
+          <GeneratorTemplates
+            t={templates}
+            locale={locale}
+            currentDesign={() => templateFromDesign(design)}
+            onApply={(d) => setDesign((current) => applyTemplate(current, d))}
+          />
+        )}
         <DesignPanel
           t={t}
           design={design}

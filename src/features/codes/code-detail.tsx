@@ -25,12 +25,18 @@ import { ScanChart, TopList } from "./scan-chart";
 import { StatusBadge } from "./status-badge";
 
 type T = Messages["codes"];
-type Props = { t: T; generator: Messages["generator"]; auth: AuthMessages; locale: Locale };
+type Props = {
+  t: T;
+  generator: Messages["generator"];
+  templates: Messages["templates"];
+  auth: AuthMessages;
+  locale: Locale;
+};
 
 type Load = { kind: "loading" } | { kind: "missing" } | { kind: "error" } | { kind: "ready"; code: DynamicCode };
 
 /** One dynamic code: its image and short link, destination, status, scans, and deletion. */
-export function CodeDetail({ t, generator, auth, locale }: Props) {
+export function CodeDetail({ t, generator, templates, auth, locale }: Props) {
   const { id } = useParams<{ id: string }>();
   const workspace = usePersonalWorkspace();
   const [load, setLoad] = useState<Load>({ kind: "loading" });
@@ -94,7 +100,7 @@ export function CodeDetail({ t, generator, auth, locale }: Props) {
       <CodeCard t={t} ws={ws} code={code} />
       <div>
         <DestinationSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
-        <DesignSection t={t} generator={generator} auth={auth} ws={ws} code={code} onSaved={setCode} />
+        <DesignSection t={t} generator={generator} templates={templates} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <StatusSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <ScansSection t={t} locale={locale} ws={ws} code={code} />
         <DeleteSection t={t} auth={auth} ws={ws} code={code} locale={locale} />
@@ -281,7 +287,15 @@ function DestinationSection({ t, auth, ws, code, onSaved }: EditProps) {
   );
 }
 
-function DesignSection({ t, generator, auth, ws, code, onSaved }: EditProps & { generator: Messages["generator"] }) {
+function DesignSection({
+  t,
+  generator,
+  templates,
+  auth,
+  ws,
+  code,
+  onSaved,
+}: EditProps & { generator: Messages["generator"]; templates: Messages["templates"] }) {
   const [look, setLook] = useState<CodeLook>(() => lookFromDesign(code.design));
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -323,6 +337,7 @@ function DesignSection({ t, generator, auth, ws, code, onSaved }: EditProps & { 
               setError(null); // a field message describes the old value
             }}
             error={error}
+            templates={{ t: templates, workspaceId: ws }}
           />
           <FormAlert message={error && !error.field ? error.message : undefined} />
           <div className="flex flex-wrap items-center gap-4">

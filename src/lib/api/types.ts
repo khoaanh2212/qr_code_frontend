@@ -57,6 +57,15 @@ export interface CodeDesign {
 
 export type CodeStatus = "active" | "paused" | "locked";
 
+/** A named design of a workspace, applied to codes by copying it. */
+export interface DesignTemplate {
+  id: string;
+  name: string;
+  design: CodeDesign;
+  created_at: string;
+  updated_at: string;
+}
+
 /** A dynamic code: a short link that redirects to target_url. */
 export interface DynamicCode {
   id: string;

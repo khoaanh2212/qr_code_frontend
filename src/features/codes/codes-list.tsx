@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, Shapes } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ButtonLink, FormAlert } from "@/features/auth/form-bits";
@@ -20,7 +20,7 @@ type State =
   | { kind: "ready"; codes: DynamicCode[]; next: string | null; loadingMore: boolean };
 
 /** The dashboard: the personal workspace's dynamic codes, newest first. */
-export function CodesList({ t, locale }: { t: T; locale: Locale }) {
+export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel: string; locale: Locale }) {
   const workspace = usePersonalWorkspace();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -69,6 +69,14 @@ export function CodesList({ t, locale }: { t: T; locale: Locale }) {
           <h1 className="text-2xl font-semibold">{t.title}</h1>
           <p className="max-w-prose text-sm text-pretty text-muted">{t.intro}</p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href={localizePath(locale, "/app/templates")}
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-control bg-surface px-3 text-sm font-medium hover:bg-foreground/5"
+          >
+            <Shapes aria-hidden="true" className="size-4" />
+            {templatesLabel}
+          </Link>
         {shown.kind === "ready" && shown.codes.length > 0 && (
           <Link
             href={newHref}
@@ -78,6 +86,7 @@ export function CodesList({ t, locale }: { t: T; locale: Locale }) {
             {t.newCode}
           </Link>
         )}
+        </div>
       </header>
 
       {shown.kind === "loading" && <p role="status" className="text-sm text-muted">{t.title}…</p>}

@@ -24,12 +24,14 @@ export const NAME_MAX = 100;
 export function CodeForm({
   t,
   generator,
+  templates,
   auth,
   locale,
   captcha,
 }: {
   t: Messages["codes"];
   generator: Messages["generator"];
+  templates: Messages["templates"];
   auth: AuthMessages;
   locale: Locale;
   captcha: CaptchaConfig;
@@ -134,6 +136,7 @@ export function CodeForm({
             if (error?.field === "colors" || error?.field === "frame_text") setError(null);
           }}
           error={error}
+          templates={workspace ? { t: templates, workspaceId: workspace.id } : undefined}
         />
         <Captcha
           config={captcha}
