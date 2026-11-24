@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "@/i18n/messages/en";
+import { config } from "@/lib/config";
 import { GoogleSignIn, googleStartUrl } from "./google";
 
 afterEach(() => {
@@ -12,7 +13,8 @@ afterEach(() => {
 describe("googleStartUrl", () => {
   it("points at the API with a return path, and asks for a re-authentication when told", () => {
     const login = new URL(googleStartUrl({ returnTo: "/vi/app" }));
-    expect(login.origin).toBe("http://localhost:8080");
+    // The configured API (CI sets its own address).
+    expect(login.origin).toBe(new URL(config.apiBaseUrl).origin);
     expect(login.pathname).toBe("/v1/auth/google/start");
     expect(login.searchParams.get("return_to")).toBe("/vi/app");
     expect(login.searchParams.has("intent")).toBe(false);
