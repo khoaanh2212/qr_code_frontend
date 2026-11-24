@@ -10,7 +10,7 @@ import { ECC_LEVELS, MARGIN_MAX, type Ecc, type QrDesign } from "@/lib/qr/types"
 
 type T = Messages["generator"];
 
-function ColorInput({
+export function ColorInput({
   t,
   label,
   value,

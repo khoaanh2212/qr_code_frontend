@@ -4,10 +4,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { localizePath, splitLocale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError, sessionApi } from "@/lib/api";
-import type { MeResponse, User } from "@/lib/api/types";
+import type { MeResponse, User, Workspace } from "@/lib/api/types";
 
 interface Session {
   user: User;
+  workspaces: Workspace[];
   /** Replaces the cached user after an update (e.g. a new display name). */
   setUser: (user: User) => void;
 }
@@ -25,12 +26,17 @@ export function useUser(): User {
   return useSession().user;
 }
 
+/** The caller's personal workspace, where their dynamic codes live. */
+export function usePersonalWorkspace(): Workspace | undefined {
+  return useSession().workspaces.find((w) => w.personal);
+}
+
 /** Updates the cached user after a change made through the API. */
 export function useSetUser(): (user: User) => void {
   return useSession().setUser;
 }
 
-type State = { kind: "loading" } | { kind: "ready"; user: User } | { kind: "error" };
+type State = { kind: "loading" } | { kind: "ready"; user: User; workspaces: Workspace[] } | { kind: "error" };
 
 /** Full page load to the login page in the current language. */
 export function redirectToLogin(): void {
@@ -58,7 +64,7 @@ export function RequireSession({
     const abort = new AbortController();
     sessionApi
       .request<MeResponse>("/v1/me", { signal: abort.signal })
-      .then(({ user }) => setState({ kind: "ready", user }))
+      .then(({ user, workspaces }) => setState({ kind: "ready", user, workspaces: workspaces ?? [] }))
       .catch((err: unknown) => {
         if (abort.signal.aborted) return;
         if (err instanceof ApiError && err.status === 401) {
@@ -70,8 +76,14 @@ export function RequireSession({
     return () => abort.abort();
   }, [attempt]);
 
-  const setUser = useCallback((user: User) => setState({ kind: "ready", user }), []);
-  const session = useMemo(() => (state.kind === "ready" ? { user: state.user, setUser } : null), [state, setUser]);
+  const setUser = useCallback(
+    (user: User) => setState((prev) => ({ kind: "ready", user, workspaces: prev.kind === "ready" ? prev.workspaces : [] })),
+    [],
+  );
+  const session = useMemo(
+    () => (state.kind === "ready" ? { user: state.user, workspaces: state.workspaces, setUser } : null),
+    [state, setUser],
+  );
 
   if (state.kind === "loading") return <p className="p-4 text-sm">{t.loading}</p>;
   if (state.kind === "error") {

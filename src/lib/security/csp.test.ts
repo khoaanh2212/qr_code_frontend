@@ -120,6 +120,9 @@ describe("captcha frames", () => {
     ["/app/account", true],
     ["/vi/app/account", true],
     ["/app/account/security", false],
+    ["/app/codes/new", true],
+    ["/pt/app/codes/new", true],
+    ["/app/codes", false],
     ["/registered", false],
   ])("%s hosts the captcha: %s", (path, want) => {
     expect(hostsCaptcha(path)).toBe(want);

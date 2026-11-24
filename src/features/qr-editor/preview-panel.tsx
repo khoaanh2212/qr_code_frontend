@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { format } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
+import { saveBlob as save } from "@/lib/browser/download";
 import type { RenderRequest } from "@/lib/qr/render-request";
 import { SIZE_MAX, SIZE_MIN, type QrFormat } from "@/lib/qr/types";
 import { errorText } from "./error-text";
@@ -14,18 +15,6 @@ type T = Messages["generator"];
 
 /** Why no printable code can be shown. */
 export type Blocker = "incomplete" | "invalid" | "lowContrast" | null;
-
-/** Saves a blob under `filename` through a temporary link. */
-function save(blob: Blob, filename: string) {
-  const href = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = href;
-  a.download = filename;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(href), 10_000);
-}
 
 /** Crop-mark color: the proof frame says whether what it holds can be printed. */
 const MARKS = {

@@ -165,6 +165,13 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
    password confirms its deletion with Google (`intent=reauth`, back to
    `/app/account/security?delete=confirm`). Linking Google from the account page is not offered:
    a different Google address would log in to another account.
-6. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+6. ~~Dynamic codes~~ Done (backend items 35-37, `src/features/codes`): the dashboard at `/app`
+   lists the personal workspace's codes; `/app/codes/new` creates one (Turnstile), prefilled when
+   the generator's "Make it dynamic" (website type) hands over the destination and colors through
+   sessionStorage; `/app/codes/{id}` shows the code image and short link (copy, PNG/SVG download),
+   edits destination and name, pauses and resumes, shows 30 days of scans as a bar chart (with a
+   table view) plus top countries and devices, and deletes after a confirmation. Locked codes are
+   read-only. Team workspaces and custom date ranges come later.
+7. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.

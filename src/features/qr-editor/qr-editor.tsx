@@ -1,7 +1,10 @@
 "use client";
 
-import { RotateCw } from "lucide-react";
+import { RotateCw, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useId, useMemo, useState } from "react";
+import { saveHandoff } from "@/features/codes/handoff";
+import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { isScannable } from "@/lib/qr/color";
 import { buildRenderRequest, missingRequired, requestKey } from "@/lib/qr/render-request";
@@ -28,7 +31,7 @@ const PREVIEW_SIZE = 512;
  * Public and session-free: talks to the API through `publicApi` only.
  * `initialType` opens it on that type (per-type pages); unknown types fall back to the first.
  */
-export function QrEditor({ t, initialType }: { t: T; initialType?: string }) {
+export function QrEditor({ t, initialType, locale }: { t: T; initialType?: string; locale: Locale }) {
   const { state, reload } = useQrTypes();
 
   if (state.kind === "loading") return <EditorSkeleton label={t.loading} />;
@@ -48,10 +51,10 @@ export function QrEditor({ t, initialType }: { t: T; initialType?: string }) {
       </div>
     );
   }
-  return <Editor t={t} types={state.catalog.types} initialType={initialType} />;
+  return <Editor t={t} types={state.catalog.types} initialType={initialType} locale={locale} />;
 }
 
-function Editor({ t, types, initialType }: { t: T; types: QrType[]; initialType?: string }) {
+function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; initialType?: string; locale: Locale }) {
   const headingIds = { content: useId(), design: useId() };
   const [typeName, setTypeName] = useState(
     () => types.find((x) => x.type === initialType)?.type ?? types[0].type,
@@ -142,6 +145,13 @@ function Editor({ t, types, initialType }: { t: T; types: QrType[]; initialType?
               setTouched((prev) => ({ ...prev, [`${qrType.type}.${name}`]: true }));
             }}
           />
+          {qrType.type === "url" && missing.length === 0 && problemNames.length === 0 && (
+            <MakeDynamic
+              t={t}
+              href={localizePath(locale, "/app/codes/new")}
+              onFollow={() => saveHandoff({ url: data.url ?? "", fg: design.fg, bg: design.bg })}
+            />
+          )}
         </section>
       </div>
 
@@ -170,6 +180,26 @@ function Editor({ t, types, initialType }: { t: T; types: QrType[]; initialType?
       </aside>
 
       <MobilePreviewBar t={t} src={blocker === null && !preview.error ? preview.src : null} targetId={PREVIEW_ID} />
+    </div>
+  );
+}
+
+/**
+ * The way from a static website code to a dynamic one: the destination and colors go along
+ * (sessionStorage), and login or sign-up in between returns to the new-code form.
+ */
+function MakeDynamic({ t, href, onFollow }: { t: T; href: string; onFollow: () => void }) {
+  return (
+    <div className="flex flex-col items-start gap-1.5 rounded-lg border border-dashed border-border p-4">
+      <Link
+        href={href}
+        onClick={onFollow}
+        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-control bg-surface px-3 text-sm font-medium hover:bg-foreground/5"
+      >
+        <Sparkles aria-hidden="true" className="size-4 text-accent" />
+        {t.makeDynamic}
+      </Link>
+      <p className="text-xs text-pretty text-muted">{t.makeDynamicHelp}</p>
     </div>
   );
 }

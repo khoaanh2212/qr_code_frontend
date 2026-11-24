@@ -23,7 +23,7 @@ export default async function HomePage() {
           <h1 className="text-3xl font-semibold tracking-tight text-balance">{t.home.title}</h1>
           <p className="max-w-prose text-pretty text-muted">{t.home.intro}</p>
         </header>
-        <QrEditor t={t.generator} />
+        <QrEditor t={t.generator} locale={await getLocale()} />
       </div>
       <TypeLinks locale={await getLocale()} t={t.typePages} />
     </div>
