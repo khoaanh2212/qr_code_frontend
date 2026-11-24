@@ -1,5 +1,16 @@
 import { sessionApi } from "@/lib/api";
-import type { CodeDesign, CodeEnvelope, CodesPage, CodeStats, CodeStatus, DynamicCode } from "@/lib/api/types";
+import type {
+  BulkAction,
+  BulkResponse,
+  BulkResult,
+  CodeDesign,
+  CodeEnvelope,
+  CodesPage,
+  CodeSort,
+  CodeStats,
+  CodeStatus,
+  DynamicCode,
+} from "@/lib/api/types";
 import type { QrFormat } from "@/lib/qr/types";
 
 /** Calls of the dynamic codes API (backend PLAN, items 35-37), always with the session. */
@@ -7,10 +18,29 @@ import type { QrFormat } from "@/lib/qr/types";
 const base = (workspaceId: string) => `/v1/workspaces/${encodeURIComponent(workspaceId)}/codes`;
 const one = (workspaceId: string, id: string) => `${base(workspaceId)}/${encodeURIComponent(id)}`;
 
-export async function listCodes(workspaceId: string, cursor?: string, signal?: AbortSignal): Promise<CodesPage> {
+/** Search, status filter and order of the list; omitted means "any" / newest first. */
+export interface CodeListParams {
+  q?: string;
+  status?: CodeStatus;
+  sort?: Exclude<CodeSort, "newest">;
+}
+
+/** A page of the list; `cursor` must come from the previous page of the same params. */
+export async function listCodes(workspaceId: string, params: CodeListParams = {}, cursor?: string, signal?: AbortSignal): Promise<CodesPage> {
   const q = new URLSearchParams({ limit: "50" });
+  if (params.q) q.set("q", params.q);
+  if (params.status) q.set("status", params.status);
+  if (params.sort) q.set("sort", params.sort);
   if (cursor) q.set("cursor", cursor);
   return sessionApi.request<CodesPage>(`${base(workspaceId)}?${q}`, { signal });
+}
+
+/** The most codes one bulk request takes (the API refuses more). */
+export const BULK_MAX_CODES = 100;
+
+/** Pauses, resumes or deletes up to BULK_MAX_CODES codes; a result per id, in order. */
+export async function bulkCodes(workspaceId: string, action: BulkAction, ids: readonly string[]): Promise<BulkResult[]> {
+  return (await sessionApi.request<BulkResponse>(`${base(workspaceId)}/bulk`, { method: "POST", body: { action, ids } })).results;
 }
 
 export async function getCode(workspaceId: string, id: string, signal?: AbortSignal): Promise<DynamicCode> {

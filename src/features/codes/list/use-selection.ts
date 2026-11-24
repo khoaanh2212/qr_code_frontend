@@ -20,6 +20,14 @@ export interface Selection {
 /** Multi-selection over a list whose visible items change with filters and paging. */
 export function useSelection(visibleIds: readonly string[]): Selection {
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
+  // When the visible codes change (a filter answered, codes deleted), ids no longer visible
+  // leave the selection for good: clearing the filter must not bring them back selected.
+  const [seen, setSeen] = useState(visibleIds);
+  if (seen !== visibleIds) {
+    setSeen(visibleIds);
+    const now = new Set(visibleIds);
+    if ([...picked].some((id) => !now.has(id))) setPicked(new Set([...picked].filter((id) => now.has(id))));
+  }
   const visible = useMemo(() => new Set(visibleIds), [visibleIds]);
   const ids = useMemo(() => new Set([...picked].filter((id) => visible.has(id))), [picked, visible]);
   const state: SelectionState = ids.size === 0 ? "none" : ids.size === visible.size ? "all" : "some";

@@ -1,6 +1,6 @@
 "use client";
 
-import { CornerDownRight, Download, Pause, Play, Trash2 } from "lucide-react";
+import { CornerDownRight, Download, Pause, Play, ScanLine, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { memo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,7 +8,8 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { format, localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
-import type { DynamicCode } from "@/lib/api/types";
+import { plural } from "@/i18n/plural";
+import type { DynamicCode, ListedCode } from "@/lib/api/types";
 import { formatDate } from "@/lib/format/time";
 import type { QrFormat } from "@/lib/qr/types";
 import { StatusBadge } from "../status-badge";
@@ -22,7 +23,7 @@ export interface CodeCardActions {
 }
 
 export interface CodeCardProps extends CodeCardActions {
-  code: DynamicCode;
+  code: ListedCode;
   layout: CodesView;
   workspaceId: string;
   locale: Locale;
@@ -100,6 +101,10 @@ export const CodeCard = memo(function CodeCard({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
         <StatusBadge status={code.status} t={t} />
         {date && <span>{format(l.createdOn, { date })}</span>}
+        <span className="inline-flex items-center gap-1 tabular-nums">
+          <ScanLine aria-hidden="true" className="size-4" />
+          {plural(locale, l.scans, code.scans_total)}
+        </span>
       </div>
       <div className="-my-1 flex min-w-0 items-center gap-1">
         <span className="truncate font-mono text-sm">{displayUrl(code.short_url)}</span>

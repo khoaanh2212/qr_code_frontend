@@ -6,7 +6,7 @@ import { format } from "@/i18n/config";
 import { en } from "@/i18n/messages/en";
 import { plural } from "@/i18n/plural";
 import { ApiError, sessionApi } from "@/lib/api";
-import type { DynamicCode } from "@/lib/api/types";
+import type { BulkResult, ListedCode } from "@/lib/api/types";
 import { clearThumbnailCache } from "./code-thumbnail";
 import { CodesList } from "./codes-list";
 
@@ -24,7 +24,7 @@ const me = {
   },
   workspaces: [{ id: "w1", name: "Personal", personal: true, role: "owner" }],
 };
-const code = (over: Partial<DynamicCode>): DynamicCode => ({
+const code = (over: Partial<ListedCode>): ListedCode => ({
   id: "c1",
   short_code: "Ab3dE5gH",
   short_url: "http://localhost:8180/Ab3dE5gH",
@@ -34,6 +34,7 @@ const code = (over: Partial<DynamicCode>): DynamicCode => ({
   status: "active",
   created_at: "2026-11-20T10:00:00Z",
   updated_at: "2026-11-20T10:00:00Z",
+  scans_total: 0,
   ...over,
 });
 const menu = code({});
@@ -47,11 +48,18 @@ let requestVoid: MockInstance<typeof sessionApi.requestVoid>;
 let requestBlob: MockInstance<typeof sessionApi.requestBlob>;
 let replace: ReturnType<typeof vi.fn>;
 
-/** Serves /v1/me, the listed pages and PATCHes that echo the change. */
-function serve(pages: Record<string, { codes: DynamicCode[]; next_cursor: string | null }>, patch?: (id: string, body: unknown) => DynamicCode) {
+type Bulk = { action: string; ids: string[] };
+
+/** Serves /v1/me, the listed pages, PATCHes that echo the change and bulk requests. */
+function serve(
+  pages: Record<string, { codes: ListedCode[]; next_cursor: string | null }>,
+  patch?: (id: string, body: unknown) => ListedCode,
+  bulk?: (body: Bulk) => BulkResult[],
+) {
   request.mockImplementation(async (path, opts) => {
     if (path === "/v1/me") return me;
     if (opts?.method === "PATCH" && patch) return { code: patch(path.split("/").pop()!, opts.body) };
+    if (path === "/v1/workspaces/w1/codes/bulk" && opts?.method === "POST" && bulk) return { results: bulk(opts.body as Bulk) };
     const page = pages[path];
     if (page) return page;
     throw new Error(`unexpected ${opts?.method ?? "GET"} ${path}`);
@@ -94,6 +102,15 @@ const show = (locale: "en" | "vi" = "en") =>
 const card = (name: string) => screen.getByRole("article", { name });
 const openMenu = (name: string) => fireEvent.click(screen.getByRole("button", { name: format(l.actions, { name }) }));
 const pick = async (name: string) => act(async () => void fireEvent.click(screen.getByRole("menuitem", { name })));
+/** Every bulk request sent, in order. */
+const bulkCalls = () =>
+  request.mock.calls.filter(([path, opts]) => path === "/v1/workspaces/w1/codes/bulk" && opts?.method === "POST").map(([, opts]) => opts?.body as Bulk);
+/** Bulk results that apply the action to every id (pause/resume echo the code). */
+const allOk = (codes: ListedCode[]) => (b: Bulk): BulkResult[] =>
+  b.ids.map((id) => {
+    const c = codes.find((x) => x.id === id)!;
+    return b.action === "delete" ? { id, result: "ok" } : { id, result: "ok", code: { ...c, status: b.action === "pause" ? "paused" : "active" } };
+  });
 
 describe("CodesList states", () => {
   it("shows skeleton cards while loading, marked busy", async () => {
@@ -150,6 +167,21 @@ describe("CodesList cards", () => {
     expect(screen.queryByRole("button", { name: t.loadMore })).toBeNull();
   });
 
+  it("shows each code's scans and how many codes are listed", async () => {
+    serve({
+      [LIST]: { codes: [code({ scans_total: 1234 }), code({ id: "c2", name: "Wi-Fi", scans_total: 1 })], next_cursor: "n1" },
+      [`${LIST}&cursor=n1`]: { codes: [flyer], next_cursor: null },
+    });
+    show();
+    const first = await screen.findByRole("article", { name: "Menu" });
+    expect(within(first).getByText(plural("en", l.scans, 1234))).toBeTruthy();
+    expect(within(card("Wi-Fi")).getByText(plural("en", l.scans, 1))).toBeTruthy();
+    // More pages remain: the count says so.
+    expect(screen.getByText(plural("en", l.countMore, 2))).toBeTruthy();
+    await act(async () => void fireEvent.click(screen.getByRole("button", { name: t.loadMore })));
+    expect(await screen.findByText(plural("en", l.count, 3))).toBeTruthy();
+  });
+
   it("loads each code's image as a thumbnail", async () => {
     serve({ [LIST]: { codes: [menu], next_cursor: null } });
     show();
@@ -170,42 +202,152 @@ describe("CodesList cards", () => {
   });
 });
 
-describe("CodesList search and filters", () => {
-  it("loads every page before searching, then shows only matches with a count", async () => {
+describe("CodesList search, filters and order", () => {
+  it("searches on the server once typing pauses, and pages through the results", async () => {
     serve({
-      [LIST]: { codes: [menu], next_cursor: "n1" },
-      [`${LIST}&cursor=n1`]: { codes: [wifi, flyer], next_cursor: null },
+      [LIST]: { codes: [menu, wifi], next_cursor: null },
+      [`${LIST}&q=wifi`]: { codes: [wifi], next_cursor: "q1" },
+      [`${LIST}&q=wifi&cursor=q1`]: { codes: [code({ id: "c7", name: "Wi-Fi 2" })], next_cursor: null },
     });
     show();
     await screen.findByRole("article", { name: "Menu" });
-    fireEvent.change(screen.getByRole("searchbox", { name: l.search }), { target: { value: "wifi" } });
-    expect(await screen.findByRole("article", { name: "Wi-Fi" })).toBeTruthy();
-    expect(screen.queryByRole("article", { name: "Menu" })).toBeNull();
-    expect(screen.getByText(format(l.countFiltered, { shown: 1, total: 3 }))).toBeTruthy();
-    // Everything is loaded: no "Load more" under a filtered list.
-    expect(screen.queryByRole("button", { name: t.loadMore })).toBeNull();
+    const box = screen.getByRole("searchbox", { name: l.search });
+    fireEvent.change(box, { target: { value: "w" } });
+    fireEvent.change(box, { target: { value: "wifi" } });
+    await waitFor(() => expect(screen.queryByRole("article", { name: "Menu" })).toBeNull());
+    // One request for the settled text, none for every keystroke.
+    expect(request.mock.calls.filter(([p]) => String(p).includes("q="))).toHaveLength(1);
+    // Shown and announced.
+    expect(screen.getAllByText(plural("en", l.matchesMore, 1)).length).toBeGreaterThan(0);
+    await act(async () => void fireEvent.click(screen.getByRole("button", { name: t.loadMore })));
+    expect(await screen.findByRole("article", { name: "Wi-Fi 2" })).toBeTruthy();
+    expect(screen.getAllByText(plural("en", l.matches, 2)).length).toBeGreaterThan(0);
   });
 
-  it("filters by status, and says so when nothing matches, with a way back", async () => {
-    serve({ [LIST]: { codes: [menu, flyer], next_cursor: null } });
+  it("filters by status on the server, and offers a way back when nothing matches", async () => {
+    serve({
+      [LIST]: { codes: [menu, flyer], next_cursor: null },
+      [`${LIST}&status=paused`]: { codes: [flyer], next_cursor: null },
+      [`${LIST}&q=nothing&status=paused`]: { codes: [], next_cursor: null },
+    });
     show();
     await screen.findByRole("article", { name: "Menu" });
     fireEvent.change(screen.getByRole("combobox", { name: l.statusFilter }), { target: { value: "paused" } });
+    await waitFor(() => expect(screen.queryByRole("article", { name: "Menu" })).toBeNull());
     expect(screen.getByRole("article", { name: "Flyer" })).toBeTruthy();
-    expect(screen.queryByRole("article", { name: "Menu" })).toBeNull();
-    fireEvent.change(screen.getByRole("searchbox", { name: l.search }), { target: { value: "nothing like this" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: l.search }), { target: { value: "nothing" } });
     expect(await screen.findByRole("heading", { name: l.noResults })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: l.clearFilters }));
-    expect(screen.getByRole("article", { name: "Menu" })).toBeTruthy();
+    expect(await screen.findByRole("article", { name: "Menu" })).toBeTruthy();
     expect((screen.getByRole("searchbox", { name: l.search }) as HTMLInputElement).value).toBe("");
   });
 
-  it("sorts by name", async () => {
-    serve({ [LIST]: { codes: [wifi, menu, flyer], next_cursor: null } });
+  it("asks the server for the most scanned codes, in its order", async () => {
+    serve({
+      [LIST]: { codes: [menu, wifi], next_cursor: null },
+      [`${LIST}&sort=scans`]: { codes: [code({ id: "c2", name: "Wi-Fi", scans_total: 9 }), code({ scans_total: 2 })], next_cursor: null },
+    });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    fireEvent.change(screen.getByRole("combobox", { name: l.sort }), { target: { value: "scans" } });
+    await waitFor(() => expect(screen.getAllByRole("article").map((a) => a.getAttribute("aria-label"))).toEqual(["Wi-Fi", "Menu"]));
+  });
+
+  it("applies a cleared search at once, and gives focus back to the search box", async () => {
+    serve({
+      [LIST]: { codes: [menu, flyer], next_cursor: null },
+      [`${LIST}&q=nothing`]: { codes: [], next_cursor: null },
+    });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    fireEvent.change(screen.getByRole("searchbox", { name: l.search }), { target: { value: "nothing" } });
+    expect(await screen.findByRole("heading", { name: l.noResults })).toBeTruthy();
+    const before = request.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: l.clearFilters }));
+    expect(await screen.findByRole("article", { name: "Menu" })).toBeTruthy();
+    // The plain list, straight away: no request for the old search with the cleared filters.
+    expect(request.mock.calls.slice(before).map(([p]) => p)).toEqual([LIST]);
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: l.search }));
+  });
+
+  it("drops a slow answer to an older query", async () => {
+    let releaseOld: (v: unknown) => void = () => {};
+    request.mockImplementation(async (path) => {
+      if (path === "/v1/me") return me;
+      if (path === LIST) return { codes: [menu], next_cursor: null };
+      if (path === `${LIST}&sort=name`) return new Promise((r) => (releaseOld = r));
+      if (path === `${LIST}&sort=oldest`) return { codes: [flyer], next_cursor: null };
+      throw new Error(`unexpected ${path}`);
+    });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    const sort = screen.getByRole("combobox", { name: l.sort });
+    fireEvent.change(sort, { target: { value: "name" } });
+    fireEvent.change(sort, { target: { value: "oldest" } });
+    expect(await screen.findByRole("article", { name: "Flyer" })).toBeTruthy();
+    await act(async () => releaseOld({ codes: [wifi], next_cursor: null }));
+    expect(screen.queryByRole("article", { name: "Wi-Fi" })).toBeNull();
+    expect(screen.getByRole("article", { name: "Flyer" })).toBeTruthy();
+  });
+
+  it("keeps the list and the toolbar when new results fail, with a retry", async () => {
+    let fail = true;
+    request.mockImplementation(async (path) => {
+      if (path === "/v1/me") return me;
+      if (path === LIST) return { codes: [menu], next_cursor: null };
+      if (path === `${LIST}&status=paused`) {
+        if (fail) throw new ApiError(503, "busy", "busy");
+        return { codes: [flyer], next_cursor: null };
+      }
+      throw new Error(`unexpected ${path}`);
+    });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    fireEvent.change(screen.getByRole("combobox", { name: l.statusFilter }), { target: { value: "paused" } });
+    expect(await screen.findByText(t.loadFailed)).toBeTruthy();
+    expect(screen.getByRole("searchbox", { name: l.search })).toBeTruthy();
+    fail = false;
+    await act(async () => void fireEvent.click(screen.getByRole("button", { name: t.retry })));
+    expect(await screen.findByRole("article", { name: "Flyer" })).toBeTruthy();
+  });
+
+  it("announces how many codes match a search", async () => {
+    serve({ [LIST]: { codes: [menu, wifi], next_cursor: null }, [`${LIST}&q=menu`]: { codes: [menu], next_cursor: null } });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    fireEvent.change(screen.getByRole("searchbox", { name: l.search }), { target: { value: "menu" } });
+    await waitFor(() =>
+      expect(screen.getAllByRole("status").some((s) => s.textContent === plural("en", l.matches, 1))).toBe(true),
+    );
+  });
+
+  it("takes no action on codes about to be replaced", async () => {
+    request.mockImplementation(async (path) => {
+      if (path === "/v1/me") return me;
+      if (path === LIST) return { codes: [menu], next_cursor: null };
+      return new Promise(() => {});
+    });
     show();
     await screen.findByRole("article", { name: "Menu" });
     fireEvent.change(screen.getByRole("combobox", { name: l.sort }), { target: { value: "name" } });
-    expect(screen.getAllByRole("article").map((a) => a.getAttribute("aria-label"))).toEqual(["Flyer", "Menu", "Wi-Fi"]);
+    const list = await screen.findByRole("list", { busy: true });
+    expect(list.hasAttribute("inert")).toBe(true);
+  });
+
+  it("keeps the current codes on screen, marked busy, while new results load", async () => {
+    let release: (v: unknown) => void = () => {};
+    request.mockImplementation(async (path) => {
+      if (path === "/v1/me") return me;
+      if (path === LIST) return { codes: [menu], next_cursor: null };
+      return new Promise((r) => (release = r));
+    });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    fireEvent.change(screen.getByRole("combobox", { name: l.sort }), { target: { value: "name" } });
+    expect(await screen.findByRole("list", { busy: true })).toBeTruthy();
+    expect(screen.getByRole("article", { name: "Menu" })).toBeTruthy();
+    await act(async () => release({ codes: [wifi], next_cursor: null }));
+    expect(await screen.findByRole("article", { name: "Wi-Fi" })).toBeTruthy();
   });
 });
 
@@ -296,29 +438,103 @@ describe("CodesList row actions", () => {
 });
 
 describe("CodesList bulk actions", () => {
-  it("selects all shown codes and pauses them, reporting the ones that failed", async () => {
-    serve({ [LIST]: { codes: [menu, wifi], next_cursor: null } }, (id, body) => {
-      if (id === "c2") throw new ApiError(503, "busy", "busy");
-      return { ...menu, id, ...(body as object) };
-    });
+  it("pauses the selection in one bulk request and reports the codes that did not change", async () => {
+    serve({ [LIST]: { codes: [menu, wifi], next_cursor: null } }, undefined, () => [
+      { id: "c1", result: "ok", code: { ...menu, status: "paused" } },
+      { id: "c2", result: "locked" },
+    ]);
     show();
     await screen.findByRole("article", { name: "Menu" });
     const all = screen.getByRole("checkbox", { name: l.selectAll }) as HTMLInputElement;
     fireEvent.click(screen.getByRole("checkbox", { name: format(l.selectCode, { name: "Menu" }) }));
     expect(all.indeterminate).toBe(true);
     fireEvent.click(all);
-    expect(all.checked).toBe(true);
     expect(screen.getByText(format(l.selected, { count: 2 }))).toBeTruthy();
     await act(async () => void fireEvent.click(screen.getByRole("button", { name: l.pause })));
+    expect(bulkCalls()).toEqual([{ action: "pause", ids: ["c1", "c2"] }]);
     expect(within(card("Menu")).getByText(t.status.paused)).toBeTruthy();
-    expect(within(card("Wi-Fi")).getByText(t.status.active)).toBeTruthy();
+    expect(screen.getByText(plural("en", l.pausedMany, 1))).toBeTruthy();
     expect(screen.getByText(plural("en", l.failed, 1))).toBeTruthy();
-    // The failed code stays selected, so "try again" is one click.
+    // The code that did not change stays selected, so "try again" is one click.
     expect(screen.getByText(format(l.selected, { count: 1 }))).toBeTruthy();
   });
 
-  it("deletes the selected codes after one confirmation", async () => {
-    serve({ [LIST]: { codes: [menu, wifi, flyer], next_cursor: null } });
+  it("counts a code missing from the answer as not changed, and drops codes deleted elsewhere", async () => {
+    const poster = code({ id: "c3", short_code: "Fl1yEr00", name: "Flyer" }); // active, so Pause sends it
+    serve({ [LIST]: { codes: [menu, wifi, poster], next_cursor: null } }, undefined, () => [
+      { id: "c1", result: "ok", code: { ...menu, status: "paused" } },
+      { id: "c2", result: "not_found" },
+      { id: "zz", result: "ok" },
+    ]);
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    fireEvent.click(screen.getByRole("checkbox", { name: format(l.selectCode, { name: "Menu" }) }));
+    fireEvent.click(screen.getByRole("checkbox", { name: format(l.selectCode, { name: "Wi-Fi" }) }));
+    fireEvent.click(screen.getByRole("checkbox", { name: format(l.selectCode, { name: "Flyer" }) }));
+    await act(async () => void fireEvent.click(screen.getByRole("button", { name: l.pause })));
+    expect(bulkCalls()).toEqual([{ action: "pause", ids: ["c1", "c2", "c3"] }]);
+    // Wi-Fi is gone; Flyer got no answer and stays selected as not changed.
+    expect(screen.queryByRole("article", { name: "Wi-Fi" })).toBeNull();
+    expect(screen.getByText(plural("en", l.failed, 1))).toBeTruthy();
+    expect(screen.getByText(format(l.selected, { count: 1 }))).toBeTruthy();
+  });
+
+  it("removes a code that left the filtered status from the list", async () => {
+    serve(
+      { [LIST]: { codes: [menu], next_cursor: null }, [`${LIST}&status=active`]: { codes: [menu, wifi], next_cursor: null } },
+      undefined,
+      () => [{ id: "c1", result: "ok", code: { ...menu, status: "paused" } }],
+    );
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    fireEvent.change(screen.getByRole("combobox", { name: l.statusFilter }), { target: { value: "active" } });
+    await screen.findByRole("article", { name: "Wi-Fi" });
+    fireEvent.click(screen.getByRole("checkbox", { name: format(l.selectCode, { name: "Menu" }) }));
+    await act(async () => void fireEvent.click(screen.getByRole("button", { name: l.pause })));
+    expect(screen.queryByRole("article", { name: "Menu" })).toBeNull();
+    expect(screen.getByRole("article", { name: "Wi-Fi" })).toBeTruthy();
+  });
+
+  it("says why a resume was refused when the email is not verified", async () => {
+    serve({ [LIST]: { codes: [flyer], next_cursor: null } }, undefined, (b) => b.ids.map((id) => ({ id, result: "email_not_verified" as const })));
+    show();
+    await screen.findByRole("article", { name: "Flyer" });
+    fireEvent.click(screen.getByRole("checkbox", { name: l.selectAll }));
+    await act(async () => void fireEvent.click(screen.getByRole("button", { name: l.resume })));
+    expect(screen.getByText(t.errors.verifyFirst)).toBeTruthy();
+  });
+
+  it("sends at most 100 codes per bulk request", async () => {
+    const many = Array.from({ length: 150 }, (_, i) => code({ id: `id${i}`, name: `Code ${i}` }));
+    serve({ [LIST]: { codes: many, next_cursor: null } }, undefined, allOk(many));
+    show();
+    await screen.findByRole("article", { name: "Code 0" });
+    fireEvent.click(screen.getByRole("checkbox", { name: l.selectAll }));
+    await act(async () => void fireEvent.click(screen.getByRole("button", { name: l.pause })));
+    expect(bulkCalls().map((b) => b.ids.length)).toEqual([100, 50]);
+    expect(screen.getByText(plural("en", l.pausedMany, 150))).toBeTruthy();
+  });
+
+  it("stops at the bulk limit, says when to retry, and keeps the rest selected", async () => {
+    const many = Array.from({ length: 150 }, (_, i) => code({ id: `id${i}`, name: `Code ${i}` }));
+    let calls = 0;
+    serve({ [LIST]: { codes: many, next_cursor: null } }, undefined, (b) => {
+      if (++calls === 2) throw new ApiError(429, "rate_limited", "slow down", undefined, 42);
+      return allOk(many)(b);
+    });
+    show();
+    await screen.findByRole("article", { name: "Code 0" });
+    fireEvent.click(screen.getByRole("checkbox", { name: l.selectAll }));
+    await act(async () => void fireEvent.click(screen.getByRole("button", { name: l.pause })));
+    expect(screen.getByText(format(l.bulkRateLimited, { seconds: 42 }))).toBeTruthy();
+    expect(screen.getByText(plural("en", l.pausedMany, 100))).toBeTruthy();
+    expect(screen.getByText(format(l.selected, { count: 50 }))).toBeTruthy();
+  });
+
+  it("deletes the selected codes in one bulk request after one confirmation", async () => {
+    serve({ [LIST]: { codes: [menu, wifi, flyer], next_cursor: null } }, undefined, (b) =>
+      b.ids.map((id) => ({ id, result: id === "c3" ? ("not_found" as const) : ("ok" as const) })),
+    );
     show();
     await screen.findByRole("article", { name: "Menu" });
     fireEvent.click(screen.getByRole("checkbox", { name: format(l.selectCode, { name: "Menu" }) }));
@@ -326,16 +542,17 @@ describe("CodesList bulk actions", () => {
     fireEvent.click(screen.getByRole("button", { name: l.delete }));
     const dialog = screen.getByRole("dialog", { name: plural("en", l.deleteManyTitle, 2) });
     await act(async () => void fireEvent.click(within(dialog).getByRole("button", { name: l.deleteConfirm })));
-    expect(requestVoid).toHaveBeenCalledTimes(2);
+    expect(bulkCalls()).toEqual([{ action: "delete", ids: ["c1", "c3"] }]);
+    expect(requestVoid).not.toHaveBeenCalled();
+    // A code already gone counts as deleted.
     expect(screen.getAllByRole("article").map((a) => a.getAttribute("aria-label"))).toEqual(["Wi-Fi"]);
-    expect(screen.queryByText(format(l.selected, { count: 2 }))).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("retitles the dialog for the codes left after a partial failure", async () => {
-    serve({ [LIST]: { codes: [menu, wifi, flyer], next_cursor: null } });
-    requestVoid.mockImplementation(async (path) => {
-      if (path.endsWith("/c3")) throw new ApiError(503, "busy", "busy");
-    });
+    serve({ [LIST]: { codes: [menu, wifi, flyer], next_cursor: null } }, undefined, (b) =>
+      b.ids.map((id) => ({ id, result: id === "c3" ? ("locked" as const) : ("ok" as const) })),
+    );
     show();
     await screen.findByRole("article", { name: "Menu" });
     fireEvent.click(screen.getByRole("checkbox", { name: l.selectAll }));
@@ -344,15 +561,19 @@ describe("CodesList bulk actions", () => {
     const dialog = screen.getByRole("dialog", { name: format(l.deleteOneTitle, { name: "Flyer" }) });
     expect(within(dialog).getByRole("alert").textContent).toBe(plural("en", l.failed, 1));
     expect(screen.getAllByRole("article").map((a) => a.getAttribute("aria-label"))).toEqual(["Flyer"]);
-    expect(screen.queryByText(format(l.selected, { count: 2 }))).toBeNull();
   });
 
-  it("drops codes hidden by a filter from the selection", async () => {
-    serve({ [LIST]: { codes: [menu, flyer], next_cursor: null } });
+  it("drops codes hidden by a filter from the selection, for good", async () => {
+    serve({ [LIST]: { codes: [menu, flyer], next_cursor: null }, [`${LIST}&status=paused`]: { codes: [flyer], next_cursor: null } });
     show();
     await screen.findByRole("article", { name: "Menu" });
     fireEvent.click(screen.getByRole("checkbox", { name: l.selectAll }));
-    fireEvent.change(screen.getByRole("combobox", { name: l.statusFilter }), { target: { value: "paused" } });
-    expect(screen.getByText(format(l.selected, { count: 1 }))).toBeTruthy();
+    const status = screen.getByRole("combobox", { name: l.statusFilter });
+    fireEvent.change(status, { target: { value: "paused" } });
+    await waitFor(() => expect(screen.getByText(format(l.selected, { count: 1 }))).toBeTruthy());
+    // Back to every status: Menu was dropped, it does not come back selected.
+    fireEvent.change(status, { target: { value: "all" } });
+    await screen.findByRole("article", { name: "Menu" });
+    expect((screen.getByRole("checkbox", { name: format(l.selectCode, { name: "Menu" }) }) as HTMLInputElement).checked).toBe(false);
   });
 });

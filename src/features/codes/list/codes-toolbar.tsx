@@ -1,6 +1,7 @@
 "use client";
 
 import { LayoutGrid, List, Pause, Play, Trash2, X } from "lucide-react";
+import type { Ref } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SearchField } from "@/components/ui/search-field";
@@ -8,7 +9,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select } from "@/components/ui/select";
 import { format } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
-import type { CodeQuery, CodeSort, StatusFilter } from "./query";
+import { MAX_SEARCH_CHARS, type CodeQuery, type CodeSort, type StatusFilter } from "./query";
 import type { CodesView } from "./use-codes-view";
 import type { SelectionState } from "./use-selection";
 
@@ -18,10 +19,12 @@ export interface CodesToolbarProps {
   onQueryChange: (query: CodeQuery) => void;
   view: CodesView;
   onViewChange: (view: CodesView) => void;
+  /** The search box, for moving focus back to it. */
+  searchRef?: Ref<HTMLInputElement>;
 }
 
 /** Search, status filter, order and layout of the codes list. Controlled: the list owns the query. */
-export function CodesToolbar({ t, query, onQueryChange, view, onViewChange }: CodesToolbarProps) {
+export function CodesToolbar({ t, query, onQueryChange, view, onViewChange, searchRef }: CodesToolbarProps) {
   const l = t.list;
   const statuses: { value: StatusFilter; label: string }[] = [
     { value: "all", label: l.statusAll },
@@ -33,6 +36,7 @@ export function CodesToolbar({ t, query, onQueryChange, view, onViewChange }: Co
     { value: "newest", label: l.sortNewest },
     { value: "oldest", label: l.sortOldest },
     { value: "name", label: l.sortName },
+    { value: "scans", label: l.sortScans },
   ];
   return (
     <div role="search" className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -41,6 +45,8 @@ export function CodesToolbar({ t, query, onQueryChange, view, onViewChange }: Co
         placeholder={l.searchPlaceholder}
         value={query.search}
         onValueChange={(search) => onQueryChange({ ...query, search })}
+        ref={searchRef}
+        maxLength={MAX_SEARCH_CHARS}
         className="min-w-0 basis-full sm:basis-72 sm:grow"
       />
       <Select label={l.statusFilter} hideLabel value={query.status} options={statuses} onChange={(status) => onQueryChange({ ...query, status })} />
