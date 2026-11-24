@@ -1,10 +1,10 @@
 "use client";
 
-import { ColorInput } from "@/features/qr-editor/design-panel";
+import { ColorInput } from "@/features/qr-editor/color-input";
 import { StylePicker } from "@/features/qr-editor/style-picker";
 import type { Messages } from "@/i18n/messages";
 import { isScannable } from "@/lib/qr/color";
-import type { CodeLook } from "./design";
+import { lookScannable, type CodeLook } from "./design";
 import type { CodeField } from "./errors";
 
 /** Colors and style of a dynamic code, with the contrast and caption messages. */
@@ -36,6 +36,7 @@ export function LookFields({
           <p className="text-xs font-medium text-danger">{contrastOk ? error?.message : t.lowContrast}</p>
         )}
       </fieldset>
+      {contrastOk && !lookScannable(look) && <p className="text-xs font-medium text-danger">{t.lowContrast}</p>}
       <StylePicker
         t={generator}
         design={look}

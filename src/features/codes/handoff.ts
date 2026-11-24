@@ -13,7 +13,7 @@ export interface Handoff {
   fg?: string;
   bg?: string;
   /** Pattern, eyes and frame of the generator's design. */
-  style?: Partial<Pick<CodeLook, "module" | "eye" | "frame" | "frameText">>;
+  style?: Partial<Omit<CodeLook, "fg" | "bg" | "margin">>;
 }
 
 export function saveHandoff(h: Handoff): void {

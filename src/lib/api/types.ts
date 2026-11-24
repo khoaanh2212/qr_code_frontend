@@ -47,6 +47,11 @@ export interface CodeDesign {
   eye?: string;
   frame?: string;
   frame_text?: string;
+  eye_frame?: string;
+  eye_ball?: string;
+  eye_color?: string;
+  eye_ball_color?: string;
+  frame_color?: string;
 }
 
 export type CodeStatus = "active" | "paused" | "locked";

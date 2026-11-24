@@ -179,6 +179,9 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
    Choosing a frame fills in the localized caption and keeps the margin at 2 or more. A caption
    of the user's own is rendered by `POST /v1/me/qr/render` with the session (the only session
    call on a public page, see the ESLint exception); signed out, the caption asks to sign in.
-8. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+8. ~~Eye parts and colors~~ Done (backend item 45): outer and inner eye shapes (for all eyes or
+   each one), own colors for the eyes and the frame, three more patterns. Pairs the API refuses
+   are disabled in the picker; stored designs with the old `eye` shorthand load as ring + center.
+9. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.

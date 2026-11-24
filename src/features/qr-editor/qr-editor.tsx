@@ -7,10 +7,9 @@ import { useId, useMemo, useState } from "react";
 import { saveHandoff } from "@/features/codes/handoff";
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
-import { isScannable } from "@/lib/qr/color";
 import { buildRenderRequest, missingRequired, requestKey } from "@/lib/qr/render-request";
 import { downloadName, normalizeUrlInput, validateFields, type FieldProblem } from "@/lib/qr/validate";
-import { DEFAULT_DESIGN, type QrData, type QrDesign, type QrType } from "@/lib/qr/types";
+import { DEFAULT_DESIGN, designScannable, type QrData, type QrDesign, type QrType } from "@/lib/qr/types";
 import { DesignPanel } from "./design-panel";
 import { errorText } from "./error-text";
 import { ContentFields, fieldText, initialData } from "./fields";
@@ -22,7 +21,22 @@ import { useRenderPreview } from "./use-render";
 
 type T = Messages["generator"];
 
-const DESIGN_FIELDS = new Set(["fg", "bg", "margin", "ecc", "logo", "size", "module", "eye", "frame", "frame_text"]);
+const DESIGN_FIELDS = new Set([
+  "fg",
+  "bg",
+  "margin",
+  "ecc",
+  "logo",
+  "size",
+  "module",
+  "eye_frame",
+  "eye_ball",
+  "eye_color",
+  "eye_ball_color",
+  "frame",
+  "frame_text",
+  "frame_color",
+]);
 const URL_FIELDS = new Set(["url", "website"]);
 const PREVIEW_ID = "qr-preview";
 const PREVIEW_SIZE = 512;
@@ -69,7 +83,7 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
   const missing = missingRequired(qrType, data);
   const problems = validateFields(qrType, data);
   const problemNames = Object.keys(problems);
-  const contrastOk = isScannable(design.fg, design.bg);
+  const contrastOk = designScannable(design);
 
   const canRender = missing.length === 0 && problemNames.length === 0 && contrastOk;
   const request = useMemo(
@@ -176,7 +190,16 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
                   url: data.url ?? "",
                   fg: design.fg,
                   bg: design.bg,
-                  style: { module: design.module, eye: design.eye, frame: design.frame, frameText: design.frameText },
+                  style: {
+                    module: design.module,
+                    eyeFrames: design.eyeFrames,
+                    eyeBalls: design.eyeBalls,
+                    eyeColor: design.eyeColor,
+                    eyeBallColor: design.eyeBallColor,
+                    frame: design.frame,
+                    frameText: design.frameText,
+                    frameColor: design.frameColor,
+                  },
                 })
               }
             />

@@ -39,6 +39,24 @@ describe("buildRenderRequest", () => {
     expect(post.body.style).toEqual({ fg: "#000000", bg: "#ffffff", module: "dots" });
   });
 
+  it("sends eye parts as one value or three, and only colors of their own", () => {
+    const design = {
+      ...DEFAULT_DESIGN,
+      eyeFrames: ["circle", "circle", "circle"] as const,
+      eyeBalls: ["square", "diamond", "square"] as const,
+      eyeColor: "#1a237e",
+      eyeBallColor: "#000000",
+    };
+    const r = buildRenderRequest({ ...url, design, format: "png", size: 512 });
+    if (r.method !== "GET") throw new Error("expected GET");
+    const q = new URL(r.path, "https://api.test").searchParams;
+    expect(q.get("eye_frame")).toBe("circle");
+    expect(q.get("eye_ball")).toBe("square,diamond,square");
+    expect(q.get("eye_color")).toBe("#1a237e");
+    expect(q.has("eye_ball_color")).toBe(false); // the same as the code color
+    expect(q.has("frame_color")).toBe(false);
+  });
+
   it("sends a caption of the user's own to the signed-in render, presets to the public one", () => {
     const framed = { ...DEFAULT_DESIGN, frame: "box" as const };
     const own = buildRenderRequest({ ...url, design: { ...framed, frameText: "Thực đơn" }, format: "png", size: 512 });

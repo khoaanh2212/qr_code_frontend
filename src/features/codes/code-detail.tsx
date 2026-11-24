@@ -14,10 +14,9 @@ import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 import type { CodeStats, DynamicCode } from "@/lib/api/types";
 import { saveBlob } from "@/lib/browser/download";
-import { isScannable } from "@/lib/qr/color";
 import { normalizeUrlInput } from "@/lib/qr/validate";
 import { codeImage, codeStats, deleteCode, getCode, updateCode } from "./api";
-import { designFromLook, lookFromDesign, type CodeLook } from "./design";
+import { designFromLook, lookFromDesign, lookScannable, type CodeLook } from "./design";
 import { LookFields } from "./look-fields";
 import { NAME_MAX } from "./code-form";
 import { codeFailure, type CodeField } from "./errors";
@@ -292,7 +291,7 @@ function DesignSection({ t, generator, auth, ws, code, onSaved }: EditProps & { 
     e.preventDefault();
     if (busy || locked) return;
     setSaved(false);
-    if (!isScannable(look.fg, look.bg)) {
+    if (!lookScannable(look)) {
       setError({ field: "colors", message: t.errors.colors });
       return;
     }

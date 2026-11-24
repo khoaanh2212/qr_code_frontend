@@ -75,7 +75,16 @@ describe("QrEditor", () => {
       url: "https://example.com/menu",
       fg: "#000000",
       bg: "#ffffff",
-      style: { module: "square", eye: "square", frame: "none", frameText: "" },
+      style: {
+        module: "square",
+        eyeFrames: ["square", "square", "square"],
+        eyeBalls: ["square", "square", "square"],
+        eyeColor: "",
+        eyeBallColor: "",
+        frame: "none",
+        frameText: "",
+        frameColor: "",
+      },
     });
     sessionStorage.clear();
   });

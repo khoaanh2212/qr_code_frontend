@@ -11,7 +11,8 @@ export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessag
     case "validation_error":
       if (err.field === "target_url") return { field: "target_url", message: t.errors.targetUrl };
       if (err.field === "name") return { field: "name", message: t.errors.generic };
-      if (err.field === "fg" || err.field === "bg") return { field: "colors", message: t.errors.colors };
+      if (["fg", "bg", "eye_color", "eye_ball_color", "frame_color"].includes(err.field ?? ""))
+        return { field: "colors", message: t.errors.colors };
       // The caption's message lives with the style picker (generator messages).
       if (err.field === "frame_text") return { field: "frame_text", message: t.errors.generic };
       return { message: t.errors.generic };

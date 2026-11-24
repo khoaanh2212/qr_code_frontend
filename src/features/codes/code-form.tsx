@@ -11,10 +11,9 @@ import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-s
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
-import { isScannable } from "@/lib/qr/color";
 import { normalizeUrlInput } from "@/lib/qr/validate";
 import { createCode } from "./api";
-import { DEFAULT_LOOK, designFromLook, type CodeLook } from "./design";
+import { DEFAULT_LOOK, designFromLook, lookScannable, type CodeLook } from "./design";
 import { codeFailure, type CodeField } from "./errors";
 import { clearHandoff, readHandoff } from "./handoff";
 import { LookFields } from "./look-fields";
@@ -55,7 +54,7 @@ export function CodeForm({
   const [error, setError] = useState<{ field?: CodeField; message: string } | null>(null);
   const targetRef = useRef<HTMLInputElement>(null);
 
-  const contrastOk = isScannable(look.fg, look.bg);
+  const contrastOk = lookScannable(look);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
