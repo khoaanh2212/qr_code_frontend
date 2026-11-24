@@ -62,7 +62,20 @@ export type EyeTriple<T> = readonly [T, T, T];
 export const MODULES = ["square", "rounded", "dots", "bars", "small", "hbars", "diamond"] as const;
 export const EYE_FRAMES = ["square", "rounded", "extra-rounded", "circle", "leaf", "pointed"] as const;
 export const EYE_BALLS = ["square", "rounded", "circle", "leaf", "pointed", "diamond"] as const;
-export const FRAMES = ["none", "label-bottom", "label-top", "box"] as const;
+export const FRAMES = [
+  "none",
+  "label-bottom",
+  "label-top",
+  "box",
+  "bubble-top",
+  "bubble-bottom",
+  "ribbon",
+  "phone",
+  "bag",
+  "cup",
+  "arrow",
+  "corners",
+] as const;
 export type QrModule = (typeof MODULES)[number];
 export type QrEyeFrame = (typeof EYE_FRAMES)[number];
 export type QrEyeBall = (typeof EYE_BALLS)[number];

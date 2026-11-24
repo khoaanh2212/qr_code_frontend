@@ -364,7 +364,7 @@ export const es = {
         modules: { square: "Cuadrado", rounded: "Redondeado", dots: "Puntos", bars: "Barras", small: "Cuadrados pequeños", hbars: "Líneas", diamond: "Rombos" },
         eyeFrames: { square: "Cuadrado", rounded: "Redondeado", "extra-rounded": "Muy redondeado", circle: "Círculo", leaf: "Hoja", pointed: "Puntiagudo" },
         eyeBalls: { square: "Cuadrado", rounded: "Redondeado", circle: "Círculo", leaf: "Hoja", pointed: "Puntiagudo", diamond: "Rombo" },
-        frames: { none: "Ninguno", "label-bottom": "Etiqueta abajo", "label-top": "Etiqueta arriba", box: "Contorno" },
+        frames: { none: "Ninguno", "label-bottom": "Etiqueta abajo", "label-top": "Etiqueta arriba", box: "Contorno", "bubble-top": "Burbuja arriba", "bubble-bottom": "Burbuja abajo", ribbon: "Cinta", phone: "Teléfono", bag: "Bolsa", cup: "Taza", arrow: "Flecha", corners: "Esquinas" },
       },
       frameText: "Texto del marco",
       frameTextHelp: "Hasta 24 caracteres. Tu propio texto requiere una cuenta gratuita; el predeterminado no.",

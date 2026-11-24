@@ -451,7 +451,77 @@ function EyeBallThumb({ shape }: { shape: QrEyeBall }) {
   );
 }
 
+/** Small drawings of the decorative frames (16x16, the code as a 5x5 block). */
+const DECOR: Partial<Record<QrFrame, ReactNode>> = {
+  "bubble-top": (
+    <>
+      <rect x="1" y="0.5" width="14" height="4" rx="1.2" />
+      <path d="M7 4.4h2L8 5.8Z" />
+      <rect x="5" y="7.5" width="6" height="6" rx="0.6" opacity="0.55" />
+    </>
+  ),
+  "bubble-bottom": (
+    <>
+      <rect x="5" y="1.5" width="6" height="6" rx="0.6" opacity="0.55" />
+      <path d="M7 11.6h2L8 10.2Z" />
+      <rect x="1" y="11.5" width="14" height="4" rx="1.2" />
+    </>
+  ),
+  ribbon: (
+    <>
+      <rect x="3.5" y="0.5" width="9" height="9" rx="1" fill="none" stroke="currentColor" />
+      <rect x="5.5" y="2.5" width="5" height="5" opacity="0.55" />
+      <rect x="2.5" y="11" width="11" height="3.2" rx="0.3" />
+      <path d="M2 12h-1.8l0.8 1.4-0.8 1.4H2ZM14 12h1.8l-0.8 1.4 0.8 1.4H14Z" />
+    </>
+  ),
+  phone: (
+    <>
+      <path fillRule="evenodd" d="M4.5 0.5h7a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 14V2A1.5 1.5 0 0 1 4.5 0.5ZM4.3 2.2v8.6h7.4V2.2Z" />
+      <rect x="5.5" y="3.5" width="5" height="5" opacity="0.55" />
+    </>
+  ),
+  bag: (
+    <>
+      <path d="M5.5 4.6C5.5 1.6 10.5 1.6 10.5 4.6" fill="none" stroke="currentColor" strokeWidth="1.1" />
+      <path fillRule="evenodd" d="M2.5 4.5h11v10.3a0.7 0.7 0 0 1-0.7 0.7H3.2a0.7 0.7 0 0 1-0.7-0.7ZM3.8 5.8v6.4h8.4V5.8Z" />
+      <rect x="5.5" y="6.5" width="5" height="5" opacity="0.55" />
+    </>
+  ),
+  cup: (
+    <>
+      <path d="M4 1.2c0.6 0.8-0.6 1.4 0 2.2M6.5 1.2c0.6 0.8-0.6 1.4 0 2.2M9 1.2c0.6 0.8-0.6 1.4 0 2.2" fill="none" stroke="currentColor" strokeWidth="0.6" />
+      <circle cx="13" cy="9" r="2.3" fill="none" stroke="currentColor" strokeWidth="1.1" />
+      <path fillRule="evenodd" d="M1.5 4.5h11.5v8.5a2.5 2.5 0 0 1-2.5 2.5H4a2.5 2.5 0 0 1-2.5-2.5ZM2.7 5.7v6.3h9.1V5.7Z" />
+      <rect x="4.7" y="6.3" width="5" height="5" opacity="0.55" />
+    </>
+  ),
+  arrow: (
+    <>
+      <rect x="6" y="1" width="8" height="8" opacity="0.55" />
+      <path d="M6.5 13C2 13.4 2 9.5 3 7.6" fill="none" stroke="currentColor" strokeWidth="0.9" />
+      <path d="M1.7 8.2l1.6-2.2 1 2.4Z" />
+      <rect x="7" y="12" width="7" height="1.6" rx="0.8" />
+    </>
+  ),
+  corners: (
+    <>
+      <path d="M1 4V1h3M12 1h3v3M15 9v3h-3M4 12H1V9" fill="none" stroke="currentColor" strokeWidth="1" />
+      <rect x="4" y="3" width="8" height="6" opacity="0.55" />
+      <rect x="4" y="13.5" width="8" height="1.6" rx="0.8" />
+    </>
+  ),
+};
+
 function FrameThumb({ frame }: { frame: QrFrame }) {
+  const decor = DECOR[frame];
+  if (decor) {
+    return (
+      <svg viewBox="0 0 16 16" className={THUMB} fill="currentColor">
+        {decor}
+      </svg>
+    );
+  }
   const code = (y: number) => (
     <g transform={`translate(4.5 ${y})`}>
       <rect width="3" height="3" />

@@ -200,7 +200,8 @@ describe("CodeDetail", () => {
     expect(await screen.findByText("3 scans")).toBeTruthy();
     expect(screen.getByText("Vietnam")).toBeTruthy();
     expect(screen.getByText(t.unknown)).toBeTruthy();
-    expect(screen.getByText(t.deviceNames.mobile)).toBeTruthy();
+    // Scoped: "Phone" is also the name of a frame in the Design section.
+    expect(within(screen.getByRole("region", { name: t.scansTitle })).getByText(t.deviceNames.mobile)).toBeTruthy();
     // The numbers behind the bars, as a table.
     await click(t.tableToggle);
     expect(screen.getByRole("row", { name: "Nov 30 3 2" })).toBeTruthy();

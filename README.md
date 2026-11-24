@@ -182,6 +182,8 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
 8. ~~Eye parts and colors~~ Done (backend item 45): outer and inner eye shapes (for all eyes or
    each one), own colors for the eyes and the frame, three more patterns. Pairs the API refuses
    are disabled in the picker; stored designs with the old `eye` shorthand load as ring + center.
-9. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+9. ~~Decorative frames~~ Done (backend item 46): speech bubbles, ribbon, phone, bag, cup, arrow and
+   corner brackets in the frame picker, with small drawings of each.
+10. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.
