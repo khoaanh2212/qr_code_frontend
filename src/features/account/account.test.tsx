@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { RequireSession } from "@/features/auth/require-session";
+import { format } from "@/i18n/config";
 import { en } from "@/i18n/messages/en";
 import { ApiError, sessionApi } from "@/lib/api";
 import { Devices } from "./devices";
@@ -16,6 +17,7 @@ const user = {
   display_name: "An",
   role: "user" as const,
   email_verified: false,
+  has_password: true,
   created_at: "2026-11-01T10:00:00Z",
 };
 const captcha = { siteKey: null, nonce: null, devToken: "dev-token" };
@@ -81,7 +83,7 @@ describe("Profile verification", () => {
 describe("Security", () => {
   it("changes the password and explains that other devices were logged out", async () => {
     render(<Security t={t} auth={auth} locale="en" />);
-    fireEvent.change(screen.getByLabelText(/^Current password/), { target: { value: "old-password" } });
+    fireEvent.change(await screen.findByLabelText(/^Current password/), { target: { value: "old-password" } });
     fireEvent.change(screen.getByLabelText(/^New password/), { target: { value: "a-brand-new-one" } });
     await click(t.passwordSubmit);
     expect(requestVoid).toHaveBeenCalledWith("/v1/me/password", {
@@ -94,7 +96,7 @@ describe("Security", () => {
   it("shows a wrong current password at its field", async () => {
     requestVoid.mockRejectedValueOnce(new ApiError(422, "validation_error", "x", "current_password"));
     render(<Security t={t} auth={auth} locale="en" />);
-    fireEvent.change(screen.getByLabelText(/^Current password/), { target: { value: "wrong-one" } });
+    fireEvent.change(await screen.findByLabelText(/^Current password/), { target: { value: "wrong-one" } });
     fireEvent.change(screen.getByLabelText(/^New password/), { target: { value: "a-brand-new-one" } });
     await click(t.passwordSubmit);
     expect(screen.getByText(t.currentWrong)).toBeTruthy();
@@ -102,6 +104,7 @@ describe("Security", () => {
 
   it("deletes the account only after an explicit confirmation", async () => {
     render(<Security t={t} auth={auth} locale="vi" />);
+    await screen.findByText(t.methodsTitle);
     expect(screen.queryByRole("button", { name: t.deleteSubmit })).toBeNull();
     await click(t.deleteStart);
     fireEvent.change(screen.getByLabelText(new RegExp(t.deleteConfirm)), { target: { value: "my-password" } });
@@ -112,6 +115,7 @@ describe("Security", () => {
 
   it("closes the delete confirmation with Escape and returns focus", async () => {
     render(<Security t={t} auth={auth} locale="en" />);
+    await screen.findByText(t.methodsTitle);
     await click(t.deleteStart);
     const field = screen.getByLabelText(new RegExp(t.deleteConfirm));
     fireEvent.keyDown(field, { key: "Escape" });
@@ -122,11 +126,97 @@ describe("Security", () => {
   it("explains why the last admin cannot leave", async () => {
     requestVoid.mockRejectedValueOnce(new ApiError(409, "last_admin", "x"));
     render(<Security t={t} auth={auth} locale="en" />);
+    await screen.findByText(t.methodsTitle);
     await click(t.deleteStart);
     fireEvent.change(screen.getByLabelText(new RegExp(t.deleteConfirm)), { target: { value: "my-password" } });
     await click(t.deleteSubmit);
     expect(screen.getByText(t.lastAdmin).getAttribute("role")).toBe("alert");
     expect(assign).not.toHaveBeenCalled();
+  });
+});
+
+describe("Security with Google", () => {
+  const googleOnly = { ...user, email_verified: true, has_password: false };
+  const linked = [{ provider: "google", email: "an@gmail.com", created_at: "2026-11-01T10:00:00Z", last_used_at: null }];
+  const serve = (u: typeof user, identities: typeof linked) =>
+    request.mockImplementation(async (path) => {
+      if (path === "/v1/me") return { user: u, identities };
+      throw new Error(`unexpected ${path}`);
+    });
+
+  it("lists the login methods and unlinks Google when a password exists", async () => {
+    serve(user, linked);
+    render(<Security t={t} auth={auth} locale="en" />);
+    expect(await screen.findByText(format(t.googleLinked, { email: "an@gmail.com" }))).toBeTruthy();
+    expect(screen.getByText(t.passwordSet)).toBeTruthy();
+    await click(t.unlinkGoogle);
+    expect(requestVoid).toHaveBeenCalledWith("/v1/me/identities/google", { method: "DELETE" });
+    expect(screen.getByText(t.googleUnlinked)).toBeTruthy();
+    expect(screen.getByText(t.googleNotLinked)).toBeTruthy();
+    expect(document.activeElement?.textContent).toContain(t.googleUnlinked);
+  });
+
+  it("without a password: no unlink, no password change, a way to set one by email", async () => {
+    serve(googleOnly, linked);
+    render(<Security t={t} auth={auth} locale="vi" />);
+    await screen.findByText(t.methodsTitle);
+    expect(screen.queryByRole("button", { name: t.unlinkGoogle })).toBeNull();
+    expect(screen.getByText(t.unlinkLastMethod)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Current password/)).toBeNull();
+    const setPassword = screen.getByRole("link", { name: t.setPasswordLink });
+    expect(setPassword.getAttribute("href")).toBe("/vi/forgot-password");
+  });
+
+  it("without a password: deletion is confirmed with Google, then needs no password", async () => {
+    serve(googleOnly, linked);
+    const view = render(<Security t={t} auth={auth} locale="en" />);
+    await screen.findByText(t.methodsTitle);
+    await click(t.deleteStart);
+    const confirm = screen.getByRole("link", { name: t.deleteWithGoogle });
+    const url = new URL(confirm.getAttribute("href")!);
+    expect(url.pathname).toBe("/v1/auth/google/start");
+    expect(url.searchParams.get("intent")).toBe("reauth");
+    expect(url.searchParams.get("return_to")).toBe("/app/account/security?delete=confirm");
+    expect(screen.queryByLabelText(new RegExp(t.deleteConfirm))).toBeNull();
+    view.unmount();
+
+    // Back from Google: the final button, no password field, and nothing deleted before the click.
+    const replaceState = vi.spyOn(window.history, "replaceState");
+    vi.stubGlobal("location", {
+      assign, replace: vi.fn(), pathname: "/app/account/security", search: "?delete=confirm",
+      href: "http://localhost:3000/app/account/security?delete=confirm", hash: "",
+    });
+    render(<Security t={t} auth={auth} locale="en" />);
+    expect(await screen.findByText(t.deleteGoogleReady)).toBeTruthy();
+    expect(requestVoid).not.toHaveBeenCalled();
+    // The one-shot marker is gone from the address bar.
+    expect(replaceState).toHaveBeenCalledWith(null, "", "/app/account/security");
+    await click(t.deleteSubmit);
+    expect(requestVoid).toHaveBeenCalledWith("/v1/me", { method: "DELETE", body: {} });
+    expect(assign).toHaveBeenCalledWith("/");
+  });
+
+  it("without a password: an expired or failed Google confirmation asks again", async () => {
+    serve(googleOnly, linked);
+    requestVoid.mockRejectedValueOnce(new ApiError(403, "google_reauth_required", "x"));
+    vi.stubGlobal("location", {
+      assign, replace: vi.fn(), pathname: "/app/account/security", search: "?delete=confirm",
+      href: "http://localhost:3000/app/account/security?delete=confirm", hash: "",
+    });
+    const view = render(<Security t={t} auth={auth} locale="en" />);
+    await screen.findByText(t.deleteGoogleReady);
+    await click(t.deleteSubmit);
+    expect(screen.getByText(t.deleteGoogleExpired)).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: t.deleteWithGoogle }));
+    view.unmount();
+
+    vi.stubGlobal("location", {
+      assign, replace: vi.fn(), pathname: "/app/account/security", search: "?delete=confirm&error=google_reauth_failed",
+      href: "http://localhost:3000/app/account/security?delete=confirm&error=google_reauth_failed", hash: "",
+    });
+    render(<Security t={t} auth={auth} locale="en" />);
+    expect(await screen.findByText(t.deleteGoogleFailed)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: t.deleteSubmit })).toBeNull();
   });
 });
 

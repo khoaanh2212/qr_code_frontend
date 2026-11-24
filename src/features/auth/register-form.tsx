@@ -6,6 +6,7 @@ import { PasswordField, TextField } from "@/components/ui/text-field";
 import { format, localizePath, type Locale } from "@/i18n/config";
 import { sessionApi } from "@/lib/api";
 import { Captcha, type CaptchaConfig } from "./captcha";
+import { GoogleSignIn } from "./google";
 import { FormAlert, Notice, ReturnToLink } from "./form-bits";
 import { authFailure, emailError, newPasswordError, type AuthMessages } from "./form-rules";
 import { rememberEmail, useRememberedEmail } from "./remembered-email";
@@ -99,6 +100,7 @@ export function RegisterForm({ t, locale, captcha }: { t: AuthMessages; locale: 
         <h1 className="text-2xl font-semibold">{t.registerTitle}</h1>
         <p className="text-sm text-pretty text-muted">{t.registerIntro}</p>
       </div>
+      <GoogleSignIn t={t} locale={locale} />
       <form noValidate onSubmit={submit} className="flex flex-col gap-4">
         <TextField
           ref={emailRef}

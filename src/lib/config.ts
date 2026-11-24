@@ -37,4 +37,9 @@ export const config = {
   siteUrl: origin("NEXT_PUBLIC_SITE_URL", process.env.NEXT_PUBLIC_SITE_URL, "http://localhost:3000"),
   /** Turnstile site key; null in development without one. */
   turnstileSiteKey: turnstileSiteKey(),
+  /**
+   * Shows "Continue with Google". Set NEXT_PUBLIC_GOOGLE_LOGIN=true only when the API has
+   * GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET (its Google endpoints are 404 otherwise).
+   */
+  googleLogin: process.env.NEXT_PUBLIC_GOOGLE_LOGIN === "true",
 } as const;

@@ -158,6 +158,13 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
    Later, once Search Console has data: localized slugs, a longer home page description,
    structured data (needs a CSP-safe way to emit JSON-LD, since `dangerouslySetInnerHTML` is
    banned).
-5. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+5. ~~Google login~~ Done (backend items 18-21): "Continue with Google" on login and sign-up
+   (`src/features/auth/google.tsx`, a link to the API, shown when `NEXT_PUBLIC_GOOGLE_LOGIN=true`),
+   the failed-login message, and login methods on `/app/account/security` (password set or not,
+   linked Google, unlink while a password remains, set a password by email). An account without a
+   password confirms its deletion with Google (`intent=reauth`, back to
+   `/app/account/security?delete=confirm`). Linking Google from the account page is not offered:
+   a different Google address would log in to another account.
+6. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.
