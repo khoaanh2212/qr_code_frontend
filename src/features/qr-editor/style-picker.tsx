@@ -10,6 +10,7 @@ import {
   FRAME_TEXT_MAX,
   FRAMES,
   MODULES,
+  RESTAURANT_FRAMES,
   type EyeTriple,
   type QrDesign,
   type QrEyeBall,
@@ -186,22 +187,30 @@ export function StylePicker<D extends StyleDesign>({
         </OwnColors>
       </fieldset>
 
-      <Choices
-        legend={t.design.frame}
-        name="frame"
-        values={FRAMES}
-        value={design.frame}
-        label={(v) => names.frames[v]}
-        thumb={(v) => <FrameThumb frame={v} />}
-        onPick={(frame) =>
-          onChange((d) => ({
-            ...d,
-            frame,
-            margin: frame === "none" ? d.margin : Math.max(d.margin, FRAME_MARGIN_MIN),
-            frameText: frame !== "none" && d.frameText === "" ? t.design.frameTextDefault : d.frameText,
-          }))
-        }
-      />
+      {(
+        [
+          [t.design.frame, "frame", FRAMES.filter((f) => !(RESTAURANT_FRAMES as readonly string[]).includes(f))],
+          [t.design.restaurantFrames, "frame-restaurant", RESTAURANT_FRAMES],
+        ] as const
+      ).map(([legend, name, values]) => (
+        <Choices
+          key={name}
+          legend={legend}
+          name={name}
+          values={values as readonly QrFrame[]}
+          value={design.frame}
+          label={(v) => names.frames[v]}
+          thumb={(v) => <FrameThumb frame={v} />}
+          onPick={(frame) =>
+            onChange((d) => ({
+              ...d,
+              frame,
+              margin: frame === "none" ? d.margin : Math.max(d.margin, FRAME_MARGIN_MIN),
+              frameText: frame !== "none" && d.frameText === "" ? t.design.frameTextDefault : d.frameText,
+            }))
+          }
+        />
+      ))}
       {design.frame !== "none" && (
         <>
           <div className="flex max-w-sm flex-col gap-1.5">
@@ -502,6 +511,53 @@ const DECOR: Partial<Record<QrFrame, ReactNode>> = {
       <path d="M6.5 13C2 13.4 2 9.5 3 7.6" fill="none" stroke="currentColor" strokeWidth="0.9" />
       <path d="M1.7 8.2l1.6-2.2 1 2.4Z" />
       <rect x="7" y="12" width="7" height="1.6" rx="0.8" />
+    </>
+  ),
+  beer: (
+    <>
+      <path d="M1.5 4.2a1.1 1.1 0 0 1 2-.6 1.1 1.1 0 0 1 2 0 1.1 1.1 0 0 1 2 0 1.1 1.1 0 0 1 2 0 1.1 1.1 0 0 1 2 0 1.1 1.1 0 0 1 2 .6Z" />
+      <path fillRule="evenodd" d="M1.5 4.2h11.5v10.6a.7.7 0 0 1-.7.7H2.2a.7.7 0 0 1-.7-.7ZM2.7 5.4v6.8h9.1V5.4Z" />
+      <rect x="13" y="6.5" width="2.5" height="4.5" rx="1" fill="none" stroke="currentColor" strokeWidth="1" />
+      <rect x="4.7" y="6.3" width="5" height="5" opacity="0.55" />
+    </>
+  ),
+  chef: (
+    <>
+      <circle cx="5.6" cy="3" r="1.8" />
+      <circle cx="8" cy="2.3" r="2" />
+      <circle cx="10.4" cy="3" r="1.8" />
+      <rect x="5" y="3.3" width="6" height="2" />
+      <path fillRule="evenodd" d="M3 5.3h10a.8.8 0 0 1 .8.8v9.1a.8.8 0 0 1-.8.8H3a.8.8 0 0 1-.8-.8V6.1a.8.8 0 0 1 .8-.8ZM3.5 6.3v6.6h9V6.3Z" />
+      <rect x="5.5" y="7.1" width="5" height="5" opacity="0.55" />
+    </>
+  ),
+  cloche: (
+    <>
+      <circle cx="8" cy="1.3" r=".7" />
+      <path d="M4.5 4.6a3.5 3.1 0 0 1 7 0Z" />
+      <rect x="3.6" y="4.6" width="8.8" height=".7" rx=".35" />
+      <path fillRule="evenodd" d="M3 5.8h10a.8.8 0 0 1 .8.8v8.6a.8.8 0 0 1-.8.8H3a.8.8 0 0 1-.8-.8V6.6a.8.8 0 0 1 .8-.8ZM3.5 6.8v6.1h9V6.8Z" />
+      <rect x="5.5" y="7.4" width="5" height="5" opacity="0.55" />
+    </>
+  ),
+  takeaway: (
+    <>
+      <rect x="1.4" y="1" width="13.2" height="1.6" rx=".6" />
+      <path fillRule="evenodd" d="M1.6 3.1h12.8l-1.7 12.4H3.3ZM4.2 4.4v6.6h7.6V4.4Z" />
+      <rect x="5.5" y="5.2" width="5" height="5" opacity="0.55" />
+    </>
+  ),
+  menu: (
+    <>
+      <path d="M11.2 0h1.4v2.4l-.7-.6-.7.6Z" />
+      <path fillRule="evenodd" d="M2.4 1.4h11a.9.9 0 0 1 .9.9v12.4a.9.9 0 0 1-.9.9h-11a.6.6 0 0 1-.6-.6V2a.6.6 0 0 1 .6-.6ZM5 3v8.8h8V3ZM3.6 2.4v12h.3v-12Z" />
+      <rect x="6.5" y="4.6" width="5" height="5" opacity="0.55" />
+    </>
+  ),
+  receipt: (
+    <>
+      <path fillRule="evenodd" d="M2 1l1.2.8L4.4 1l1.2.8L6.8 1 8 1.8 9.2 1l1.2.8 1.2-.8 1.2.8L14 1v14l-1.2-.8-1.2.8-1.2-.8-1.2.8L8 14.2l-1.2.8-1.2-.8-1.2.8-1.2-.8L2 15ZM3.6 3.2v8.2h8.8V3.2Z" />
+      <rect x="5.5" y="4.8" width="5" height="5" opacity="0.55" />
     </>
   ),
   corners: (

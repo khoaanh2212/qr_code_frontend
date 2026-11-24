@@ -378,6 +378,7 @@ export const en = {
       frameColorToggle: "Own frame color",
       frameColor: "Frame color",
       frame: "Frame",
+      restaurantFrames: "Restaurants & cafés",
       styles: {
         modules: {
           square: "Square",
@@ -417,6 +418,12 @@ export const en = {
           cup: "Cup",
           arrow: "Arrow",
           corners: "Corners",
+          beer: "Beer",
+          chef: "Chef",
+          cloche: "Cloche",
+          takeaway: "Takeaway",
+          menu: "Menu",
+          receipt: "Receipt",
         },
       },
       frameText: "Frame text",

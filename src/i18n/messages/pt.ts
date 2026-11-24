@@ -374,11 +374,12 @@ export const pt = {
       frameColorToggle: "Cor própria do quadro",
       frameColor: "Cor do quadro",
       frame: "Moldura",
+      restaurantFrames: "Restaurantes e cafés",
       styles: {
         modules: { square: "Quadrado", rounded: "Arredondado", dots: "Pontos", bars: "Barras", small: "Quadrados pequenos", hbars: "Linhas", diamond: "Losangos" },
         eyeFrames: { square: "Quadrado", rounded: "Arredondado", "extra-rounded": "Muito arredondado", circle: "Círculo", leaf: "Folha", pointed: "Pontiagudo" },
         eyeBalls: { square: "Quadrado", rounded: "Arredondado", circle: "Círculo", leaf: "Folha", pointed: "Pontiagudo", diamond: "Losango" },
-        frames: { none: "Nenhuma", "label-bottom": "Legenda abaixo", "label-top": "Legenda acima", box: "Contorno", "bubble-top": "Balão acima", "bubble-bottom": "Balão abaixo", ribbon: "Fita", phone: "Celular", bag: "Sacola", cup: "Xícara", arrow: "Seta", corners: "Cantos" },
+        frames: { none: "Nenhuma", "label-bottom": "Legenda abaixo", "label-top": "Legenda acima", box: "Contorno", "bubble-top": "Balão acima", "bubble-bottom": "Balão abaixo", ribbon: "Fita", phone: "Celular", bag: "Sacola", cup: "Xícara", arrow: "Seta", corners: "Cantos", beer: "Cerveja", chef: "Chef", cloche: "Cloche", takeaway: "Para viagem", menu: "Cardápio", receipt: "Recibo" },
       },
       frameText: "Texto da moldura",
       frameTextHelp: "Até 24 caracteres. Texto próprio exige uma conta gratuita; o padrão não.",

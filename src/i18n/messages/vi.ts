@@ -374,11 +374,12 @@ export const vi = {
       frameColorToggle: "Màu khung riêng",
       frameColor: "Màu khung",
       frame: "Khung",
+      restaurantFrames: "Nhà hàng & quán cà phê",
       styles: {
         modules: { square: "Vuông", rounded: "Bo tròn", dots: "Chấm", bars: "Thanh", small: "Ô vuông nhỏ", hbars: "Đường kẻ", diamond: "Hình thoi" },
         eyeFrames: { square: "Vuông", rounded: "Bo tròn", "extra-rounded": "Bo tròn nhiều", circle: "Tròn", leaf: "Hình lá", pointed: "Nhọn" },
         eyeBalls: { square: "Vuông", rounded: "Bo tròn", circle: "Tròn", leaf: "Hình lá", pointed: "Nhọn", diamond: "Hình thoi" },
-        frames: { none: "Không", "label-bottom": "Nhãn bên dưới", "label-top": "Nhãn bên trên", box: "Viền", "bubble-top": "Bong bóng trên", "bubble-bottom": "Bong bóng dưới", ribbon: "Ruy băng", phone: "Điện thoại", bag: "Túi mua sắm", cup: "Cốc cà phê", arrow: "Mũi tên", corners: "Góc" },
+        frames: { none: "Không", "label-bottom": "Nhãn bên dưới", "label-top": "Nhãn bên trên", box: "Viền", "bubble-top": "Bong bóng trên", "bubble-bottom": "Bong bóng dưới", ribbon: "Ruy băng", phone: "Điện thoại", bag: "Túi mua sắm", cup: "Cốc cà phê", arrow: "Mũi tên", corners: "Góc", beer: "Cốc bia", chef: "Mũ đầu bếp", cloche: "Chụp đồ ăn", takeaway: "Cốc mang đi", menu: "Thực đơn", receipt: "Hóa đơn" },
       },
       frameText: "Chữ trên khung",
       frameTextHelp: "Tối đa 24 ký tự. Chữ riêng cần tài khoản miễn phí; chữ mặc định thì không cần.",

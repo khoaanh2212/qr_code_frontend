@@ -374,11 +374,12 @@ export const de = {
       frameColorToggle: "Eigene Rahmenfarbe",
       frameColor: "Rahmenfarbe",
       frame: "Rahmen",
+      restaurantFrames: "Restaurants & Cafés",
       styles: {
         modules: { square: "Quadratisch", rounded: "Abgerundet", dots: "Punkte", bars: "Balken", small: "Kleine Quadrate", hbars: "Linien", diamond: "Rauten" },
         eyeFrames: { square: "Quadratisch", rounded: "Abgerundet", "extra-rounded": "Stark abgerundet", circle: "Kreis", leaf: "Blatt", pointed: "Spitz" },
         eyeBalls: { square: "Quadratisch", rounded: "Abgerundet", circle: "Kreis", leaf: "Blatt", pointed: "Spitz", diamond: "Raute" },
-        frames: { none: "Keiner", "label-bottom": "Beschriftung unten", "label-top": "Beschriftung oben", box: "Umriss", "bubble-top": "Sprechblase oben", "bubble-bottom": "Sprechblase unten", ribbon: "Band", phone: "Handy", bag: "Tasche", cup: "Tasse", arrow: "Pfeil", corners: "Ecken" },
+        frames: { none: "Keiner", "label-bottom": "Beschriftung unten", "label-top": "Beschriftung oben", box: "Umriss", "bubble-top": "Sprechblase oben", "bubble-bottom": "Sprechblase unten", ribbon: "Band", phone: "Handy", bag: "Tasche", cup: "Tasse", arrow: "Pfeil", corners: "Ecken", beer: "Bier", chef: "Kochmütze", cloche: "Servierhaube", takeaway: "To-go", menu: "Speisekarte", receipt: "Kassenbon" },
       },
       frameText: "Rahmentext",
       frameTextHelp: "Bis zu 24 Zeichen. Eigener Text braucht ein kostenloses Konto; der Standardtext nicht.",
