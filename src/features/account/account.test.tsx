@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { RequireSession } from "@/features/auth/require-session";
 import { format } from "@/i18n/config";
@@ -189,8 +189,10 @@ describe("Security with Google", () => {
     render(<Security t={t} auth={auth} locale="en" />);
     expect(await screen.findByText(t.deleteGoogleReady)).toBeTruthy();
     expect(requestVoid).not.toHaveBeenCalled();
-    // The one-shot marker is gone from the address bar.
-    expect(replaceState).toHaveBeenCalledWith(null, "", "/app/account/security");
+    // The one-shot marker is gone from the address bar. It is dropped by an effect, which React
+    // may run after the text above is painted (the render follows an async load): wait for it.
+    await waitFor(() => expect(replaceState).toHaveBeenCalledWith(null, "", "/app/account/security"));
+    expect(replaceState).toHaveBeenCalledTimes(1); // once: the effect does not loop
     await click(t.deleteSubmit);
     expect(requestVoid).toHaveBeenCalledWith("/v1/me", { method: "DELETE", body: {} });
     expect(assign).toHaveBeenCalledWith("/");

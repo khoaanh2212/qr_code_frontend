@@ -300,7 +300,7 @@ function Select<V extends string>({
         id={id}
         value={value}
         onChange={(e) => onPick(e.target.value as V)}
-        className="min-h-11 rounded-md border border-control bg-surface px-3"
+        className="rounded-md border border-control bg-surface"
       >
         {values.map((v) => (
           <option key={v} value={v} disabled={disabled?.(v)}>
