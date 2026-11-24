@@ -146,7 +146,13 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
 3. ~~Account pages~~ Done (`src/features/account`, `/app/account`): profile and display name,
    password change, account deletion, logged-in devices. Not in the API yet (backend PLAN):
    email change, personal data export, time zone, usage counters.
-4. Per-type public pages (`/wifi-qr-code`, ...) for SEO.
+4. ~~Per-type public pages~~ Done (`src/features/qr-type-pages`, one route folder per slug, `src/lib/qr/type-pages.ts`):
+   `/url-qr-code`, `/text-qr-code`, `/wifi-qr-code`, `/vcard-qr-code`, `/email-qr-code`,
+   `/sms-qr-code`, `/phone-qr-code` in every language, each opening the generator on its type with
+   a short guide and questions, linked from the home page and listed in the sitemap. Slugs are
+   English in every language and never change once published (a rename needs a 308 redirect).
+   Later, once Search Console has data: localized slugs, structured data (needs a CSP-safe way to
+   emit JSON-LD, since `dangerouslySetInnerHTML` is banned).
 5. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.

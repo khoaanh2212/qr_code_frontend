@@ -26,8 +26,9 @@ const PREVIEW_SIZE = 512;
 /**
  * The static QR code generator: pick a type, fill in its fields, adjust the design, download.
  * Public and session-free: talks to the API through `publicApi` only.
+ * `initialType` opens it on that type (per-type pages); unknown types fall back to the first.
  */
-export function QrEditor({ t }: { t: T }) {
+export function QrEditor({ t, initialType }: { t: T; initialType?: string }) {
   const { state, reload } = useQrTypes();
 
   if (state.kind === "loading") return <EditorSkeleton label={t.loading} />;
@@ -47,12 +48,14 @@ export function QrEditor({ t }: { t: T }) {
       </div>
     );
   }
-  return <Editor t={t} types={state.catalog.types} />;
+  return <Editor t={t} types={state.catalog.types} initialType={initialType} />;
 }
 
-function Editor({ t, types }: { t: T; types: QrType[] }) {
+function Editor({ t, types, initialType }: { t: T; types: QrType[]; initialType?: string }) {
   const headingIds = { content: useId(), design: useId() };
-  const [typeName, setTypeName] = useState(types[0].type);
+  const [typeName, setTypeName] = useState(
+    () => types.find((x) => x.type === initialType)?.type ?? types[0].type,
+  );
   const [dataByType, setDataByType] = useState<Record<string, QrData>>({});
   const [touched, setTouched] = useState<Record<string, true>>({});
   const [design, setDesign] = useState<QrDesign>(DEFAULT_DESIGN);

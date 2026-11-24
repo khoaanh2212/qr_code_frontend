@@ -136,6 +136,20 @@ describe("QrEditor", () => {
     expect(opts.body?.data).toEqual({ ssid: "Cafe", encryption: "nopass" });
   });
 
+  it("opens on the type a per-type page asks for", async () => {
+    render(<QrEditor t={t} initialType="wifi" />);
+    expect(await screen.findByLabelText(/Network name/)).toBeTruthy();
+    expect((screen.getByLabelText("Wi-Fi") as HTMLInputElement).checked).toBe(true);
+    // The other types stay one click away.
+    fireEvent.click(screen.getByLabelText("Website"));
+    expect(screen.getByLabelText(/Website address/)).toBeTruthy();
+  });
+
+  it("falls back to the first type when the API does not offer the requested one", async () => {
+    render(<QrEditor t={t} initialType="sms" />);
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
+  });
+
   it("offers a retry when the catalog cannot be loaded", async () => {
     vi.mocked(publicApi.request).mockRejectedValueOnce(new ApiError(0, "network_error", "down"));
     render(<QrEditor t={t} />);
