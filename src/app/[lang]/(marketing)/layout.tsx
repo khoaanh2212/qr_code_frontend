@@ -48,6 +48,11 @@ export default async function MarketingLayout({ children }: LayoutProps<"/[lang]
       <footer className="flex flex-col gap-3 border-t border-border px-4 pt-6 pb-28 text-center text-sm text-muted lg:pb-6">
         <TypeFooterLinks locale={locale} t={t.typePages} />
         <p>{t.footer.staticForever}</p>
+        <p>
+          <Link href={localizePath(locale, "/report")} className="inline-flex min-h-11 items-center underline-offset-4 hover:text-foreground hover:underline">
+            {t.footer.reportAbuse}
+          </Link>
+        </p>
       </footer>
     </RootDocument>
   );

@@ -23,6 +23,7 @@ export const PRIVATE_PREFIXES = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/report",
 ] as const;
 
 export function isPrivatePath(path: string): boolean {
@@ -34,8 +35,11 @@ export function surfaceFor(pathname: string): Surface {
   return isPrivatePath(splitLocale(pathname).rest) ? "private" : "marketing";
 }
 
-/** Private pages that show the Turnstile check (sign-up, reset request, resend on verify and profile). */
-export const CAPTCHA_PATHS = ["/register", "/forgot-password", "/verify-email", "/app/account", "/app/codes/new"] as const;
+/**
+ * Private pages that show the Turnstile check (sign-up, reset request, resend on verify,
+ * profile, new code, abuse report).
+ */
+export const CAPTCHA_PATHS = ["/register", "/forgot-password", "/verify-email", "/app/account", "/app/codes/new", "/report"] as const;
 
 /** Whether a URL path (with or without a locale prefix) hosts the Turnstile iframe. */
 export function hostsCaptcha(pathname: string): boolean {
