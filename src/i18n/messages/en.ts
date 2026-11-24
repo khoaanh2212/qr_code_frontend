@@ -22,114 +22,183 @@ export const en = {
   },
   /** Per-type landing pages ("/wifi-qr-code"), see src/lib/qr/type-pages.ts. */
   typePages: {
-    howTo: "How it works",
     faq: "Questions",
     allTypes: "QR codes by type",
     pages: {
       url: {
+        linkLabel: "URL QR code",
         title: "URL QR code generator",
-        description: "Create a free QR code that opens your website. No account, no expiry.",
+        description:
+          "Create a free QR code for any link. It opens your page straight away, never expires and needs no sign-up. Download PNG or SVG with your colors and logo.",
         intro:
           "Turn any web address into a QR code. Scanning it opens the page in the phone's browser, with no app to install.",
+        howToTitle: "How to make a QR code for a link",
         step1: "Paste the address of the page, starting with https://.",
         step2: "Pick colors and add your logo if you like. The preview checks that the code stays scannable.",
         step3: "Download it as PNG for screens or SVG for print.",
+        detailTitle: "Make the link work in print",
+        detail1:
+          "A shorter address gives a simpler code that scans from further away. Drop parameters you do not need, but keep the UTM tags your analytics rely on: they work in a QR code like in any other link.",
+        detail2:
+          "Test the code with two or three phones before printing. Print it at least 2 cm wide, and larger when people scan from a distance: about a tenth of the scanning distance is a good rule.",
         q1: "Does the code expire?",
         a1: "No. The address is written into the code itself, so it keeps working for as long as the page is online.",
         q2: "Can I change the address after printing?",
         a2: "Not with a static code: a new address needs a new code. Test the link before you print.",
-        q3: "Is it tracked?",
+        q3: "Are scans tracked?",
         a3: "No. A static code opens your address directly, without passing through our servers, so scans are not counted.",
+        q4: "Why does my code not scan?",
+        a4: "Usually the contrast is too low, the code is printed too small, or a logo covers too much of it. Keep a dark code on a light background; the preview warns when the colors are too close.",
       },
       text: {
+        linkLabel: "Text QR code",
         title: "Text QR code generator",
-        description: "Put a short note, code or message into a free QR code that works offline.",
+        description:
+          "Put a note, serial number or short message into a free QR code. Phones read it offline, with no app and no link to open. Download it as PNG or SVG.",
         intro:
           "Store plain text in a QR code: a note, a serial number, instructions. The phone shows the text, no internet needed.",
+        howToTitle: "How to make a text QR code",
         step1: "Type or paste your text.",
         step2: "Adjust the colors and error correction. Shorter text gives a simpler code that scans more easily.",
         step3: "Download it as PNG or SVG.",
+        detailTitle: "Where text codes help",
+        detail1:
+          "Text codes suit labels and places without a reliable connection: serial numbers on equipment, storage boxes, a short instruction next to a machine, or a message hidden in an invitation.",
+        detail2:
+          "Most camera apps show the text and offer to copy or search it. If you want people to open a page, make a URL code instead: a link inside a text code is not tappable on every phone.",
         q1: "How much text fits?",
         a1: "Up to about 2,000 characters (fewer with accented letters), but short text scans far more reliably. Keep it to a few lines for print.",
         q2: "Does it need an internet connection?",
         a2: "No. The text is inside the code, so the phone reads it offline.",
         q3: "Can I edit the text later?",
         a3: "No. The text is part of the code, so new text means a new code.",
+        q4: "Can I use other languages and emoji?",
+        a4: "Yes. The text is stored as UTF-8, so any language works. Accented letters, other scripts and emoji take more room, so the code gets denser.",
       },
       wifi: {
+        linkLabel: "Wi-Fi QR code",
         title: "Wi-Fi QR code generator",
-        description: "Let guests join your Wi-Fi by scanning a free QR code instead of typing the password.",
+        description:
+          "Create a free Wi-Fi QR code so guests join your network by scanning instead of typing the password. Works with WPA and open networks. No sign-up needed.",
         intro:
           "Guests scan the code and join your network, without spelling out the password. Most phone cameras support it.",
+        howToTitle: "How to make a Wi-Fi QR code",
         step1: "Enter the network name (SSID) exactly as it appears, and the password.",
         step2: "Choose the security type: WPA for most home and office networks, None for an open network.",
         step3: "Download the code and print it where guests can see it.",
+        detailTitle: "Before you print it",
+        detail1:
+          "The network name must match exactly, including capital letters and spaces. Choose WPA for WPA, WPA2 and WPA3 networks, WEP only for very old routers, and None for an open network. Tick Hidden network if your router does not broadcast its name.",
+        detail2:
+          "For a café or an office, consider a separate guest network: the printed code then never reveals the password of the network your own devices use.",
         q1: "Is my Wi-Fi password safe?",
         a1: "The password is written into the code, so anyone who scans it can read it. Only show it to people you would give the password to. We never store it.",
-        q2: "Which phones can scan it?",
-        a2: "The camera app of current iPhones and Android phones joins the network directly. Older phones may need a QR scanner app.",
+        q2: "Does it work on iPhone and Android?",
+        a2: "Yes. The Camera app on iOS 11 and later offers to join the network, and Android 10 and later do the same from the camera or the Wi-Fi settings. Older phones may need a QR scanner app.",
         q3: "What if I change the password?",
         a3: "The code holds the old password, so make a new code after changing it.",
+        q4: "Why does my phone not join?",
+        a4: "Check the network name for typos and capital letters, the security type and the password. A phone only joins networks in range, so test the code where it will hang.",
       },
       vcard: {
+        linkLabel: "vCard QR code",
         title: "vCard QR code generator",
-        description: "Share your contact details with a free QR code that saves straight to the phone's contacts.",
+        description:
+          "Create a free vCard QR code for business cards and badges. Scanning it saves your name, phone, email and address to the phone's contacts. No sign-up.",
         intro:
           "Put your name, phone, email and address in a QR code. Scanning it offers to save you as a contact, with nothing to type.",
+        howToTitle: "How to make a vCard QR code",
         step1: "Fill in the details you want to share. A name or an organization is required, everything else is optional.",
         step2: "Style the code to match your business card or badge.",
         step3: "Download it as SVG for print or PNG for email signatures and slides.",
+        detailTitle: "Keep the card easy to scan",
+        detail1:
+          "Every field you fill in makes the code denser. On a business card, a name, phone, email and website are usually enough; keep the address and note for larger prints.",
+        detail2:
+          "Write the phone number with its country code, for example +44, so it works for contacts abroad. The details are saved as a vCard 3.0 card, which the contacts apps of current iPhones and Android phones import.",
         q1: "What does the phone do when it scans the code?",
         a1: "It shows the contact card and offers to save it. Nothing is sent anywhere.",
         q2: "Why does the code look dense?",
         a2: "Every detail you add makes the code larger. Leave out fields you do not need, and print it at least 3 cm wide.",
         q3: "Can I update my details later?",
         a3: "Not with a static code: the details are in the code, so new details need a new code.",
+        q4: "Can I add a photo?",
+        a4: "No. A photo does not fit in a QR code, so the card holds text fields only.",
       },
       email: {
+        linkLabel: "Email QR code",
         title: "Email QR code generator",
-        description: "Create a free QR code that opens a new email with the address, subject and message filled in.",
+        description:
+          "Create a free QR code that opens a new email with the address, subject and message already filled in. Ideal for feedback, support and orders. No sign-up.",
         intro:
           "Scanning the code opens the phone's mail app with a ready-to-send email. Useful for feedback, support and sign-ups.",
+        howToTitle: "How to make an email QR code",
         step1: "Enter the recipient's address.",
         step2: "Add a subject and a message if you want them filled in.",
         step3: "Download the code and test it with your phone before printing.",
+        detailTitle: "Ideas for email codes",
+        detail1:
+          "Put one on a receipt for feedback, on a product for support requests, or at an event for sign-ups. A prefilled subject such as “Order 1042” makes the replies easy to sort.",
+        detail2:
+          "Keep the message short: everything is stored in the code, and a long message makes it denser and harder to scan.",
         q1: "Is the email sent automatically?",
         a1: "No. The mail app opens with a draft, and the person scanning decides whether to send it.",
         q2: "Can the sender change the text?",
         a2: "Yes. The subject and message are only a starting point.",
         q3: "Which mail app opens?",
         a3: "The phone's default mail app.",
+        q4: "Can I add more than one recipient?",
+        a4: "No, one address per code. To reach a team, use a shared address such as a support inbox.",
       },
       sms: {
+        linkLabel: "SMS QR code",
         title: "SMS QR code generator",
-        description: "Create a free QR code that opens a text message to your number, with the message filled in.",
+        description:
+          "Create a free SMS QR code that opens a text message to your number with the message filled in. Good for opt-ins, votes and quick replies. No sign-up.",
         intro:
           "Scanning the code opens a new text message to your number. Handy for opt-ins, votes and quick replies.",
+        howToTitle: "How to make an SMS QR code",
         step1: "Enter the phone number with its country code, for example +44.",
         step2: "Add the message to fill in, if you want one.",
         step3: "Download the code and try it with your phone.",
+        detailTitle: "Ways to use SMS codes",
+        detail1:
+          "Ask people to text a keyword to join a list, vote, confirm an appointment or request a call back. The prefilled message saves them typing and gives you replies in one format.",
+        detail2:
+          "If you collect opt-ins for marketing messages, follow your country's rules and say how to stop receiving them.",
         q1: "Is the message sent automatically?",
         a1: "No. The messaging app opens with the text, and the person scanning presses send.",
         q2: "Who pays for the message?",
         a2: "The person who sends it, at their usual rate.",
         q3: "Why include the country code?",
         a3: "So the number works from any country. Start it with + and the country code.",
+        q4: "Does it work on iPhone and Android?",
+        a4: "Yes, on most phones the messaging app opens with the number and the text. Some older phones fill in the number but not the text.",
       },
       phone: {
+        linkLabel: "Phone QR code",
         title: "Phone QR code generator",
-        description: "Create a free QR code that calls your phone number when scanned.",
+        description:
+          "Create a free QR code that opens the dialer with your number, ready to call. For posters, vans, shop windows and business cards. No sign-up, no expiry.",
         intro:
           "Scanning the code opens the phone's dialer with your number. Useful on posters, vans, shop windows and business cards.",
+        howToTitle: "How to make a phone QR code",
         step1: "Enter the number with its country code, for example +1.",
         step2: "Style the code to match your print.",
         step3: "Download it and check that it dials the right number.",
+        detailTitle: "Make it easy to call",
+        detail1:
+          "Write the number in international format, starting with + and the country code. It then dials correctly from local and foreign phones alike.",
+        detail2:
+          "Say next to the code what the call is for, such as “Scan to book a table”: people scan more readily when they know what happens next.",
         q1: "Does it call straight away?",
         a1: "No. The dialer opens with the number filled in, and the person decides whether to call.",
         q2: "Can I use a landline number?",
-        a2: "Yes, any number a phone can dial.",
+        a2: "Yes, any regular number, mobile or landline. Extensions and codes with * or # are not supported.",
         q3: "What if my number changes?",
         a3: "The number is in the code, so a new number needs a new code.",
+        q4: "Does it work without mobile data?",
+        a4: "Yes. Reading the code needs no connection; only the call itself uses the phone network.",
       },
     },
   },

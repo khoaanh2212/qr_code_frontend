@@ -25,7 +25,7 @@ export default async function HomePage() {
         </header>
         <QrEditor t={t.generator} />
       </div>
-      <TypeLinks locale={await getLocale()} t={t} />
+      <TypeLinks locale={await getLocale()} t={t.typePages} />
     </div>
   );
 }

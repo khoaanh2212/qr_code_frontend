@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { baseMetadata, RootDocument } from "@/components/root-document";
+import { TypeFooterLinks } from "@/features/qr-type-pages/type-links";
 import { LOCALES, localizePath } from "@/i18n/config";
 import { getLocale, getMessages } from "@/i18n/server";
 
@@ -42,8 +43,11 @@ export default async function MarketingLayout({ children }: LayoutProps<"/[lang]
         </nav>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:py-10">{children}</main>
-      <footer className="border-t border-border py-6 text-center text-sm text-muted">
-        {t.footer.staticForever}
+      {/* pb-28 below lg: every public page has the generator, whose fixed mobile preview bar
+          would otherwise cover the end of the footer. */}
+      <footer className="flex flex-col gap-3 border-t border-border px-4 pt-6 pb-28 text-center text-sm text-muted lg:pb-6">
+        <TypeFooterLinks locale={locale} t={t.typePages} />
+        <p>{t.footer.staticForever}</p>
       </footer>
     </RootDocument>
   );

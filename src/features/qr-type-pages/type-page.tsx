@@ -39,7 +39,7 @@ export async function TypePage({ type }: { type: TypePageType }) {
         <QrEditor t={t.generator} initialType={type} />
       </div>
       <TypeGuide t={t.typePages} type={type} />
-      <TypeLinks locale={locale} t={t} current={type} />
+      <TypeLinks locale={locale} t={t.typePages} current={type} />
     </div>
   );
 }

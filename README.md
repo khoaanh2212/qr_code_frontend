@@ -148,11 +148,16 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
    email change, personal data export, time zone, usage counters.
 4. ~~Per-type public pages~~ Done (`src/features/qr-type-pages`, one route folder per slug, `src/lib/qr/type-pages.ts`):
    `/url-qr-code`, `/text-qr-code`, `/wifi-qr-code`, `/vcard-qr-code`, `/email-qr-code`,
-   `/sms-qr-code`, `/phone-qr-code` in every language, each opening the generator on its type with
-   a short guide and questions, linked from the home page and listed in the sitemap. Slugs are
-   English in every language and never change once published (a rename needs a 308 redirect).
-   Later, once Search Console has data: localized slugs, structured data (needs a CSP-safe way to
-   emit JSON-LD, since `dangerouslySetInnerHTML` is banned).
+   `/sms-qr-code`, `/phone-qr-code` in every language, each opening the generator on its type.
+   Below it, server-rendered text that is specific to the type (the generator renders in the
+   browser, so this is what search engines read): how-to steps, two paragraphs of details, four
+   questions. Linked from the home page and the footer of every public page with "Wi-Fi QR code"
+   style anchors, and listed in the sitemap. Slugs are English in every language and never change
+   once published (a rename needs a 308 redirect). Copy rules: claims must match what the API
+   does (static content, nothing stored, no scan tracking); check facts in the backend encoders.
+   Later, once Search Console has data: localized slugs, a longer home page description,
+   structured data (needs a CSP-safe way to emit JSON-LD, since `dangerouslySetInnerHTML` is
+   banned).
 5. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.

@@ -120,7 +120,7 @@ function Editor({ t, types, initialType }: { t: T; types: QrType[]; initialType?
     }));
 
   return (
-    <div className="grid gap-8 pb-24 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10 lg:pb-0">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
       <div className="flex min-w-0 flex-col gap-8">
         <TypePicker t={t} types={types} value={qrType.type} onChange={setTypeName} />
         <section aria-labelledby={headingIds.content} className="flex flex-col gap-4">
