@@ -90,6 +90,22 @@ not headless: no `mcp__playwright__*` and no ad-hoc headless scripts.
 
 Load the matching skill before starting work of that kind.
 
+**Enforcement (non-negotiable).**
+
+- Invoke every matching skill with the Skill tool (agents with the Agent tool) before the work it
+  covers starts. Reading this table, following existing patterns in the code or running the
+  equivalent commands by hand does not count as using a skill.
+- Every task, however small (a script, a docs change, a follow-up fix), goes through its
+  `ecc:orch-*` pipeline with both gates. An approval covers only the work it named.
+- Each step loads its own skills: writing code, writing tests, schema and SQL, API design,
+  Docker, review, verification, commit and PR. Loading one skill at the start of a task is not
+  enough.
+- Before every commit run `ecc:verification-loop`; commit and open PRs through `ecc:prp-commit`
+  and `ecc:pr`.
+- If a skill cannot be loaded (missing, error), stop and tell the user; never continue without it.
+- Every PR description ends with an "ECC skills used" line listing the skills and agents loaded
+  for it. A PR without it, or with a matching skill missing, is not ready to merge.
+
 | Kind of work | ECC skill / agent |
 |---|---|
 | New feature | `ecc:orch-add-feature` |
