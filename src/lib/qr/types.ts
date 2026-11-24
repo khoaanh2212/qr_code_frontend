@@ -64,6 +64,11 @@ export type QrLogoIcon = (typeof LOGO_ICONS)[number];
 
 export type EyeTriple<T> = readonly [T, T, T];
 
+/** Maps each eye's value (top-left, top-right, bottom-left), keeping the triple's type. */
+export function mapTriple<T, U>(t: EyeTriple<T>, f: (value: T, index: number) => U): EyeTriple<U> {
+  return [f(t[0], 0), f(t[1], 1), f(t[2], 2)];
+}
+
 /** Style options of the API (backend PLAN, "Rules – QR"), in display order. */
 export const MODULES = ["square", "rounded", "dots", "bars", "small", "hbars", "diamond"] as const;
 export const EYE_FRAMES = ["square", "rounded", "extra-rounded", "circle", "leaf", "pointed"] as const;

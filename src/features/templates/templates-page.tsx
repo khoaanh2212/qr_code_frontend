@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { FormAlert, TextLink } from "@/features/auth/form-bits";
+import { FormAlert, TextLink } from "@/components/form/form-bits";
 import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-session";
 import { render } from "@/features/qr-editor/use-render";
 import { format, localizePath, type Locale } from "@/i18n/config";

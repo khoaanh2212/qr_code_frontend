@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { format, localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
-import { ApiError, publicApi } from "@/lib/api";
+import { commonErrorMessage, publicApi, toApiError } from "@/lib/api";
 import { Captcha, type CaptchaConfig } from "@/features/auth/captcha";
-import { FormAlert, Notice, TextLink } from "@/features/auth/form-bits";
+import { FormAlert, Notice, TextLink } from "@/components/form/form-bits";
 import { parseShortCode } from "./short-code";
 
 export type ReportMessages = Messages["report"];
@@ -20,18 +20,12 @@ export type ReportReason = (typeof REPORT_REASONS)[number];
 export const MAX_DETAILS = 500;
 
 function failure(err: unknown, t: ReportMessages): { field?: "link" | "reason" | "details"; message: string } {
-  const e = err instanceof ApiError ? err : new ApiError(0, "network_error", "");
+  const e = toApiError(err);
+  const common = commonErrorMessage(e, t.errors);
+  if (common !== undefined) return { message: common };
   switch (e.code) {
     case "not_found":
       return { field: "link", message: t.errors.notFound };
-    case "captcha_failed":
-      return { message: t.errors.captchaFailed };
-    case "captcha_unavailable":
-      return { message: t.errors.captchaUnavailable };
-    case "rate_limited":
-      return { message: format(t.errors.rateLimited, { seconds: e.retryAfter ?? 60 }) };
-    case "network_error":
-      return { message: t.errors.network };
     case "validation_error":
       if (e.field === "reason") return { field: "reason", message: t.errors.reasonRequired };
       if (e.field === "short_code") return { field: "link", message: t.errors.linkInvalid };

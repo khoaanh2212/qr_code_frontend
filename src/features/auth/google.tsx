@@ -5,7 +5,7 @@ import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { config } from "@/lib/config";
 import { safeReturnTo } from "@/lib/navigation/return-to";
-import { FormAlert } from "./form-bits";
+import { FormAlert } from "@/components/form/form-bits";
 
 /** The API's Google login error, set on /login by its callback (backend PLAN, "Google login"). */
 export const GOOGLE_LOGIN_FAILED = "google_login_failed";

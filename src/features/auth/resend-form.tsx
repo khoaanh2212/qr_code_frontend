@@ -4,9 +4,9 @@ import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import type { Locale } from "@/i18n/config";
-import { sessionApi } from "@/lib/api";
+import { resendVerification } from "./api";
 import { Captcha, type CaptchaConfig } from "./captcha";
-import { FormAlert } from "./form-bits";
+import { FormAlert } from "@/components/form/form-bits";
 import { authFailure, emailError, type AuthMessages } from "./form-rules";
 import { rememberEmail, useRememberedEmail } from "./remembered-email";
 
@@ -44,10 +44,7 @@ export function ResendForm({
 
     setBusy(true);
     try {
-      await sessionApi.request("/v1/auth/resend-verification", {
-        method: "POST",
-        body: { email: email.trim(), captcha_token: token },
-      });
+      await resendVerification({ email: email.trim(), captcha_token: token });
       setSent(true);
     } catch (err) {
       setAlert(authFailure(err, t).message);

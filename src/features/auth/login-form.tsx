@@ -4,9 +4,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordField, TextField } from "@/components/ui/text-field";
 import { localizePath, type Locale } from "@/i18n/config";
-import { sessionApi } from "@/lib/api";
+import { login } from "./api";
 import { safeReturnTo } from "@/lib/navigation/return-to";
-import { FormAlert, ReturnToLink } from "./form-bits";
+import { FormAlert, ReturnToLink } from "@/components/form/form-bits";
 import { authFailure, emailError, type AuthMessages } from "./form-rules";
 import { rememberEmail, useRememberedEmail } from "./remembered-email";
 
@@ -46,7 +46,7 @@ export function LoginForm({ t, locale }: { t: AuthMessages; locale: Locale }) {
 
     setBusy(true);
     try {
-      await sessionApi.request("/v1/auth/login", { method: "POST", body: { email: email.trim(), password } });
+      await login({ email: email.trim(), password });
       window.location.assign(afterLoginTarget(locale));
     } catch (err) {
       setAlert(authFailure(err, t).message);

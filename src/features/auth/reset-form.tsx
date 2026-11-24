@@ -4,8 +4,9 @@ import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordField } from "@/components/ui/text-field";
 import { localizePath, type Locale } from "@/i18n/config";
-import { ApiError, sessionApi } from "@/lib/api";
-import { ButtonLink, FormAlert, Notice, TextLink } from "./form-bits";
+import { ApiError } from "@/lib/api";
+import { resetPassword } from "./api";
+import { ButtonLink, FormAlert, Notice, TextLink } from "@/components/form/form-bits";
 import { authFailure, newPasswordError, type AuthMessages } from "./form-rules";
 import { useFragmentToken } from "./fragment-token";
 
@@ -62,7 +63,7 @@ export function ResetForm({ t, locale }: { t: AuthMessages; locale: Locale }) {
 
     setBusy(true);
     try {
-      await sessionApi.request("/v1/auth/reset-password", { method: "POST", body: { token, password } });
+      await resetPassword({ token, password });
       setOutcome("done");
     } catch (err) {
       if (err instanceof ApiError && err.code === "invalid_token") setOutcome("invalid");

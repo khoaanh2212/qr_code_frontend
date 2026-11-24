@@ -3,7 +3,8 @@
 import { LogOut } from "lucide-react";
 import { useState } from "react";
 import { localizePath, type Locale } from "@/i18n/config";
-import { ApiError, sessionApi } from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { logout } from "./api";
 import { authFailure, type AuthMessages } from "./form-rules";
 
 /**
@@ -29,7 +30,7 @@ export function LogoutButton({ t, locale }: { t: AuthMessages; locale: Locale })
         setBusy(true);
         setError(undefined);
         try {
-          await sessionApi.requestVoid("/v1/auth/logout", { method: "POST" });
+          await logout();
         } catch (err) {
           if (!(err instanceof ApiError && err.status === 401)) {
             setError(authFailure(err, t).message);

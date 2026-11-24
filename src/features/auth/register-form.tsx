@@ -4,10 +4,10 @@ import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordField, TextField } from "@/components/ui/text-field";
 import { format, localizePath, type Locale } from "@/i18n/config";
-import { sessionApi } from "@/lib/api";
+import { register } from "./api";
 import { Captcha, type CaptchaConfig } from "./captcha";
 import { GoogleSignIn } from "./google";
-import { FormAlert, Notice, ReturnToLink } from "./form-bits";
+import { FormAlert, Notice, ReturnToLink } from "@/components/form/form-bits";
 import { authFailure, emailError, newPasswordError, type AuthMessages } from "./form-rules";
 import { rememberEmail, useRememberedEmail } from "./remembered-email";
 import { ResendForm } from "./resend-form";
@@ -45,7 +45,7 @@ export function RegisterForm({ t, locale, captcha }: { t: AuthMessages; locale: 
     try {
       const body: Record<string, string> = { email: email.trim(), password, captcha_token: token };
       if (name.trim()) body.display_name = name.trim();
-      await sessionApi.request("/v1/auth/register", { method: "POST", body });
+      await register(body);
       setSentTo(email.trim());
     } catch (err) {
       const failure = authFailure(err, t);

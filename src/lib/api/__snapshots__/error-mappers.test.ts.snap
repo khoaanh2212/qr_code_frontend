@@ -1,0 +1,577 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`API error mappers > map every code the same way (en) 1`] = `
+[
+  {
+    "auth": {
+      "message": "Too many attempts. Try again in 60 seconds.",
+    },
+    "code": "rate_limited",
+    "codes": {
+      "message": "Too many attempts. Try again in 60 seconds.",
+    },
+    "field": undefined,
+    "generator": "Too many requests. Try again in 60 seconds.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "The server is busy. Try again in a moment.",
+    },
+    "code": "busy",
+    "codes": {
+      "message": "The server is busy. Try again in a moment.",
+    },
+    "field": undefined,
+    "generator": "The server is busy. Try again in a moment.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Cannot reach the server. Check your connection.",
+    },
+    "code": "network_error",
+    "codes": {
+      "message": "Cannot reach the server. Check your connection.",
+    },
+    "field": undefined,
+    "generator": "Cannot reach the server. Check your connection.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "The security check failed. Please try again.",
+    },
+    "code": "captcha_failed",
+    "codes": {
+      "message": "The security check failed. Please try again.",
+    },
+    "field": undefined,
+    "generator": "Something went wrong. Try again.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "The security check is unavailable right now. Try again in a moment.",
+    },
+    "code": "captcha_unavailable",
+    "codes": {
+      "message": "The security check is unavailable right now. Try again in a moment.",
+    },
+    "field": undefined,
+    "generator": "Something went wrong. Try again.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Email or password is incorrect.",
+    },
+    "code": "invalid_credentials",
+    "codes": {
+      "message": "Email or password is incorrect.",
+    },
+    "field": undefined,
+    "generator": "Something went wrong. Try again.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "payload_too_large",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": undefined,
+    "generator": "The request is too large. Try a smaller logo.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "unsupported_media_type",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": undefined,
+    "generator": "Choose a PNG or JPEG image.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "email_not_verified",
+    "codes": {
+      "message": "Verify your email address before you create or redirect codes.",
+    },
+    "field": undefined,
+    "generator": "Something went wrong. Try again.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "code_limit_reached",
+    "codes": {
+      "message": "You have reached the maximum number of codes.",
+    },
+    "field": undefined,
+    "generator": "Something went wrong. Try again.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "code_locked",
+    "codes": {
+      "message": "An operator locked this code.",
+    },
+    "field": undefined,
+    "generator": "Something went wrong. Try again.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "not_found",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": undefined,
+    "generator": "Something went wrong. Try again.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "something_else",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": undefined,
+    "generator": "Something went wrong. Try again.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Too many attempts. Try again in 17 seconds.",
+    },
+    "code": "rate_limited",
+    "codes": {
+      "message": "Too many attempts. Try again in 17 seconds.",
+    },
+    "field": undefined,
+    "generator": "Too many requests. Try again in 17 seconds.",
+    "retryAfter": 17,
+  },
+  {
+    "auth": {
+      "field": "email",
+      "message": "Enter an email address like name@example.com.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": "email",
+    "generator": "Check this value.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "field": "password",
+      "message": "Use at least 10 characters.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": "password",
+    "generator": "Check this value.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "field": "display_name",
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": "display_name",
+    "generator": "Check this value.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "field": "target_url",
+      "message": "Enter a public web address that starts with https://.",
+    },
+    "field": "target_url",
+    "generator": "Check this value.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "field": "name",
+      "message": "Something went wrong. Try again.",
+    },
+    "field": "name",
+    "generator": "Check this value.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "field": "colors",
+      "message": "Choose colors with more contrast.",
+    },
+    "field": "fg",
+    "generator": "Check this value.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "field": "frame_text",
+      "message": "Something went wrong. Try again.",
+    },
+    "field": "frame_text",
+    "generator": "Check this value.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Something went wrong. Try again.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": "other",
+    "generator": "Check this value.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Cannot reach the server. Check your connection.",
+    },
+    "code": "non-api",
+    "codes": {
+      "message": "Something went wrong. Try again.",
+    },
+    "field": undefined,
+    "generator": "",
+    "retryAfter": undefined,
+  },
+]
+`;
+
+exports[`API error mappers > map every code the same way (vi) 1`] = `
+[
+  {
+    "auth": {
+      "message": "Quá nhiều lần thử. Thử lại sau 60 giây.",
+    },
+    "code": "rate_limited",
+    "codes": {
+      "message": "Quá nhiều lần thử. Thử lại sau 60 giây.",
+    },
+    "field": undefined,
+    "generator": "Quá nhiều yêu cầu. Thử lại sau 60 giây.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Máy chủ đang bận. Thử lại sau giây lát.",
+    },
+    "code": "busy",
+    "codes": {
+      "message": "Máy chủ đang bận. Thử lại sau giây lát.",
+    },
+    "field": undefined,
+    "generator": "Máy chủ đang bận. Vui lòng thử lại sau giây lát.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Không kết nối được máy chủ. Kiểm tra kết nối mạng.",
+    },
+    "code": "network_error",
+    "codes": {
+      "message": "Không kết nối được máy chủ. Kiểm tra kết nối mạng.",
+    },
+    "field": undefined,
+    "generator": "Không kết nối được máy chủ. Kiểm tra kết nối mạng.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Kiểm tra bảo mật không thành công. Vui lòng thử lại.",
+    },
+    "code": "captcha_failed",
+    "codes": {
+      "message": "Kiểm tra bảo mật không thành công. Vui lòng thử lại.",
+    },
+    "field": undefined,
+    "generator": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Kiểm tra bảo mật tạm thời không khả dụng. Thử lại sau giây lát.",
+    },
+    "code": "captcha_unavailable",
+    "codes": {
+      "message": "Kiểm tra bảo mật tạm thời không khả dụng. Thử lại sau giây lát.",
+    },
+    "field": undefined,
+    "generator": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Email hoặc mật khẩu không đúng.",
+    },
+    "code": "invalid_credentials",
+    "codes": {
+      "message": "Email hoặc mật khẩu không đúng.",
+    },
+    "field": undefined,
+    "generator": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "payload_too_large",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": undefined,
+    "generator": "Yêu cầu quá lớn. Hãy thử logo nhỏ hơn.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "unsupported_media_type",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": undefined,
+    "generator": "Hãy chọn ảnh PNG hoặc JPEG.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "email_not_verified",
+    "codes": {
+      "message": "Hãy xác minh địa chỉ email trước khi tạo hoặc đổi đích đến của mã.",
+    },
+    "field": undefined,
+    "generator": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "code_limit_reached",
+    "codes": {
+      "message": "Bạn đã đạt số lượng mã tối đa.",
+    },
+    "field": undefined,
+    "generator": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "code_locked",
+    "codes": {
+      "message": "Quản trị viên đã khoá mã này.",
+    },
+    "field": undefined,
+    "generator": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "not_found",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": undefined,
+    "generator": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "something_else",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": undefined,
+    "generator": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Quá nhiều lần thử. Thử lại sau 17 giây.",
+    },
+    "code": "rate_limited",
+    "codes": {
+      "message": "Quá nhiều lần thử. Thử lại sau 17 giây.",
+    },
+    "field": undefined,
+    "generator": "Quá nhiều yêu cầu. Thử lại sau 17 giây.",
+    "retryAfter": 17,
+  },
+  {
+    "auth": {
+      "field": "email",
+      "message": "Nhập địa chỉ email dạng ten@example.com.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": "email",
+    "generator": "Kiểm tra lại giá trị này.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "field": "password",
+      "message": "Dùng tối thiểu 10 ký tự.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": "password",
+    "generator": "Kiểm tra lại giá trị này.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "field": "display_name",
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": "display_name",
+    "generator": "Kiểm tra lại giá trị này.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "field": "target_url",
+      "message": "Nhập địa chỉ web công khai bắt đầu bằng https://.",
+    },
+    "field": "target_url",
+    "generator": "Kiểm tra lại giá trị này.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "field": "name",
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": "name",
+    "generator": "Kiểm tra lại giá trị này.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "field": "colors",
+      "message": "Hãy chọn màu có độ tương phản cao hơn.",
+    },
+    "field": "fg",
+    "generator": "Kiểm tra lại giá trị này.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "field": "frame_text",
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": "frame_text",
+    "generator": "Kiểm tra lại giá trị này.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "code": "validation_error",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": "other",
+    "generator": "Kiểm tra lại giá trị này.",
+    "retryAfter": undefined,
+  },
+  {
+    "auth": {
+      "message": "Không kết nối được máy chủ. Kiểm tra kết nối mạng.",
+    },
+    "code": "non-api",
+    "codes": {
+      "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    },
+    "field": undefined,
+    "generator": "",
+    "retryAfter": undefined,
+  },
+]
+`;
