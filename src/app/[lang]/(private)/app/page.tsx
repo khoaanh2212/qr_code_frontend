@@ -1,4 +1,4 @@
-import { CodesList } from "@/features/codes/codes-list";
+import { CodesList } from "@/features/codes/list/codes-list";
 import { getLocale, getMessages } from "@/i18n/server";
 
 export default async function DashboardPage() {
