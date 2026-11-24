@@ -1,0 +1,13 @@
+# Only what the build needs goes into the context.
+.git
+.github
+.impeccable
+.next
+node_modules
+coverage
+*.tsbuildinfo
+.env*
+!.env.example
+Dockerfile
+.dockerignore
+*.md

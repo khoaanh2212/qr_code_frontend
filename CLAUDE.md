@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# QR Code Generator Frontend
+# ProofQR Frontend
 
 Next.js customer web app for the QR code generator: public pages (generator, per-type pages,
 pricing) and the logged-in app. The API is the Go backend `qrcode_generator_backend`; its
@@ -63,6 +63,28 @@ a page never keeps the other surface's Content Security Policy.
 - `pnpm test`: unit tests only.
 - `pnpm build` / `pnpm start`: production build and server. A production build needs
   `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_SITE_URL` (see `.env.example`).
+- `docker build` with the `NEXT_PUBLIC_*` build arguments: the production image (README, "Docker").
+  Keep the `Dockerfile` in step when the build changes (new required variable, files in `public/`).
+  `pnpm-workspace.yaml` blocks install scripts (`sharp` included): adding `next/image`
+  optimization needs `sharp` allowed and checked in the image.
+
+## Smoke tests (mandatory)
+
+User's rule (2026-11-23, same as the qrtiger repos): every feature is smoke-tested in the user's own
+Chrome with **Claude in Chrome** (`mcp__claude-in-chrome__*`, the extension already set up there),
+not headless: no `mcp__playwright__*` and no ad-hoc headless scripts.
+
+- Run what ships: kill whatever holds port 3000 (`lsof -ti :3000 | xargs kill`), then
+  `pnpm build && pnpm start` with the `NEXT_PUBLIC_*` values (Turnstile: Cloudflare's test key
+  `1x00000000000000000000AA`), against the local API (`make up` in the backend; emails in Mailpit at
+  http://localhost:8025).
+- Open a **new tab** (never take over one of the user's tabs), click through the feature's real
+  flows in at least one non-English locale, screenshot each state, read computed styles and
+  console errors with the tab's `javascript_tool` / `read_console_messages`.
+- **Leave the tab open when done** so the user can look at it.
+- Use throwaway accounts on the local stack only (`*@example.com`); never type real credentials,
+  and never act on third-party sites while testing.
+- Report what was checked, with the screenshots, before committing.
 
 ## ECC skills (mandatory)
 
@@ -78,7 +100,7 @@ Load the matching skill before starting work of that kind.
 | Writing TypeScript | `ecc:typescript-patterns` |
 | Render performance, bundle size | `ecc:react-performance` |
 | Writing tests (tests first) | `ecc:tdd-workflow`, `ecc:react-testing` (`ecc:react-test`) |
-| End-to-end and browser checks | `ecc:e2e-testing` (agent `ecc:e2e-runner`), `ecc:browser-qa` |
+| Smoke tests and browser checks | `ecc:browser-qa` with **Claude in Chrome only** (see "Smoke tests"); not `ecc:e2e-runner` or any headless option |
 | Interface design: new screens, layout, critique, audit, polish | `impeccable` (installed per machine, see below), with `ecc:frontend-design-direction`, `ecc:design-system`, `ecc:brand-discovery` |
 | Polishing UI details | `ecc:taste`, `ecc:taste-application`, `ecc:make-interfaces-feel-better` |
 | Animation | `ecc:motion-foundations`, `ecc:motion-patterns` |
@@ -95,6 +117,10 @@ Load the matching skill before starting work of that kind.
 | Commits, branches, PRs | `ecc:git-workflow`, `ecc:prp-commit`, `ecc:pr` |
 
 ## Design skill: impeccable
+
+Product truth lives in `PRODUCT.md` and the visual system in `DESIGN.md` (its frontmatter tokens are
+normative; `.impeccable/design.json` carries the extensions). Read both before UI work and keep
+new screens inside that system; re-run `/impeccable document` when the system changes.
 
 UI design work uses the `impeccable` skill (https://github.com/pbakaus/impeccable, Apache-2.0). It is
 installed per machine, not committed: `npx impeccable install --providers=claude --scope=project`

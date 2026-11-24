@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCsp, surfaceFor } from "./csp";
+import { buildCsp, hostsCaptcha, surfaceFor } from "./csp";
 
 const api = "https://api.example.com";
 
@@ -50,6 +50,7 @@ describe("buildCsp", () => {
     expect(d.get("script-src")).toEqual(["'self'", "'nonce-bm9uY2UtMTIz'", "'strict-dynamic'"]);
     expect(d.get("connect-src")).toEqual(["'self'", api]);
     expect(d.get("frame-ancestors")).toEqual(["'none'"]);
+    expect(d.get("frame-src")).toEqual(["'none'"]);
     expect(d.get("object-src")).toEqual(["'none'"]);
     expect(d.get("base-uri")).toEqual(["'none'"]);
     expect(d.get("form-action")).toEqual(["'self'"]);
@@ -64,6 +65,7 @@ describe("buildCsp", () => {
     const csp = buildCsp({ surface: "marketing", nonce: "bm9uY2UtMTIz", apiOrigin: api, dev: false });
     expect(csp).not.toContain("nonce-");
     expect(directives(csp).get("script-src")).toEqual(["'self'", "'unsafe-inline'"]);
+    expect(directives(csp).get("frame-src")).toEqual(["'none'"]);
   });
 
   it("never allows eval outside development", () => {
@@ -103,5 +105,37 @@ describe("buildCsp", () => {
 
   it.each(["abc def", "abc'", "abc;", ""])("rejects a malformed nonce %j", (nonce) => {
     expect(() => buildCsp({ surface: "private", nonce, apiOrigin: api, dev: false })).toThrow();
+  });
+});
+
+describe("captcha frames", () => {
+  it.each([
+    ["/register", true],
+    ["/vi/register", true],
+    ["/forgot-password", true],
+    ["/de/verify-email", true],
+    ["/login", false],
+    ["/reset-password", false],
+    ["/app", false],
+    ["/app/account", true],
+    ["/vi/app/account", true],
+    ["/app/account/security", false],
+    ["/app/codes/new", true],
+    ["/pt/app/codes/new", true],
+    ["/app/codes", false],
+    ["/registered", false],
+  ])("%s hosts the captcha: %s", (path, want) => {
+    expect(hostsCaptcha(path)).toBe(want);
+  });
+
+  it("frames Turnstile only when asked, and never on public pages", () => {
+    const frames = (surface: "private" | "marketing", captcha: boolean) =>
+      buildCsp({ surface, captcha, nonce: "bm9uY2UtMTIz", apiOrigin: api, dev: false })
+        .split(";")
+        .find((d) => d.trim().startsWith("frame-src"))
+        ?.trim();
+    expect(frames("private", true)).toBe("frame-src https://challenges.cloudflare.com");
+    expect(frames("private", false)).toBe("frame-src 'none'");
+    expect(frames("marketing", true)).toBe("frame-src 'none'");
   });
 });

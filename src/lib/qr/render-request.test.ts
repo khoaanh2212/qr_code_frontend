@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildRenderRequest, missingRequired, requestKey } from "./render-request";
-import { DEFAULT_DESIGN, type QrType } from "./types";
+import { buildRenderRequest, missingRequired, requestKey, SIGNED_IN_RENDER } from "./render-request";
+import { DEFAULT_DESIGN, isPresetCaption, type QrType } from "./types";
 
 const url = { type: "url", data: { url: "https://example.com/a?b=1" } };
 
@@ -21,6 +21,70 @@ describe("buildRenderRequest", () => {
       url: "https://example.com/a?b=1",
     });
     expect(r.path.startsWith("/v1/qr/render?")).toBe(true);
+  });
+
+  it("adds only the style options that differ from the plain look", () => {
+    const design = { ...DEFAULT_DESIGN, module: "dots" as const, frame: "box" as const, frameText: "  Scan me  " };
+    const r = buildRenderRequest({ ...url, design, format: "svg", size: 512 });
+    if (r.method !== "GET") throw new Error("expected GET");
+    const q = new URL(r.path, "https://api.test").searchParams;
+    expect(q.get("module")).toBe("dots");
+    expect(q.get("frame")).toBe("box");
+    expect(q.get("frame_text")).toBe("Scan me");
+    expect(q.has("eye")).toBe(false);
+
+    const post = buildRenderRequest({ ...url, design: { ...design, frame: "none" }, format: "png", size: 512 }, { post: true });
+    if (post.method !== "POST") throw new Error("expected POST");
+    // Without a frame its caption is not sent (the API refuses a caption without a frame).
+    expect(post.body.style).toEqual({ fg: "#000000", bg: "#ffffff", module: "dots" });
+  });
+
+  it("sends eye parts as one value or three, and only colors of their own", () => {
+    const design = {
+      ...DEFAULT_DESIGN,
+      eyeFrames: ["circle", "circle", "circle"] as const,
+      eyeBalls: ["square", "diamond", "square"] as const,
+      eyeColor: "#1a237e",
+      eyeBallColor: "#000000",
+    };
+    const r = buildRenderRequest({ ...url, design, format: "png", size: 512 });
+    if (r.method !== "GET") throw new Error("expected GET");
+    const q = new URL(r.path, "https://api.test").searchParams;
+    expect(q.get("eye_frame")).toBe("circle");
+    expect(q.get("eye_ball")).toBe("square,diamond,square");
+    expect(q.get("eye_color")).toBe("#1a237e");
+    expect(q.has("eye_ball_color")).toBe(false); // the same as the code color
+    expect(q.has("frame_color")).toBe(false);
+  });
+
+  it("sends a built-in icon with level H, never next to an uploaded logo", () => {
+    const icon = buildRenderRequest({ ...url, design: { ...DEFAULT_DESIGN, logoIcon: "wifi" }, format: "pdf", size: 512 });
+    if (icon.method !== "GET") throw new Error("expected GET");
+    const q = new URL(icon.path, "https://api.test").searchParams;
+    expect(q.get("logo_icon")).toBe("wifi");
+    expect(q.get("ecc")).toBe("H");
+    expect(q.get("format")).toBe("pdf");
+
+    const logo = { name: "l.png", id: "l1", base64: "AAAA" };
+    const both = buildRenderRequest({ ...url, design: { ...DEFAULT_DESIGN, logoIcon: "wifi", logo }, format: "png", size: 512 });
+    if (both.method !== "POST") throw new Error("expected POST");
+    expect(both.body.style).not.toHaveProperty("logo_icon");
+  });
+
+  it("sends a caption of the user's own to the signed-in render, presets to the public one", () => {
+    const framed = { ...DEFAULT_DESIGN, frame: "box" as const };
+    const own = buildRenderRequest({ ...url, design: { ...framed, frameText: "Thực đơn" }, format: "png", size: 512 });
+    expect(own.method === "POST" && own.path).toBe(SIGNED_IN_RENDER);
+    const preset = buildRenderRequest({ ...url, design: { ...framed, frameText: "quét mã" }, format: "png", size: 512 });
+    expect(preset.method).toBe("GET");
+  });
+
+  it("recognizes presets in any case and composition", () => {
+    expect(isPresetCaption("")).toBe(true);
+    expect(isPresetCaption(" Scan me ")).toBe(true);
+    expect(isPresetCaption("Que\u0301t ma\u0303")).toBe(true);
+    expect(isPresetCaption("PAY HERE")).toBe(false);
+    expect(isPresetCaption("\u017fcan me")).toBe(false);
   });
 
   it("encodes a leading + so it is not read as a space", () => {

@@ -61,12 +61,16 @@ trial ends. This product commits to the opposite, and says so:
 - Six languages: en (no URL prefix), vi, es, de, fr, pt. Translations beyond English and Vietnamese
   still need a native speaker's review.
 - Rendering and all rules live in the Go API; this app never generates codes itself.
-- Open decisions: product name, logo and domain ("QR Code Generator" is a placeholder); pricing.
+- Open decisions: pricing; the domain (proofqr.app looked free on 2026-11-23, not yet registered or
+  checked for trademarks).
 
 ## Brand Commitments
 
-- No final name, logo or domain yet. Future work must not invent a name, logo, mascot or slogan;
-  keep the placeholder until the owner decides.
+- Name: **ProofQR** (chosen 2026-11-23). "Proof" as in a print proof: what you see is exactly what
+  prints, and nothing is hidden. Same in every language; one word, capital P and QR.
+- Mark: a QR finder pattern with a Signal Teal centre inside four crop marks (DESIGN.md, "Brand
+  mark"). No robot, mascot or "AI" framing: the product has no AI features, and the name must
+  not promise any. Do not invent a slogan; the promise lines in PRODUCT.md are the copy.
 - Copy is plain and direct, and says what is true: what the code contains, whether it is static or
   dynamic, what happens when a plan ends.
 

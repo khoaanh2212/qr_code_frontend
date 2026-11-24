@@ -1,3 +1,4 @@
+import { validEmail } from "@/lib/forms/email";
 import type { QrData, QrType } from "./types";
 
 /**
@@ -10,14 +11,6 @@ const URL_FIELDS = new Set(["url", "website"]);
 const EMAIL_FIELDS = new Set(["email", "to"]);
 const PHONE_FIELDS = new Set(["phone"]);
 
-const EMAIL = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/;
-/** Go's net/mail also refuses dot-atoms with leading, trailing or doubled dots, and DNS labels with edge hyphens. */
-function validEmail(value: string): boolean {
-  if (!EMAIL.test(value)) return false;
-  const [local, domain] = value.split("@");
-  if (local.startsWith(".") || local.endsWith(".") || local.includes("..")) return false;
-  return domain.split(".").every((label) => !label.startsWith("-") && !label.endsWith("-"));
-}
 const PHONE = /^\+?[0-9]{3,15}$/;
 const HEX64 = /^[0-9a-fA-F]{64}$/;
 

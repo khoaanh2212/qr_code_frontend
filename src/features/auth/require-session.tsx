@@ -1,25 +1,50 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { localizePath, splitLocale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError, sessionApi } from "@/lib/api";
-import type { MeResponse, User } from "@/lib/api/types";
+import type { MeResponse, User, Workspace } from "@/lib/api/types";
 
-const SessionContext = createContext<User | null>(null);
+interface Session {
+  user: User;
+  workspaces: Workspace[];
+  /** Replaces the cached user after an update (e.g. a new display name). */
+  setUser: (user: User) => void;
+}
+
+const SessionContext = createContext<Session | null>(null);
+
+function useSession(): Session {
+  const session = useContext(SessionContext);
+  if (!session) throw new Error("must be used below <RequireSession>");
+  return session;
+}
 
 /** The logged-in user; only usable below <RequireSession>. */
 export function useUser(): User {
-  const user = useContext(SessionContext);
-  if (!user) throw new Error("useUser must be used below <RequireSession>");
-  return user;
+  return useSession().user;
 }
 
-type State = { kind: "loading" } | { kind: "ready"; user: User } | { kind: "error" };
+/** The caller's personal workspace, where their dynamic codes live. */
+export function usePersonalWorkspace(): Workspace | undefined {
+  return useSession().workspaces.find((w) => w.personal);
+}
+
+/** Updates the cached user after a change made through the API. */
+export function useSetUser(): (user: User) => void {
+  return useSession().setUser;
+}
+
+type State = { kind: "loading" } | { kind: "ready"; user: User; workspaces: Workspace[] } | { kind: "error" };
 
 /** Full page load to the login page in the current language. */
 export function redirectToLogin(): void {
-  const here = window.location.pathname + window.location.search;
+  // The "Google is connected" marker belongs to the login that set it, not to the next one.
+  const params = new URLSearchParams(window.location.search);
+  params.delete("google");
+  const query = params.toString();
+  const here = window.location.pathname + (query ? `?${query}` : "");
   const { locale } = splitLocale(window.location.pathname);
   window.location.replace(`${localizePath(locale, "/login")}?return_to=${encodeURIComponent(here)}`);
 }
@@ -43,7 +68,7 @@ export function RequireSession({
     const abort = new AbortController();
     sessionApi
       .request<MeResponse>("/v1/me", { signal: abort.signal })
-      .then(({ user }) => setState({ kind: "ready", user }))
+      .then(({ user, workspaces }) => setState({ kind: "ready", user, workspaces: workspaces ?? [] }))
       .catch((err: unknown) => {
         if (abort.signal.aborted) return;
         if (err instanceof ApiError && err.status === 401) {
@@ -54,6 +79,15 @@ export function RequireSession({
       });
     return () => abort.abort();
   }, [attempt]);
+
+  const setUser = useCallback(
+    (user: User) => setState((prev) => ({ kind: "ready", user, workspaces: prev.kind === "ready" ? prev.workspaces : [] })),
+    [],
+  );
+  const session = useMemo(
+    () => (state.kind === "ready" ? { user: state.user, workspaces: state.workspaces, setUser } : null),
+    [state, setUser],
+  );
 
   if (state.kind === "loading") return <p className="p-4 text-sm">{t.loading}</p>;
   if (state.kind === "error") {
@@ -73,5 +107,9 @@ export function RequireSession({
       </div>
     );
   }
-  return <SessionContext.Provider value={state.user}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={session}>
+      {children}
+    </SessionContext.Provider>
+  );
 }

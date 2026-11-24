@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-23T14:23:29+00:00",
+  "title": "Design System: ProofQR",
+  "extensions": {
+    "colorMeta": {
+      "signal-teal": {
+        "role": "primary",
+        "displayName": "Signal Teal",
+        "canonical": "#0f766e",
+        "tonalRamp": [
+          "#042f2e",
+          "#134e4a",
+          "#115e59",
+          "#0f766e",
+          "#0d9488",
+          "#2dd4bf",
+          "#99f6e4",
+          "#f0fdfa"
+        ]
+      },
+      "signal-teal-dark": {
+        "role": "primary",
+        "displayName": "Signal Teal (dark theme)",
+        "canonical": "#2dd4bf"
+      },
+      "on-signal": {
+        "role": "primary",
+        "displayName": "On Signal",
+        "canonical": "#ffffff"
+      },
+      "signal-wash": {
+        "role": "primary",
+        "displayName": "Signal Wash",
+        "canonical": "#e6f4f1"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#fafaf9",
+        "tonalRamp": [
+          "#0c0a09",
+          "#1c1917",
+          "#44403c",
+          "#57534e",
+          "#78716c",
+          "#a8a29e",
+          "#d6d3d1",
+          "#fafaf9"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "canonical": "#ffffff"
+      },
+      "masthead": {
+        "role": "neutral",
+        "displayName": "Masthead",
+        "canonical": "#e7f0ee"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1c1917"
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#57534e"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#d6d3d1"
+      },
+      "control-edge": {
+        "role": "neutral",
+        "displayName": "Control Edge",
+        "canonical": "#78716c"
+      },
+      "stop-red": {
+        "role": "error",
+        "displayName": "Stop Red",
+        "canonical": "#b91c1c"
+      },
+      "caution-amber": {
+        "role": "warning",
+        "displayName": "Caution Amber",
+        "canonical": "#92400e"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The page title, once per page."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Titles of auth and account pages."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings inside a tool."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Input values and running text; intros capped at 65ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, tile labels, compact buttons."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Help text and field errors."
+      },
+      "spec": {
+        "displayName": "Spec",
+        "purpose": "Measured values: sizes, hex colors, codes. Tabular numerals."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 8px 24px rgb(0 0 0 / 0.12)",
+        "purpose": "Menus and popovers that sit above the page."
+      },
+      {
+        "name": "dock",
+        "value": "0 -4px 16px rgb(0 0 0 / 0.08)",
+        "purpose": "The bar fixed to the bottom of the phone screen."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms ease",
+        "purpose": "Hover and press feedback on controls."
+      },
+      {
+        "name": "proof",
+        "value": "200ms ease",
+        "purpose": "Crop-mark color and preview opacity changes."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one primary action of an area, here the download.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 15V3\"/><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"m7 10 5 5 5-5\"/></svg>Download PNG</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 16px;border:0;border-radius:6px;background:var(--accent,#0f766e);color:var(--accent-foreground,#fff);font-weight:600;font-size:1rem;cursor:pointer;transition:opacity 150ms}.ds-btn-primary:hover{opacity:.9}.ds-btn-primary:focus-visible{outline:2px solid var(--accent,#0f766e);outline-offset:2px}.ds-btn-primary:disabled{opacity:.4;cursor:not-allowed}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Retry, remove logo, upload logo.",
+      "html": "<button class=\"ds-btn-secondary\">Try again</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--control-border,#78716c);border-radius:6px;background:var(--surface,#fff);color:var(--foreground,#1c1917);font-size:.875rem;font-weight:500;cursor:pointer;transition:background 150ms}.ds-btn-secondary:hover{background:color-mix(in srgb,var(--foreground,#1c1917) 5%,var(--surface,#fff))}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent,#0f766e);outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Label, input, help caption; error caption replaces nothing, it adds below.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Website address <span class=\"ds-req\">*</span></span><input class=\"ds-input\" value=\"https://example.com/menu\"><span class=\"ds-field-help\">Starts with https:// or http://.</span></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;max-width:28rem}.ds-field-label{font-size:.875rem;font-weight:500;color:var(--foreground,#1c1917)}.ds-req{color:var(--danger,#b91c1c)}.ds-input{min-height:44px;padding:8px 12px;border:1px solid var(--control-border,#78716c);border-radius:6px;background:var(--surface,#fff);color:var(--foreground,#1c1917);font-size:1rem;caret-color:var(--accent,#0f766e)}.ds-input:focus-visible{outline:2px solid var(--accent,#0f766e);outline-offset:2px}.ds-input[aria-invalid=true]{border-color:var(--danger,#b91c1c)}.ds-field-help{font-size:.75rem;color:var(--muted,#57534e)}"
+    },
+    {
+      "name": "Type Tile",
+      "kind": "chip",
+      "refersTo": "type-tile-selected",
+      "description": "QR type radio: icon above label; selected has teal border and wash.",
+      "html": "<div class=\"ds-tiles\"><label class=\"ds-tile is-on\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/></svg>Website</label><label class=\"ds-tile\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 20h.01\"/><path d=\"M2 8.82a15 15 0 0 1 20 0\"/><path d=\"M5 12.859a10 10 0 0 1 14 0\"/><path d=\"M8.5 16.429a5 5 0 0 1 7 0\"/></svg>Wi-Fi</label></div>",
+      "css": ".ds-tiles{display:flex;gap:8px}.ds-tile{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:5.25rem;padding:12px 8px;border:1px solid var(--border,#d6d3d1);border-radius:8px;background:var(--surface,#fff);color:var(--muted,#57534e);font-size:.875rem;font-weight:500;cursor:pointer;transition:border-color 150ms,color 150ms}.ds-tile:hover{border-color:color-mix(in srgb,var(--foreground,#1c1917) 40%,transparent);color:var(--foreground,#1c1917)}.ds-tile.is-on{border-color:var(--accent,#0f766e);background:var(--accent-soft,#e6f4f1);color:var(--foreground,#1c1917)}"
+    },
+    {
+      "name": "Format Toggle",
+      "kind": "custom",
+      "refersTo": "segment-selected",
+      "description": "Mutually exclusive options in the spec voice.",
+      "html": "<div class=\"ds-seg\"><span class=\"ds-seg-item is-on\">PNG</span><span class=\"ds-seg-item\">SVG</span></div>",
+      "css": ".ds-seg{display:inline-flex;border:1px solid var(--control-border,#78716c);border-radius:6px;overflow:hidden}.ds-seg-item{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;font-family:ui-monospace,monospace;font-size:.875rem;color:var(--foreground,#1c1917);cursor:pointer}.ds-seg-item.is-on{background:var(--foreground,#1c1917);color:var(--background,#fafaf9)}"
+    },
+    {
+      "name": "Masthead",
+      "kind": "nav",
+      "refersTo": "masthead",
+      "description": "Teal-tinted header band; 44px targets.",
+      "html": "<header class=\"ds-mast\"><span class=\"ds-mast-name\">QR Code Generator</span><nav class=\"ds-mast-nav\"><a href=\"#\">English</a><a href=\"#\">Log in</a><a href=\"#\">Sign up</a></nav></header>",
+      "css": ".ds-mast{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--header,#e7f0ee);border-bottom:1px solid var(--border,#d6d3d1)}.ds-mast-name{font-weight:600;color:var(--foreground,#1c1917)}.ds-mast-nav{display:flex;gap:16px}.ds-mast-nav a{display:inline-flex;align-items:center;min-height:44px;color:var(--foreground,#1c1917);font-size:.875rem;text-decoration:none}.ds-mast-nav a:hover{text-decoration:underline;text-underline-offset:.2em}.ds-mast-nav a:focus-visible{outline:2px solid var(--accent,#0f766e);outline-offset:2px}"
+    },
+    {
+      "name": "Print Proof",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "The preview: code on white, crop marks carrying state, spec line below.",
+      "html": "<figure class=\"ds-proof\"><div class=\"ds-proof-frame\"><i class=\"m tl\"></i><i class=\"m tr\"></i><i class=\"m bl\"></i><i class=\"m br\"></i><div class=\"ds-proof-sheet\"><svg width=\"120\" height=\"120\" viewBox=\"0 0 29 29\" aria-hidden=\"true\"><rect width=\"29\" height=\"29\" fill=\"#fff\"/><path d=\"M0 0h7v7H0zM22 0h7v7h-7zM0 22h7v7H0z\" fill=\"#000\"/><path d=\"M2 2h3v3H2zM24 2h3v3h-3zM2 24h3v3H2z\" fill=\"#fff\"/><path d=\"M9 1h2v2H9zM13 3h2v2h-2zM9 9h4v2H9zM15 9h2v4h-2zM19 11h3v2h-3zM9 15h2v3H9zM13 17h4v2h-4zM21 15h2v2h-2zM23 19h3v2h-3zM9 21h2v4H9zM13 23h3v2h-3zM19 23h2v4h-2zM25 25h2v2h-2z\" fill=\"#000\"/></svg></div></div><figcaption class=\"ds-proof-spec\">PNG · 1024 × 1024 px</figcaption></figure>",
+      "css": ".ds-proof{margin:0;display:flex;flex-direction:column;align-items:center;gap:8px}.ds-proof-frame{position:relative;width:15rem;aspect-ratio:1;padding:12px;box-sizing:border-box}.ds-proof-frame .m{position:absolute;width:16px;height:16px;border-color:color-mix(in srgb,var(--foreground,#1c1917) 40%,transparent);border-style:solid;border-width:0;transition:border-color 200ms}.ds-proof-frame .tl{top:0;left:0;border-top-width:2px;border-left-width:2px}.ds-proof-frame .tr{top:0;right:0;border-top-width:2px;border-right-width:2px}.ds-proof-frame .bl{bottom:0;left:0;border-bottom-width:2px;border-left-width:2px}.ds-proof-frame .br{bottom:0;right:0;border-bottom-width:2px;border-right-width:2px}.ds-proof-frame:hover .m{border-color:var(--warning,#92400e)}.ds-proof-sheet{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#fff;border-radius:2px}.ds-proof-spec{font-family:ui-monospace,monospace;font-size:.75rem;font-variant-numeric:tabular-nums;color:var(--muted,#57534e)}"
+    },
+    {
+      "name": "Brand Mark",
+      "kind": "custom",
+      "refersTo": "brand-mark",
+      "description": "Finder pattern with a teal centre inside four crop marks; ink follows currentColor.",
+      "html": "<span class=\"ds-logo\"><svg viewBox=\"0 0 48 48\" aria-hidden=\"true\"><path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M10.5 10.5h27v27h-27z M14.36 14.36v19.28h19.28V14.36z\"/><rect x=\"18.21\" y=\"18.21\" width=\"11.58\" height=\"11.58\" fill=\"var(--accent,#0f766e)\"/><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"square\" d=\"M3 11V3h8 M45 11V3h-8 M3 37v8h8 M45 37v8h-8\"/></svg>ProofQR</span>",
+      "css": ".ds-logo{display:inline-flex;align-items:center;gap:8px;font-weight:600;letter-spacing:-0.025em;color:var(--foreground,#1c1917);font-size:1.125rem}.ds-logo svg{width:24px;height:24px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Print Proof",
+    "overview": "Everything this product makes ends up printed: on a menu, a table tent, a shop window, a business card. The interface is the proof sheet that comes before the print run. A proof is trusted because it is exact: it shows precisely what will be printed, its size and format, and it never shows something that will not come out right. That is the standard every screen is held to.\n\nThe voice is assured and professional. Calm warm paper instead of cold grey, deep ink for text, one signal color for action and readiness, precise numbers in a monospaced spec line. Controls are the standard ones of the web, drawn firmly: clear borders, generous touch targets, unmistakable states. Personality lives in exact details, never in decoration: the crop marks around the preview, the spec line under it, a themed caret and text selection. The visual world rejects the free-tool category look outright: no ad banners, pop-ups, blinking upgrade buttons or fake countdowns, and no decorative purple gradients, glassmorphism or neon glow.",
+    "keyCharacteristics": [
+      "Warm paper ground, deep ink text, one signal teal for action and state.",
+      "Standard web controls, firm borders (3:1 or better), 44 px touch targets on phones.",
+      "Flat surfaces separated by rules and tone; shadows only for what floats above content.",
+      "A proof frame with crop marks whose color carries the state of what it holds.",
+      "Exact measurements in a monospaced, tabular spec voice."
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "Signal Teal is the only accent. It marks the primary action of an area and state, never decoration; there is at most one teal button in view per area.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Edges Rule",
+        "body": "Rule color outlines structure; Control Edge outlines what responds to input. A border that looks interactive must be interactive.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper Rule",
+        "body": "The QR code always sits on white, in both themes. A proof is never shown on a dark tile.",
+        "section": "colors"
+      },
+      {
+        "name": "The Measured Mono Rule",
+        "body": "Monospace appears only for values that are measured or exact (sizes, colors, codes). Never for headings, labels or decoration.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed Scale Rule",
+        "body": "Sizes are fixed rem steps (ratio about 1.2); no fluid clamp() type in the product.",
+        "section": "typography"
+      },
+      {
+        "name": "The Float-Only Rule",
+        "body": "A shadow means \"this sits above the page\". Panels, tiles, inputs and buttons never carry one.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep Signal Teal for the primary action and for state; one teal button per area.",
+      "Do outline every control with Control Edge (`#78716c` / `#8a837c`) and every structure with Rule.",
+      "Do make touch targets at least 44px tall on phones.",
+      "Do set measured values (sizes, hex colors, codes) in Geist Mono with tabular numerals.",
+      "Do show the QR code on white in both themes, framed by crop marks that tell its state.",
+      "Do theme the browser's own surfaces: text selection, caret, focus ring, `accent-color`.",
+      "Do keep transitions between 150 and 250ms and for state changes only; respect reduced motion."
+    ],
+    "donts": [
+      "Don't use the free-tool category look: no ad banners, pop-ups, blinking \"Upgrade\" buttons or fake countdowns.",
+      "Don't use decorative purple gradients, glassmorphism or neon glow. The one blur in the system is the phone bar's backdrop, there for legibility over scrolling content.",
+      "Don't put shadows on panels, tiles, inputs or buttons; shadows are for floating layers only.",
+      "Don't show a QR code that cannot be printed or scanned, even dimmed.",
+      "Don't use monospace for headings, labels or as a \"technical\" costume.",
+      "Don't add a second accent color or tint surfaces other than the selected tile."
+    ]
+  }
+}

@@ -34,8 +34,19 @@ export function surfaceFor(pathname: string): Surface {
   return isPrivatePath(splitLocale(pathname).rest) ? "private" : "marketing";
 }
 
+/** Private pages that show the Turnstile check (sign-up, reset request, resend on verify and profile). */
+export const CAPTCHA_PATHS = ["/register", "/forgot-password", "/verify-email", "/app/account", "/app/codes/new"] as const;
+
+/** Whether a URL path (with or without a locale prefix) hosts the Turnstile iframe. */
+export function hostsCaptcha(pathname: string): boolean {
+  const { rest } = splitLocale(pathname);
+  return CAPTCHA_PATHS.some((p) => rest === p || rest === `${p}/`);
+}
+
 export interface CspOptions {
   surface: Surface;
+  /** Allow the Turnstile iframe (only on CAPTCHA_PATHS). */
+  captcha?: boolean;
   /** Required for "private"; ignored for "marketing". */
   nonce?: string;
   /** Origin of the API (scheme://host[:port]), allowed for fetch and QR preview images. */
@@ -45,6 +56,9 @@ export interface CspOptions {
 }
 
 const NONCE = /^[A-Za-z0-9+/=_-]{8,}$/;
+
+/** Origin of Cloudflare Turnstile's script and iframe. */
+export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 
 function checkOrigin(value: string): string {
   let url: URL;
@@ -59,7 +73,7 @@ function checkOrigin(value: string): string {
   return url.origin;
 }
 
-export function buildCsp({ surface, nonce, apiOrigin, dev }: CspOptions): string {
+export function buildCsp({ surface, captcha = false, nonce, apiOrigin, dev }: CspOptions): string {
   const api = checkOrigin(apiOrigin);
 
   let scripts: string[];
@@ -80,7 +94,8 @@ export function buildCsp({ surface, nonce, apiOrigin, dev }: CspOptions): string
     ["img-src", "'self'", "blob:", "data:", api],
     ["font-src", "'self'"],
     ["connect-src", "'self'", api],
-    ["frame-src", "'none'"],
+    // Only the pages with the Cloudflare Turnstile check frame anything (its iframe).
+    surface === "private" && captcha ? ["frame-src", TURNSTILE_ORIGIN] : ["frame-src", "'none'"],
     ["object-src", "'none'"],
     ["base-uri", "'none'"],
     ["form-action", "'self'"],

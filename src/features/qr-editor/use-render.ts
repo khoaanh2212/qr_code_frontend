@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ApiError, publicApi } from "@/lib/api";
-import type { RenderRequest } from "@/lib/qr/render-request";
+import { ApiError, publicApi, sessionApi } from "@/lib/api";
+import { SIGNED_IN_RENDER, type RenderRequest } from "@/lib/qr/render-request";
 
-/** Renders through the API: GET (cacheable) or POST, as `request` says. */
+/**
+ * Renders through the API: GET (cacheable) or POST, as `request` says. A custom frame caption
+ * goes to the signed-in render, with the session cookie; everything else stays session-free.
+ */
 export function render(request: RenderRequest, signal?: AbortSignal): Promise<Blob> {
-  return request.method === "GET"
-    ? publicApi.requestBlob(request.path, { signal })
-    : publicApi.requestBlob(request.path, { method: "POST", body: request.body, signal });
+  if (request.method === "GET") return publicApi.requestBlob(request.path, { signal });
+  const api = request.path === SIGNED_IN_RENDER ? sessionApi : publicApi;
+  return api.requestBlob(request.path, { method: "POST", body: request.body, signal });
 }
 
 export interface PreviewState {

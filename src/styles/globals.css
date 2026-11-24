@@ -17,6 +17,7 @@
   --accent-soft: #e6f4f1;
   --header: #e7f0ee;
   --danger: #b91c1c;
+  --on-danger: #ffffff;
   --warning: #92400e;
 }
 
@@ -33,6 +34,7 @@
     --accent-soft: #0f2e2b;
     --header: #141f1d;
     --danger: #fca5a5;
+    --on-danger: #450a0a;
     --warning: #fcd34d;
   }
 }
@@ -49,6 +51,7 @@
   --color-accent-soft: var(--accent-soft);
   --color-header: var(--header);
   --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
   --color-warning: var(--warning);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -89,6 +92,11 @@ a {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Regions focused by script (tabindex="-1", e.g. a form's outcome) are not controls: no ring. */
+[tabindex="-1"]:focus-visible {
+  outline: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

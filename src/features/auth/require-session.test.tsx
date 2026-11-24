@@ -64,6 +64,13 @@ describe("RequireSession", () => {
     await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/vi/login?return_to=%2Fvi%2Fapp"));
   });
 
+  it("does not carry the Google-connected marker into the next login", async () => {
+    vi.stubGlobal("location", { pathname: "/vi/app", search: "?google=connected&tab=1", replace });
+    vi.spyOn(sessionApi, "request").mockRejectedValue(new ApiError(401, "unauthenticated", "no"));
+    renderGuard();
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/vi/login?return_to=%2Fvi%2Fapp%3Ftab%3D1"));
+  });
+
   it("ignores the request aborted by the strict-mode remount", async () => {
     const request = vi.spyOn(sessionApi, "request").mockImplementation(
       (_path, opts) =>

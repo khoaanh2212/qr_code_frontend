@@ -1,12 +1,17 @@
 "use client";
 
-import { RotateCw } from "lucide-react";
+import { RotateCw, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useId, useMemo, useState } from "react";
+import { saveHandoff } from "@/features/codes/handoff";
+import { applyTemplate, templateFromDesign } from "@/features/templates/convert";
+import { GeneratorTemplates } from "@/features/templates/generator-templates";
+import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
-import { isScannable } from "@/lib/qr/color";
 import { buildRenderRequest, missingRequired, requestKey } from "@/lib/qr/render-request";
 import { downloadName, normalizeUrlInput, validateFields, type FieldProblem } from "@/lib/qr/validate";
-import { DEFAULT_DESIGN, type QrData, type QrDesign, type QrType } from "@/lib/qr/types";
+import { DEFAULT_DESIGN, designScannable, type QrData, type QrDesign, type QrType } from "@/lib/qr/types";
 import { DesignPanel } from "./design-panel";
 import { errorText } from "./error-text";
 import { ContentFields, fieldText, initialData } from "./fields";
@@ -18,7 +23,23 @@ import { useRenderPreview } from "./use-render";
 
 type T = Messages["generator"];
 
-const DESIGN_FIELDS = new Set(["fg", "bg", "margin", "ecc", "logo", "size"]);
+const DESIGN_FIELDS = new Set([
+  "fg",
+  "bg",
+  "margin",
+  "ecc",
+  "logo",
+  "size",
+  "module",
+  "eye_frame",
+  "eye_ball",
+  "eye_color",
+  "eye_ball_color",
+  "frame",
+  "frame_text",
+  "frame_color",
+  "logo_icon",
+]);
 const URL_FIELDS = new Set(["url", "website"]);
 const PREVIEW_ID = "qr-preview";
 const PREVIEW_SIZE = 512;
@@ -26,8 +47,20 @@ const PREVIEW_SIZE = 512;
 /**
  * The static QR code generator: pick a type, fill in its fields, adjust the design, download.
  * Public and session-free: talks to the API through `publicApi` only.
+ * `initialType` opens it on that type (per-type pages); unknown types fall back to the first.
  */
-export function QrEditor({ t }: { t: T }) {
+export function QrEditor({
+  t,
+  templates,
+  initialType,
+  locale,
+}: {
+  t: T;
+  /** Messages of design templates; without them the generator offers none. */
+  templates?: Messages["templates"];
+  initialType?: string;
+  locale: Locale;
+}) {
   const { state, reload } = useQrTypes();
 
   if (state.kind === "loading") return <EditorSkeleton label={t.loading} />;
@@ -47,12 +80,26 @@ export function QrEditor({ t }: { t: T }) {
       </div>
     );
   }
-  return <Editor t={t} types={state.catalog.types} />;
+  return <Editor t={t} templates={templates} types={state.catalog.types} initialType={initialType} locale={locale} />;
 }
 
-function Editor({ t, types }: { t: T; types: QrType[] }) {
+function Editor({
+  t,
+  templates,
+  types,
+  initialType,
+  locale,
+}: {
+  t: T;
+  templates?: Messages["templates"];
+  types: QrType[];
+  initialType?: string;
+  locale: Locale;
+}) {
   const headingIds = { content: useId(), design: useId() };
-  const [typeName, setTypeName] = useState(types[0].type);
+  const [typeName, setTypeName] = useState(
+    () => types.find((x) => x.type === initialType)?.type ?? types[0].type,
+  );
   const [dataByType, setDataByType] = useState<Record<string, QrData>>({});
   const [touched, setTouched] = useState<Record<string, true>>({});
   const [design, setDesign] = useState<QrDesign>(DEFAULT_DESIGN);
@@ -62,7 +109,7 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
   const missing = missingRequired(qrType, data);
   const problems = validateFields(qrType, data);
   const problemNames = Object.keys(problems);
-  const contrastOk = isScannable(design.fg, design.bg);
+  const contrastOk = designScannable(design);
 
   const canRender = missing.length === 0 && problemNames.length === 0 && contrastOk;
   const request = useMemo(
@@ -73,7 +120,14 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
   const key = useMemo(() => (request ? requestKey(request, design.logo?.id) : null), [request, design.logo?.id]);
   const preview = useRenderPreview(request, key, qrType.type);
 
-  const serverField = preview.error?.code === "validation_error" ? preview.error.field : undefined;
+  // A caption of the user's own goes to the signed-in render; 401 means "sign in first".
+  const captionNeedsSignIn = preview.error?.status === 401;
+  const serverField = captionNeedsSignIn
+    ? "frame_text"
+    : preview.error?.code === "validation_error"
+      ? preview.error.field
+      : undefined;
+  const pathname = usePathname();
   const serverContentField = serverField && !DESIGN_FIELDS.has(serverField) ? serverField : undefined;
 
   // What blocks a printable code, first problem first.
@@ -85,7 +139,11 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
   else if (!contrastOk) blocker = "lowContrast";
   else if (serverField) blocker = "invalid";
   const invalidField = invalidName ? qrType.fields.find((f) => f.name === invalidName) : undefined;
-  const invalidLabel = invalidField ? fieldText(t, qrType.type, invalidField).label : undefined;
+  const invalidLabel = invalidField
+    ? fieldText(t, qrType.type, invalidField).label
+    : serverField === "frame_text"
+      ? t.design.frameText
+      : undefined;
 
   // Field messages: shown once, at the field, after the user has left it (or the API refused it).
   const problemText: Record<FieldProblem, string> = {
@@ -107,7 +165,17 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
   if (serverContentField) fieldErrors[serverContentField] ??= t.validation.invalid;
   const designError =
     serverField && DESIGN_FIELDS.has(serverField)
-      ? { field: serverField, message: serverField === "logo" ? t.design.logoType : t.validation.invalid }
+      ? {
+          field: serverField,
+          message:
+            serverField === "logo"
+              ? t.design.logoType
+              : serverField === "frame_text"
+                ? captionNeedsSignIn
+                  ? t.design.frameTextSignIn
+                  : t.design.frameTextInvalid
+                : t.validation.invalid,
+        }
       : undefined;
 
   const setField = (name: string, value: string) =>
@@ -117,7 +185,7 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
     }));
 
   return (
-    <div className="grid gap-8 pb-24 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10 lg:pb-0">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
       <div className="flex min-w-0 flex-col gap-8">
         <TypePicker t={t} types={types} value={qrType.type} onChange={setTypeName} />
         <section aria-labelledby={headingIds.content} className="flex flex-col gap-4">
@@ -139,6 +207,31 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
               setTouched((prev) => ({ ...prev, [`${qrType.type}.${name}`]: true }));
             }}
           />
+          {qrType.type === "url" && missing.length === 0 && problemNames.length === 0 && (
+            <MakeDynamic
+              t={t}
+              href={localizePath(locale, "/app/codes/new")}
+              onFollow={() =>
+                saveHandoff({
+                  url: data.url ?? "",
+                  fg: design.fg,
+                  bg: design.bg,
+                  style: {
+                    module: design.module,
+                    eyeFrames: design.eyeFrames,
+                    eyeBalls: design.eyeBalls,
+                    eyeColor: design.eyeColor,
+                    eyeBallColor: design.eyeBallColor,
+                    frame: design.frame,
+                    frameText: design.frameText,
+                    frameColor: design.frameColor,
+                    // An uploaded logo stays in this tab; an icon travels.
+                    logoIcon: design.logo ? "" : design.logoIcon,
+                  },
+                })
+              }
+            />
+          )}
         </section>
       </div>
 
@@ -146,7 +239,31 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
         <h2 id={headingIds.design} className="text-lg font-semibold">
           {t.sections.design}
         </h2>
-        <DesignPanel t={t} design={design} onChange={setDesign} contrastOk={contrastOk} error={designError} />
+        {templates && (
+          <GeneratorTemplates
+            t={templates}
+            locale={locale}
+            currentDesign={() => templateFromDesign(design)}
+            onApply={(d) => setDesign((current) => applyTemplate(current, d))}
+          />
+        )}
+        <DesignPanel
+          t={t}
+          design={design}
+          onChange={setDesign}
+          contrastOk={contrastOk}
+          error={designError}
+          captionAction={
+            captionNeedsSignIn && (
+              <Link
+                href={`${localizePath(locale, "/login")}?return_to=${encodeURIComponent(pathname)}`}
+                className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-accent underline-offset-4 hover:underline"
+              >
+                {t.design.frameTextSignInLink}
+              </Link>
+            )
+          }
+        />
       </section>
 
       <aside
@@ -167,6 +284,26 @@ function Editor({ t, types }: { t: T; types: QrType[] }) {
       </aside>
 
       <MobilePreviewBar t={t} src={blocker === null && !preview.error ? preview.src : null} targetId={PREVIEW_ID} />
+    </div>
+  );
+}
+
+/**
+ * The way from a static website code to a dynamic one: the destination and colors go along
+ * (sessionStorage), and login or sign-up in between returns to the new-code form.
+ */
+function MakeDynamic({ t, href, onFollow }: { t: T; href: string; onFollow: () => void }) {
+  return (
+    <div className="flex flex-col items-start gap-1.5 rounded-lg border border-dashed border-border p-4">
+      <Link
+        href={href}
+        onClick={onFollow}
+        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-control bg-surface px-3 text-sm font-medium hover:bg-foreground/5"
+      >
+        <Sparkles aria-hidden="true" className="size-4 text-accent" />
+        {t.makeDynamic}
+      </Link>
+      <p className="text-xs text-pretty text-muted">{t.makeDynamicHelp}</p>
     </div>
   );
 }

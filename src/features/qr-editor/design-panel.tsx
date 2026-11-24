@@ -1,76 +1,15 @@
 "use client";
 
 import { ImagePlus, X } from "lucide-react";
-import { useEffect, useId, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { format } from "@/i18n/config";
+import { useEffect, useId, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { Messages } from "@/i18n/messages";
-import { normalizeHex } from "@/lib/qr/color";
 import { LogoError, readLogo } from "@/lib/qr/logo";
-import { ECC_LEVELS, MARGIN_MAX, type Ecc, type QrDesign } from "@/lib/qr/types";
+import { ECC_LEVELS, FRAME_MARGIN_MIN, MARGIN_MAX, type Ecc, type QrDesign } from "@/lib/qr/types";
+import { ColorInput } from "./color-input";
+import { LogoIconPicker } from "./logo-icons";
+import { StylePicker } from "./style-picker";
 
 type T = Messages["generator"];
-
-function ColorInput({
-  t,
-  label,
-  value,
-  onChange,
-}: {
-  t: T;
-  label: string;
-  value: string;
-  onChange: (hex: string) => void;
-}) {
-  const ids = { text: useId(), error: useId() };
-  const [text, setText] = useState(value);
-  const [synced, setSynced] = useState(value);
-  // Follow changes made elsewhere (the picker), but never rewrite what the user is typing
-  // when it already means the current color.
-  if (synced !== value) {
-    setSynced(value);
-    if (normalizeHex(text) !== value) setText(value);
-  }
-  const invalid = normalizeHex(text) === null;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={ids.text} className="text-sm font-medium">
-        {label}
-      </label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          aria-label={format(t.design.colorPicker, { name: label })}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-10 w-12 cursor-pointer rounded-md border border-control bg-surface p-1"
-        />
-        <input
-          id={ids.text}
-          value={text}
-          maxLength={7}
-          spellCheck={false}
-          autoComplete="off"
-          aria-invalid={invalid ? true : undefined}
-          aria-describedby={invalid ? ids.error : undefined}
-          onChange={(e) => {
-            setText(e.target.value);
-            const hex = normalizeHex(e.target.value);
-            if (hex) onChange(hex);
-          }}
-          onBlur={() => {
-            if (invalid) setText(value);
-          }}
-          className="w-28 rounded-md border border-control bg-surface px-3 py-2 font-mono text-sm uppercase aria-[invalid=true]:border-danger"
-        />
-      </div>
-      {invalid && (
-        <p id={ids.error} className="text-xs font-medium text-danger">
-          {t.design.colorInvalid}
-        </p>
-      )}
-    </div>
-  );
-}
 
 export function DesignPanel({
   t,
@@ -78,6 +17,7 @@ export function DesignPanel({
   onChange,
   contrastOk,
   error,
+  captionAction,
 }: {
   t: T;
   design: QrDesign;
@@ -85,6 +25,8 @@ export function DesignPanel({
   contrastOk: boolean;
   /** Server-side error of a design field ("fg", "bg", "margin", "logo"). */
   error?: { field: string; message: string };
+  /** Under the frame caption (e.g. a sign-in link when the caption needs an account). */
+  captionAction?: ReactNode;
 }) {
   const ids = { ecc: useId(), margin: useId(), logo: useId(), logoHelp: useId(), logoError: useId() };
   const [logoError, setLogoError] = useState<string | null>(null);
@@ -111,11 +53,13 @@ export function DesignPanel({
       </div>
       {/* The preview's status announces this; here it is shown next to the colors. */}
       {!contrastOk && <p className="text-sm font-medium text-warning">{t.design.lowContrast}</p>}
-      {error && error.field !== "logo" && (
+      {error && error.field !== "logo" && error.field !== "frame_text" && (
         <p role="alert" className="text-sm font-medium text-danger">
           {error.message}
         </p>
       )}
+
+      <StylePicker t={t} design={design} onChange={onChange} error={error} captionAction={captionAction} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
@@ -124,8 +68,8 @@ export function DesignPanel({
           </label>
           <select
             id={ids.ecc}
-            value={design.logo ? "H" : design.ecc}
-            disabled={hasLogo}
+            value={design.logo || design.logoIcon ? "H" : design.ecc}
+            disabled={hasLogo || Boolean(design.logoIcon)}
             onChange={(e) => {
               const ecc = e.target.value as Ecc;
               onChange((d) => ({ ...d, ecc }));
@@ -146,7 +90,7 @@ export function DesignPanel({
           <input
             id={ids.margin}
             type="range"
-            min={0}
+            min={design.frame === "none" ? 0 : FRAME_MARGIN_MIN}
             max={MARGIN_MAX}
             value={design.margin}
             onChange={(e) => {
@@ -196,7 +140,8 @@ export function DesignPanel({
                   const logo = await readLogo(file);
                   setLogoError(null);
                   moveFocus.current = true;
-                  onChange((d) => ({ ...d, logo }));
+                  // An uploaded logo replaces a built-in icon.
+                  onChange((d) => ({ ...d, logo, logoIcon: "" }));
                 } catch (err) {
                   setLogoError(err instanceof LogoError && err.reason === "size" ? t.design.logoSize : t.design.logoType);
                 }
@@ -205,7 +150,7 @@ export function DesignPanel({
           </label>
         )}
         <p id={ids.logoHelp} className="text-xs text-muted">
-          {design.logo ? t.design.logoEcc : t.design.logoHelp}
+          {design.logo || design.logoIcon ? t.design.logoEcc : t.design.logoHelp}
         </p>
         {shownLogoError && (
           <p id={ids.logoError} role="alert" className="text-xs font-medium text-danger">
@@ -213,6 +158,9 @@ export function DesignPanel({
           </p>
         )}
       </div>
+      {!design.logo && (
+        <LogoIconPicker t={t} value={design.logoIcon} onPick={(logoIcon) => onChange((d) => ({ ...d, logoIcon }))} />
+      )}
     </div>
   );
 }
