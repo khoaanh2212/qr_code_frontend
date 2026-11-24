@@ -81,7 +81,15 @@ export const FRAMES = [
   "cup",
   "arrow",
   "corners",
+  "beer",
+  "chef",
+  "cloche",
+  "takeaway",
+  "menu",
+  "receipt",
 ] as const;
+/** The restaurant frames, shown as their own group (the rest of FRAMES are general). */
+export const RESTAURANT_FRAMES = ["beer", "chef", "cloche", "takeaway", "menu", "receipt"] as const;
 export type QrModule = (typeof MODULES)[number];
 export type QrEyeFrame = (typeof EYE_FRAMES)[number];
 export type QrEyeBall = (typeof EYE_BALLS)[number];

@@ -191,6 +191,8 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     "Save as template" in the new-code form, a code's Design section and the generator (the
     generator reads the session only when the templates section is opened; signed out, it offers
     sign-in), plus `/app/templates` with previews, rename and delete. Applying copies the design.
-12. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+12. ~~Restaurant frames~~ Done (backend item 49): beer, chef's hat, cloche, takeaway cup, menu and
+    receipt, as a "Restaurants & cafés" group in the frame picker.
+13. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.

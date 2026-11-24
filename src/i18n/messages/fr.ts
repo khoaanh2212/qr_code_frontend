@@ -374,11 +374,12 @@ export const fr = {
       frameColorToggle: "Couleur de cadre personnalisée",
       frameColor: "Couleur du cadre",
       frame: "Cadre",
+      restaurantFrames: "Restaurants et cafés",
       styles: {
         modules: { square: "Carré", rounded: "Arrondi", dots: "Points", bars: "Barres", small: "Petits carrés", hbars: "Lignes", diamond: "Losanges" },
         eyeFrames: { square: "Carré", rounded: "Arrondi", "extra-rounded": "Très arrondi", circle: "Cercle", leaf: "Feuille", pointed: "Pointu" },
         eyeBalls: { square: "Carré", rounded: "Arrondi", circle: "Cercle", leaf: "Feuille", pointed: "Pointu", diamond: "Losange" },
-        frames: { none: "Aucun", "label-bottom": "Légende en bas", "label-top": "Légende en haut", box: "Contour", "bubble-top": "Bulle en haut", "bubble-bottom": "Bulle en bas", ribbon: "Ruban", phone: "Téléphone", bag: "Sac", cup: "Tasse", arrow: "Flèche", corners: "Coins" },
+        frames: { none: "Aucun", "label-bottom": "Légende en bas", "label-top": "Légende en haut", box: "Contour", "bubble-top": "Bulle en haut", "bubble-bottom": "Bulle en bas", ribbon: "Ruban", phone: "Téléphone", bag: "Sac", cup: "Tasse", arrow: "Flèche", corners: "Coins", beer: "Bière", chef: "Toque", cloche: "Cloche", takeaway: "À emporter", menu: "Menu", receipt: "Ticket" },
       },
       frameText: "Texte du cadre",
       frameTextHelp: "24 caractères maximum. Un texte personnalisé nécessite un compte gratuit ; le texte par défaut, non.",
