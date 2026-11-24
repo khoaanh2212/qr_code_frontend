@@ -84,9 +84,35 @@ export interface CodeEnvelope {
   code: DynamicCode;
 }
 
+/** A code as GET /v1/workspaces/{wid}/codes lists it: with its all-time scans. */
+export interface ListedCode extends DynamicCode {
+  scans_total: number;
+}
+
+/** Orders of the codes list (backend PLAN item 50). */
+export type CodeSort = "newest" | "oldest" | "name" | "scans";
+
+/**
+ * A page of codes. `next_cursor` continues the same query only (same `q`, `status`, `sort`);
+ * null on the last page.
+ */
 export interface CodesPage {
-  codes: DynamicCode[];
+  codes: ListedCode[];
   next_cursor: string | null;
+}
+
+/** POST /v1/workspaces/{wid}/codes/bulk (backend PLAN item 51): up to 100 ids. */
+export type BulkAction = "pause" | "resume" | "delete";
+
+/** What a bulk request did to one code; `code` is the changed code after a pause or resume. */
+export interface BulkResult {
+  id: string;
+  result: "ok" | "not_found" | "locked" | "email_not_verified" | "failed";
+  code?: DynamicCode;
+}
+
+export interface BulkResponse {
+  results: BulkResult[];
 }
 
 export interface CountEntry {

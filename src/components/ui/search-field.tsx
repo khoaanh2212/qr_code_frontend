@@ -1,15 +1,16 @@
 import { Search } from "lucide-react";
-import { useId, type InputHTMLAttributes } from "react";
+import { useId, type InputHTMLAttributes, type Ref } from "react";
 
 export type SearchFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "value" | "onChange"> & {
   /** Accessible name (visually hidden: the icon and placeholder carry it on screen). */
   label: string;
   value: string;
   onValueChange: (value: string) => void;
+  ref?: Ref<HTMLInputElement>;
 };
 
 /** A search box (DESIGN.md "Inputs"): leading icon, native clear button, 44px tall. */
-export function SearchField({ label, value, onValueChange, className = "", ...props }: SearchFieldProps) {
+export function SearchField({ label, value, onValueChange, className = "", ref, ...props }: SearchFieldProps) {
   const id = useId();
   return (
     <div className={`relative ${className}`}>
@@ -18,6 +19,7 @@ export function SearchField({ label, value, onValueChange, className = "", ...pr
       </label>
       <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
       <input
+        ref={ref}
         id={id}
         type="search"
         value={value}

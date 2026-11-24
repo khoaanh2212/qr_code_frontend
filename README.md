@@ -198,15 +198,17 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     with Turnstile, and sends `POST /v1/reports` without cookies. It promises a review, not an
     outcome (reports never switch a code off). Linked from the public footer and from the short
     link's notice pages.
-14. Codes list (backend PLAN items 50-52, `src/features/codes/list`): the dashboard lists codes
-    with a thumbnail, status, short link (copy), destination and a menu (download PNG/SVG,
-    pause/resume, delete); search (accent-insensitive, pasted links match), status filter, order
-    (newest, oldest, name), list or grid layout (remembered in this browser), and bulk pause,
-    resume and delete (one confirmation, failed codes stay selected). Reusable parts live in
-    `src/components/ui` (see its README). **Left** once the API ships items 50-51: send
-    `q` / `status` / `sort` instead of loading every page to filter, show scans with a
-    "Most scanned" order, and use the bulk endpoint (bulk actions now send one request per code,
-    which the API's 30-a-minute write limit cuts off for large selections).
+14. ~~Codes list~~ Done (backend PLAN items 50-52, `src/features/codes/list`): the dashboard lists
+    codes with a thumbnail, status, scans, short link (copy), destination and a menu (download
+    PNG/SVG, pause/resume, delete). Search (accent-insensitive, pasted links match), status
+    filter and order (newest, oldest, name, most scanned) are sent to the API (`q`, `status`,
+    `sort`; search after typing pauses), with "Load more" through the API's cursor; the count
+    reads "50+" while more pages remain (the API sends no total). List or grid layout,
+    remembered in this browser. Bulk pause, resume and delete go through
+    `POST .../codes/bulk` in requests of up to 100 codes (one confirmation for deletes); each
+    code's result is applied, the codes not changed stay selected, and the bulk limit (3
+    requests a minute) is reported with the wait. Reusable parts live in `src/components/ui`
+    (see its README).
 14. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
     server so the generator is in the prerendered HTML instead of a skeleton (better LCP and first
     input). It needs a server-side API URL (e.g. `API_INTERNAL_URL=http://api:8080` in compose),

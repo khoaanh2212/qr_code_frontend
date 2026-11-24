@@ -2,51 +2,58 @@
 
 import { CircleCheck, CircleX, Plus, QrCode, SearchX, Shapes } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ButtonLink, FormAlert } from "@/components/form/form-bits";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersonalWorkspace } from "@/features/auth/require-session";
-import { format, localizePath, type Locale } from "@/i18n/config";
+import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { plural } from "@/i18n/plural";
-import type { DynamicCode } from "@/lib/api/types";
+import type { DynamicCode, ListedCode } from "@/lib/api/types";
 import { CodeCard } from "./code-card";
 import { CodesToolbar, SelectionBar } from "./codes-toolbar";
-import { applyQuery, DEFAULT_QUERY, isDefaultQuery, needsAllPages, type CodeQuery } from "./query";
+import { DEFAULT_QUERY, isDefaultQuery, listParams, type CodeQuery } from "./query";
 import { useCodeActions } from "./use-code-actions";
 import { useCodes } from "./use-codes";
 import { useCodesView, type CodesView } from "./use-codes-view";
+import { useDebouncedValue } from "./use-debounced-value";
 import { useSelection } from "./use-selection";
 
 type T = Messages["codes"];
 
-const NO_CODES: readonly DynamicCode[] = [];
+const NO_CODES: readonly ListedCode[] = [];
+
+/** Search waits until typing pauses: one request per settled text, not per keystroke. */
+const SEARCH_DELAY_MS = 300;
 
 /**
  * The dashboard: the personal workspace's dynamic codes, with search, status filter, order,
  * list/grid layout, per-code actions and bulk pause, resume and delete.
  *
- * Composition only. Data (`useCodes`), what is shown (`applyQuery`), selection (`useSelection`),
- * actions (`useCodeActions`) and the layout preference (`useCodesView`) are separate hooks;
- * `CodesToolbar`, `SelectionBar` and `CodeCard` render props.
+ * Composition only. The API searches, filters and orders (`useCodes` with `listParams`, backend
+ * PLAN item 50); selection (`useSelection`), actions (`useCodeActions`, bulk through the API's
+ * bulk endpoint) and the layout preference (`useCodesView`) are separate hooks; `CodesToolbar`,
+ * `SelectionBar` and `CodeCard` render props.
  */
 export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel: string; locale: Locale }) {
   const l = t.list;
   const workspace = usePersonalWorkspace();
   const ws = workspace?.id;
   const [query, setQuery] = useState<CodeQuery>(DEFAULT_QUERY);
-  // Typing stays responsive on long lists: filtering follows at a lower priority.
-  const applied = useDeferredValue(query);
-  const loadAll = needsAllPages(applied);
-  const { state, retry, loadMore, update, remove } = useCodes(ws, { loadAll });
+  const typed = useDebouncedValue(query.search, SEARCH_DELAY_MS);
+  // A cleared search applies at once (no request for the old text with the new filters).
+  const search = query.search.trim() === "" ? "" : typed;
+  // The query the list answers: status and order at once, search once typing pauses.
+  const applied = useMemo<CodeQuery>(() => ({ ...query, search }), [query, search]);
+  const { state, retry, loadMore, update, remove } = useCodes(ws, listParams(applied));
   const [view, setView] = useCodesView();
 
   const codes = state.kind === "ready" ? state.codes : NO_CODES;
   const next = state.kind === "ready" ? state.next : null;
-  const shown = useMemo(() => applyQuery(codes, applied, locale), [codes, applied, locale]);
+  const shown = codes; // the API's answer, in its order
   const shownIds = useMemo(() => shown.map((c) => c.id), [shown]);
   const selection = useSelection(shownIds);
   const selected = shown.filter((c) => selection.ids.has(c.id));
@@ -55,21 +62,32 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
   // After a delete the cards (and the button that opened the dialog) are gone: continue from
   // the list's heading rather than from the top of the page.
   const heading = useRef<HTMLHeadingElement>(null);
+  const searchBox = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (actions.deletions > 0) heading.current?.focus();
   }, [actions.deletions]);
 
   const { setStatus, askDelete } = actions;
   const toggleStatus = useCallback((c: DynamicCode) => setStatus([c], c.status === "paused" ? "active" : "paused", false), [setStatus]);
-  const deleteOne = useCallback((c: DynamicCode) => askDelete([c]), [askDelete]);
+  const deleteOne = useCallback((c: DynamicCode) => askDelete([c], false), [askDelete]);
 
   const newHref = localizePath(locale, "/app/codes/new");
-  // Codes exist while any are listed or more pages remain (deleting a whole page fetches the next).
-  const hasCodes = state.kind === "ready" && (codes.length > 0 || next !== null);
-  const fetchingAll = loadAll && state.kind === "ready" && next !== null && !state.moreFailed;
-  const summary = isDefaultQuery(applied)
-    ? plural(locale, l.count, codes.length)
-    : format(l.countFiltered, { shown: shown.length, total: codes.length });
+  const filtered = !isDefaultQuery(applied);
+  const refreshing = state.kind === "ready" && state.refreshing;
+  const refreshFailed = state.kind === "ready" && state.refreshFailed;
+  // Codes about to be replaced take no action (it would be undone by the new page).
+  const stale = refreshing || refreshFailed;
+  // The workspace has codes while any are listed or more pages remain (deleting a whole page
+  // fetches the next); under a filter the toolbar stays, so the filter can be changed back.
+  const hasCodes = state.kind === "ready" && (codes.length > 0 || next !== null || filtered || stale);
+  // The API sends no total: "50+" while more pages remain. Until new results arrive, say so.
+  const summary = refreshing
+    ? l.loading
+    : plural(locale, filtered ? (next ? l.matchesMore : l.matches) : next ? l.countMore : l.count, codes.length);
+  const noResults = state.kind === "ready" && shown.length === 0 && next === null && !stale;
+  // Search results are announced: typing in the box gives no other cue to screen readers.
+  const announcement =
+    (state.kind === "loading" && workspace) || refreshing ? l.loading : filtered && !refreshFailed ? (noResults ? l.noResults : summary) : "";
   const activeSelected = selected.filter((c) => c.status === "active");
   const pausedSelected = selected.filter((c) => c.status === "paused");
 
@@ -102,7 +120,7 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
 
       {/* Live regions stay mounted, so screen readers hear each change of their text. */}
       <p role="status" className="sr-only">
-        {state.kind === "loading" && workspace ? l.loading : fetchingAll ? l.loadingAll : ""}
+        {announcement}
       </p>
       <div role="status" className="flex flex-col gap-1 text-sm font-medium empty:hidden">
         {actions.notice.done && (
@@ -111,12 +129,12 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
             {actions.notice.done}
           </p>
         )}
-        {actions.notice.failed && (
-          <p className="flex items-center gap-2 text-danger">
-            <CircleX aria-hidden="true" className="size-4" />
-            {actions.notice.failed}
+        {actions.notice.problems?.map((problem) => (
+          <p key={problem} className="flex items-center gap-2 text-danger">
+            <CircleX aria-hidden="true" className="size-4 shrink-0" />
+            {problem}
           </p>
-        )}
+        ))}
       </div>
 
       {/* Every account has a personal workspace; without one there is nothing to load. */}
@@ -140,26 +158,41 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
           <h2 ref={heading} id="codes-heading" tabIndex={-1} className="sr-only">
             {t.title}
           </h2>
-          <CodesToolbar t={t} query={query} onQueryChange={setQuery} view={view} onViewChange={setView} />
+          <CodesToolbar t={t} query={query} onQueryChange={setQuery} view={view} onViewChange={setView} searchRef={searchBox} />
+          {refreshFailed && (
+            <div className="flex flex-col items-start gap-2">
+              <FormAlert message={t.loadFailed} />
+              <Button variant="secondary" onClick={retry}>
+                {t.retry}
+              </Button>
+            </div>
+          )}
           <SelectionBar
             t={t}
             state={selection.state}
             count={selection.ids.size}
-            summary={fetchingAll ? l.loadingAll : summary}
+            summary={summary}
             onToggleAll={selection.toggleAll}
             onClear={selection.clear}
             onPause={activeSelected.length > 0 ? () => setStatus(activeSelected, "paused", true) : undefined}
             onResume={pausedSelected.length > 0 ? () => setStatus(pausedSelected, "active", true) : undefined}
-            onDelete={() => askDelete(selected)}
-            busy={actions.busy}
+            onDelete={() => askDelete(selected, true)}
+            busy={actions.busy || stale}
           />
 
-          {shown.length === 0 && !fetchingAll && codes.length > 0 ? (
+          {noResults ? (
             <EmptyState
               icon={SearchX}
               title={l.noResults}
               action={
-                <Button variant="secondary" onClick={() => setQuery({ ...DEFAULT_QUERY, sort: query.sort })}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setQuery({ ...DEFAULT_QUERY, sort: query.sort });
+                    // The button goes away with the empty state: continue from the search box.
+                    searchBox.current?.focus();
+                  }}
+                >
                   {l.clearFilters}
                 </Button>
               }
@@ -167,7 +200,11 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
               {l.noResultsIntro}
             </EmptyState>
           ) : (
-            <ul className={listClass(view)}>
+            <ul
+              aria-busy={refreshing || undefined}
+              inert={stale}
+              className={`${listClass(view)} transition-opacity duration-200 ${stale ? "opacity-60" : ""}`}
+            >
               {shown.map((code) => (
                 <li key={code.id}>
                   <CodeCard
@@ -196,7 +233,7 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
               </Button>
             </div>
           )}
-          {!loadAll && state.kind === "ready" && next && !state.moreFailed && (
+          {state.kind === "ready" && next && !state.moreFailed && !refreshing && (
             <Button variant="secondary" className="w-fit" busy={state.loadingMore} onClick={loadMore}>
               {t.loadMore}
             </Button>
