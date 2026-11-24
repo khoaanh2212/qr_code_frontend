@@ -3,7 +3,7 @@
 import { RotateCw, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useId, useMemo, useState } from "react";
+import { memo, useCallback, useId, useMemo, useState } from "react";
 import { saveHandoff } from "@/features/codes/handoff";
 import { applyTemplate, templateFromDesign } from "@/features/templates/convert";
 import { GeneratorTemplates } from "@/features/templates/generator-templates";
@@ -42,6 +42,12 @@ const DESIGN_FIELDS = new Set([
 ]);
 const URL_FIELDS = new Set(["url", "website"]);
 const PREVIEW_ID = "qr-preview";
+
+// Typing the content changes only the content and the preview: the design controls (the style
+// picker draws dozens of SVG thumbnails) and the type cards are memoized here, where their props
+// are kept stable.
+const DesignPanelMemo = memo(DesignPanel);
+const TypePickerMemo = memo(TypePicker);
 const PREVIEW_SIZE = 512;
 
 /**
@@ -109,8 +115,8 @@ function Editor({
 
   const qrType = types.find((x) => x.type === typeName) ?? types[0];
   const data = useMemo(() => dataByType[qrType.type] ?? initialData(qrType), [dataByType, qrType]);
-  const missing = missingRequired(qrType, data);
-  const problems = validateFields(qrType, data);
+  const missing = useMemo(() => missingRequired(qrType, data), [qrType, data]);
+  const problems = useMemo(() => validateFields(qrType, data), [qrType, data]);
   const problemNames = Object.keys(problems);
   const contrastOk = designScannable(design);
 
@@ -166,20 +172,40 @@ function Editor({
     if (touchedName(name)) fieldErrors[name] = problemText[problems[name]];
   }
   if (serverContentField) fieldErrors[serverContentField] ??= t.validation.invalid;
-  const designError =
-    serverField && DESIGN_FIELDS.has(serverField)
-      ? {
-          field: serverField,
-          message:
-            serverField === "logo"
-              ? t.design.logoType
-              : serverField === "frame_text"
-                ? captionNeedsSignIn
-                  ? t.design.frameTextSignIn
-                  : t.design.frameTextInvalid
-                : t.validation.invalid,
-        }
-      : undefined;
+  const designError = useMemo(
+    () =>
+      serverField && DESIGN_FIELDS.has(serverField)
+        ? {
+            field: serverField,
+            message:
+              serverField === "logo"
+                ? t.design.logoType
+                : serverField === "frame_text"
+                  ? captionNeedsSignIn
+                    ? t.design.frameTextSignIn
+                    : t.design.frameTextInvalid
+                  : t.validation.invalid,
+          }
+        : undefined,
+    [serverField, captionNeedsSignIn, t],
+  );
+  const captionAction = useMemo(
+    () =>
+      captionNeedsSignIn && (
+        <Link
+          href={`${localizePath(locale, "/login")}?return_to=${encodeURIComponent(pathname)}`}
+          className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-accent underline-offset-4 hover:underline"
+        >
+          {t.design.frameTextSignInLink}
+        </Link>
+      ),
+    [captionNeedsSignIn, locale, pathname, t],
+  );
+  const currentTemplateDesign = useCallback(() => templateFromDesign(design), [design]);
+  const applyTemplateDesign = useCallback(
+    (d: Parameters<typeof applyTemplate>[1]) => setDesign((current) => applyTemplate(current, d)),
+    [],
+  );
 
   const setField = (name: string, value: string) =>
     setDataByType((prev) => ({
@@ -190,7 +216,7 @@ function Editor({
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
       <div className="flex min-w-0 flex-col gap-8">
-        <TypePicker t={t} types={types} value={qrType.type} onChange={setTypeName} />
+        <TypePickerMemo t={t} types={types} value={qrType.type} onChange={setTypeName} />
         <section aria-labelledby={headingIds.content} className="flex flex-col gap-4">
           <h2 id={headingIds.content} className="text-lg font-semibold">
             {t.sections.content}
@@ -246,26 +272,17 @@ function Editor({
           <GeneratorTemplates
             t={templates}
             locale={locale}
-            currentDesign={() => templateFromDesign(design)}
-            onApply={(d) => setDesign((current) => applyTemplate(current, d))}
+            currentDesign={currentTemplateDesign}
+            onApply={applyTemplateDesign}
           />
         )}
-        <DesignPanel
+        <DesignPanelMemo
           t={t}
           design={design}
           onChange={setDesign}
           contrastOk={contrastOk}
           error={designError}
-          captionAction={
-            captionNeedsSignIn && (
-              <Link
-                href={`${localizePath(locale, "/login")}?return_to=${encodeURIComponent(pathname)}`}
-                className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-accent underline-offset-4 hover:underline"
-              >
-                {t.design.frameTextSignInLink}
-              </Link>
-            )
-          }
+          captionAction={captionAction}
         />
       </section>
 
