@@ -56,7 +56,8 @@ function filled(type: string, data: QrData): QrData {
 export function buildRenderRequest(input: RenderInput, { post = false } = {}): RenderRequest {
   const data = filled(input.type, input.data);
   const { design } = input;
-  const ecc = design.logo ? "H" : design.ecc;
+  // A logo or an icon hides modules: the API forces level H for both.
+  const ecc = design.logo || design.logoIcon ? "H" : design.ecc;
 
   const custom = hasCustomCaption(design);
   if (!post && !design.logo && !custom && !SENSITIVE_TYPES.has(input.type)) {

@@ -36,6 +36,7 @@ const DESIGN_FIELDS = new Set([
   "frame",
   "frame_text",
   "frame_color",
+  "logo_icon",
 ]);
 const URL_FIELDS = new Set(["url", "website"]);
 const PREVIEW_ID = "qr-preview";
@@ -199,6 +200,8 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
                     frame: design.frame,
                     frameText: design.frameText,
                     frameColor: design.frameColor,
+                    // An uploaded logo stays in this tab; an icon travels.
+                    logoIcon: design.logo ? "" : design.logoIcon,
                   },
                 })
               }

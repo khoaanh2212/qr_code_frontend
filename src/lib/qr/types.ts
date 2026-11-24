@@ -24,7 +24,8 @@ export interface QrCatalog {
 export const ECC_LEVELS = ["L", "M", "Q", "H"] as const;
 export type Ecc = (typeof ECC_LEVELS)[number];
 
-export type QrFormat = "png" | "svg";
+export const FORMATS = ["png", "svg", "jpg", "pdf"] as const;
+export type QrFormat = (typeof FORMATS)[number];
 
 export interface QrLogo {
   /** Base64 of the PNG/JPEG bytes, without a data: prefix. */
@@ -54,7 +55,12 @@ export interface QrDesign {
   eyeColor: string;
   eyeBallColor: string;
   frameColor: string;
+  /** A built-in icon over the center, or "" (never together with `logo`). */
+  logoIcon: QrLogoIcon | "";
 }
+
+export const LOGO_ICONS = ["scan-me", "link", "wifi", "mail", "location", "user", "star", "heart"] as const;
+export type QrLogoIcon = (typeof LOGO_ICONS)[number];
 
 export type EyeTriple<T> = readonly [T, T, T];
 
@@ -125,9 +131,10 @@ export const DEFAULT_DESIGN: QrDesign = {
   eyeColor: "",
   eyeBallColor: "",
   frameColor: "",
+  logoIcon: "",
 };
 
-type StyleParam = "module" | "eye_frame" | "eye_ball" | "eye_color" | "eye_ball_color" | "frame" | "frame_text" | "frame_color";
+type StyleParam = "logo_icon" | "module" | "eye_frame" | "eye_ball" | "eye_color" | "eye_ball_color" | "frame" | "frame_text" | "frame_color";
 
 /** One value when all three eyes agree, else three comma-separated ones. */
 function triple(values: EyeTriple<string>): string {
@@ -142,6 +149,7 @@ export function styleParams(design: QrDesign): Partial<Record<StyleParam, string
   const out: Partial<Record<StyleParam, string>> = {};
   const own = (c: string) => c !== "" && c.toLowerCase() !== design.fg.toLowerCase();
   if (design.module !== "square") out.module = design.module;
+  if (design.logoIcon && !design.logo) out.logo_icon = design.logoIcon;
   if (design.eyeFrames.some((f) => f !== "square")) out.eye_frame = triple(design.eyeFrames);
   if (design.eyeBalls.some((b) => b !== "square")) out.eye_ball = triple(design.eyeBalls);
   if (own(design.eyeColor)) out.eye_color = design.eyeColor;

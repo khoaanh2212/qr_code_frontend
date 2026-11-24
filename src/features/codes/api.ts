@@ -1,5 +1,6 @@
 import { sessionApi } from "@/lib/api";
 import type { CodeDesign, CodeEnvelope, CodesPage, CodeStats, CodeStatus, DynamicCode } from "@/lib/api/types";
+import type { QrFormat } from "@/lib/qr/types";
 
 /** Calls of the dynamic codes API (backend PLAN, items 35-37), always with the session. */
 
@@ -44,7 +45,7 @@ export async function deleteCode(workspaceId: string, id: string): Promise<void>
 }
 
 /** The code's image (it encodes the short link), as a blob for an object URL or a download. */
-export async function codeImage(workspaceId: string, id: string, format: "png" | "svg", size = 1024): Promise<Blob> {
+export async function codeImage(workspaceId: string, id: string, format: QrFormat, size = 1024): Promise<Blob> {
   const q = new URLSearchParams({ format, size: String(size) });
   return sessionApi.requestBlob(`${one(workspaceId, id)}/image?${q}`);
 }

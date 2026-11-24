@@ -31,6 +31,13 @@ describe("code designs", () => {
     expect(design).not.toHaveProperty("eye");
   });
 
+  it("keeps a built-in icon, drops an unknown one", () => {
+    expect(lookFromDesign({ logo_icon: "star" }).logoIcon).toBe("star");
+    expect(lookFromDesign({ logo_icon: "rocket" }).logoIcon).toBe("");
+    expect(designFromLook({ ...DEFAULT_LOOK, logoIcon: "heart" })).toMatchObject({ logo_icon: "heart" });
+    expect(safeLook({ logoIcon: "<svg>" })).toEqual({});
+  });
+
   it("does not send a part color equal to the code color", () => {
     expect(designFromLook({ ...DEFAULT_LOOK, eyeColor: "#000000" })).not.toHaveProperty("eye_color");
   });

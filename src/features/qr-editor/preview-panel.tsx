@@ -7,7 +7,7 @@ import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 import { saveBlob as save } from "@/lib/browser/download";
 import type { RenderRequest } from "@/lib/qr/render-request";
-import { SIZE_MAX, SIZE_MIN, type QrFormat } from "@/lib/qr/types";
+import { FORMATS, SIZE_MAX, SIZE_MIN, type QrFormat } from "@/lib/qr/types";
 import { errorText } from "./error-text";
 import { render, type PreviewState } from "./use-render";
 
@@ -123,7 +123,7 @@ export function PreviewPanel({
           <fieldset className="flex flex-col">
             <legend className="mb-1.5 text-sm font-medium">{t.download.format}</legend>
             <div className="flex overflow-hidden rounded-md border border-control">
-              {(["png", "svg"] as const).map((f) => (
+              {FORMATS.map((f) => (
                 <label
                   key={f}
                   className="inline-flex min-h-11 cursor-pointer items-center px-4 font-mono text-sm uppercase has-checked:bg-foreground has-checked:text-background has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-accent"

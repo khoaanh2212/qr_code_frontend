@@ -1,6 +1,7 @@
 "use client";
 
 import { ColorInput } from "@/features/qr-editor/color-input";
+import { LogoIconPicker } from "@/features/qr-editor/logo-icons";
 import { StylePicker } from "@/features/qr-editor/style-picker";
 import type { Messages } from "@/i18n/messages";
 import { isScannable } from "@/lib/qr/color";
@@ -43,6 +44,7 @@ export function LookFields({
         onChange={onChange}
         error={error?.field === "frame_text" ? { field: "frame_text", message: generator.design.frameTextInvalid } : undefined}
       />
+      <LogoIconPicker t={generator} value={look.logoIcon} onPick={(logoIcon) => onChange((l) => ({ ...l, logoIcon }))} />
     </div>
   );
 }

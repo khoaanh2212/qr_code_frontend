@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "@/i18n/messages/en";
 import { ApiError, publicApi, sessionApi } from "@/lib/api";
@@ -43,6 +43,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** The Wi-Fi type card (an icon card is also labelled "Wi-Fi"). */
+const wifiType = async () => within(await screen.findByRole("group", { name: t.typesLabel })).getByLabelText(t.types.wifi);
+
 async function settle() {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(500);
@@ -84,6 +87,7 @@ describe("QrEditor", () => {
         frame: "none",
         frameText: "",
         frameColor: "",
+        logoIcon: "",
       },
     });
     sessionStorage.clear();
@@ -154,7 +158,7 @@ describe("QrEditor", () => {
 
   it("checks the WPA password length before calling the API", async () => {
     render(<QrEditor t={t} locale="en" />);
-    fireEvent.click(await screen.findByLabelText("Wi-Fi"));
+    fireEvent.click(await wifiType());
     fireEvent.change(screen.getByLabelText(/Network name/), { target: { value: "Office" } });
     const pw = screen.getByLabelText(/Password/);
     fireEvent.change(pw, { target: { value: "short" } });
@@ -166,7 +170,7 @@ describe("QrEditor", () => {
 
   it("posts Wi-Fi content and hides the password of an open network", async () => {
     render(<QrEditor t={t} locale="en" />);
-    fireEvent.click(await screen.findByLabelText("Wi-Fi"));
+    fireEvent.click(await wifiType());
     fireEvent.change(screen.getByLabelText(/Network name/), { target: { value: "Cafe" } });
     await settle();
     expect(blob).not.toHaveBeenCalled(); // WPA without a password
@@ -183,7 +187,7 @@ describe("QrEditor", () => {
   it("opens on the type a per-type page asks for", async () => {
     render(<QrEditor t={t} locale="en" initialType="wifi" />);
     expect(await screen.findByLabelText(/Network name/)).toBeTruthy();
-    expect((screen.getByLabelText("Wi-Fi") as HTMLInputElement).checked).toBe(true);
+    expect(((await wifiType()) as HTMLInputElement).checked).toBe(true);
     // The other types stay one click away.
     fireEvent.click(screen.getByLabelText("Website"));
     expect(screen.getByLabelText(/Website address/)).toBeTruthy();

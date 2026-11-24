@@ -14,6 +14,7 @@ import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 import type { CodeStats, DynamicCode } from "@/lib/api/types";
 import { saveBlob } from "@/lib/browser/download";
+import { FORMATS, type QrFormat } from "@/lib/qr/types";
 import { normalizeUrlInput } from "@/lib/qr/validate";
 import { codeImage, codeStats, deleteCode, getCode, updateCode } from "./api";
 import { designFromLook, lookFromDesign, lookScannable, type CodeLook } from "./design";
@@ -132,7 +133,7 @@ function CodeCard({ t, ws, code }: { t: T; ws: string; code: DynamicCode }) {
     };
   }, [ws, code.id, designKey]);
 
-  async function download(fmt: "png" | "svg") {
+  async function download(fmt: QrFormat) {
     setDownloadError(undefined);
     try {
       saveBlob(await codeImage(ws, code.id, fmt), `proofqr-${code.short_code}.${fmt}`);
@@ -172,7 +173,7 @@ function CodeCard({ t, ws, code }: { t: T; ws: string; code: DynamicCode }) {
           <SavedNote message={copied ? t.copied : undefined} />
         </div>
         <div className="flex flex-wrap gap-2">
-          {(["png", "svg"] as const).map((fmt) => (
+          {FORMATS.map((fmt) => (
             <Button key={fmt} variant="secondary" onClick={() => void download(fmt)}>
               <Download aria-hidden="true" className="size-4" />
               {t.download} {fmt.toUpperCase()}

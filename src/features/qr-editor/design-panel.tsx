@@ -6,6 +6,7 @@ import type { Messages } from "@/i18n/messages";
 import { LogoError, readLogo } from "@/lib/qr/logo";
 import { ECC_LEVELS, FRAME_MARGIN_MIN, MARGIN_MAX, type Ecc, type QrDesign } from "@/lib/qr/types";
 import { ColorInput } from "./color-input";
+import { LogoIconPicker } from "./logo-icons";
 import { StylePicker } from "./style-picker";
 
 type T = Messages["generator"];
@@ -67,8 +68,8 @@ export function DesignPanel({
           </label>
           <select
             id={ids.ecc}
-            value={design.logo ? "H" : design.ecc}
-            disabled={hasLogo}
+            value={design.logo || design.logoIcon ? "H" : design.ecc}
+            disabled={hasLogo || Boolean(design.logoIcon)}
             onChange={(e) => {
               const ecc = e.target.value as Ecc;
               onChange((d) => ({ ...d, ecc }));
@@ -139,7 +140,8 @@ export function DesignPanel({
                   const logo = await readLogo(file);
                   setLogoError(null);
                   moveFocus.current = true;
-                  onChange((d) => ({ ...d, logo }));
+                  // An uploaded logo replaces a built-in icon.
+                  onChange((d) => ({ ...d, logo, logoIcon: "" }));
                 } catch (err) {
                   setLogoError(err instanceof LogoError && err.reason === "size" ? t.design.logoSize : t.design.logoType);
                 }
@@ -148,7 +150,7 @@ export function DesignPanel({
           </label>
         )}
         <p id={ids.logoHelp} className="text-xs text-muted">
-          {design.logo ? t.design.logoEcc : t.design.logoHelp}
+          {design.logo || design.logoIcon ? t.design.logoEcc : t.design.logoHelp}
         </p>
         {shownLogoError && (
           <p id={ids.logoError} role="alert" className="text-xs font-medium text-danger">
@@ -156,6 +158,9 @@ export function DesignPanel({
           </p>
         )}
       </div>
+      {!design.logo && (
+        <LogoIconPicker t={t} value={design.logoIcon} onPick={(logoIcon) => onChange((d) => ({ ...d, logoIcon }))} />
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   FRAME_MARGIN_MIN,
   FRAME_TEXT_MAX,
   FRAMES,
+  LOGO_ICONS,
   MODULES,
   styleParams,
   type EyeTriple,
@@ -29,6 +30,7 @@ export type CodeLook = Pick<
   | "frame"
   | "frameText"
   | "frameColor"
+  | "logoIcon"
   | "margin"
 >;
 
@@ -46,6 +48,7 @@ export const DEFAULT_LOOK: CodeLook = {
   frame: DEFAULT_DESIGN.frame,
   frameText: "",
   frameColor: "",
+  logoIcon: "",
   margin: DEFAULT_DESIGN.margin,
 };
 
@@ -84,6 +87,7 @@ export function lookFromDesign(d: CodeDesign): CodeLook {
     frame: pick(FRAMES, d.frame, DEFAULT_LOOK.frame),
     frameText: typeof d.frame_text === "string" ? d.frame_text : "",
     frameColor: color(d.frame_color),
+    logoIcon: pick(LOGO_ICONS, d.logo_icon, "" as const),
     margin: d.margin ?? DEFAULT_LOOK.margin,
   };
 }
@@ -110,6 +114,7 @@ export function safeLook(v: Partial<Record<keyof CodeLook, unknown>>): Partial<C
   }
   if (FRAMES.includes(v.frame as never)) out.frame = v.frame as CodeLook["frame"];
   if (typeof v.frameText === "string") out.frameText = v.frameText.slice(0, FRAME_TEXT_MAX);
+  if (LOGO_ICONS.includes(v.logoIcon as never)) out.logoIcon = v.logoIcon as CodeLook["logoIcon"];
   for (const key of ["eyeColor", "eyeBallColor", "frameColor"] as const) {
     const c = color(v[key]);
     if (c) out[key] = c;

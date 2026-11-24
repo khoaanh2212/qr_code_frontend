@@ -57,6 +57,20 @@ describe("buildRenderRequest", () => {
     expect(q.has("frame_color")).toBe(false);
   });
 
+  it("sends a built-in icon with level H, never next to an uploaded logo", () => {
+    const icon = buildRenderRequest({ ...url, design: { ...DEFAULT_DESIGN, logoIcon: "wifi" }, format: "pdf", size: 512 });
+    if (icon.method !== "GET") throw new Error("expected GET");
+    const q = new URL(icon.path, "https://api.test").searchParams;
+    expect(q.get("logo_icon")).toBe("wifi");
+    expect(q.get("ecc")).toBe("H");
+    expect(q.get("format")).toBe("pdf");
+
+    const logo = { name: "l.png", id: "l1", base64: "AAAA" };
+    const both = buildRenderRequest({ ...url, design: { ...DEFAULT_DESIGN, logoIcon: "wifi", logo }, format: "png", size: 512 });
+    if (both.method !== "POST") throw new Error("expected POST");
+    expect(both.body.style).not.toHaveProperty("logo_icon");
+  });
+
   it("sends a caption of the user's own to the signed-in render, presets to the public one", () => {
     const framed = { ...DEFAULT_DESIGN, frame: "box" as const };
     const own = buildRenderRequest({ ...url, design: { ...framed, frameText: "Thực đơn" }, format: "png", size: 512 });
