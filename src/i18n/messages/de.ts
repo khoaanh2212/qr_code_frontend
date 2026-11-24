@@ -222,6 +222,8 @@ export const de = {
     googleContinue: "Weiter mit Google",
     orDivider: "oder",
     googleFailed: "Die Anmeldung mit Google hat nicht geklappt. Versuche es erneut oder nutze deine E-Mail-Adresse und dein Passwort.",
+    googleConnected: "Google ist verbunden. Ab jetzt kannst du dich mit Google anmelden.",
+    noticeDismiss: "Schließen",
     toLogin: "Schon ein Konto? Anmelden",
     backToLogin: "Zurück zur Anmeldung",
     registerIntro: "Kostenlose statische QR-Codes brauchen nie ein Konto. Ein Konto dient zum Speichern und Verwalten von Codes.",

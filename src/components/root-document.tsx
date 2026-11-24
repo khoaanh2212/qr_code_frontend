@@ -4,6 +4,7 @@ import type { Locale } from "@/i18n/config";
 import { config } from "@/lib/config";
 import "@/styles/globals.css";
 import { SITE_NAME } from "@/lib/site";
+import { GoogleConnectedNotice } from "./google-connected-notice";
 
 // Fonts are downloaded at build time and served from this site (CSP font-src 'self').
 // latin-ext covers Vietnamese, German, French, Spanish and Portuguese diacritics.
@@ -20,10 +21,22 @@ export const baseMetadata: Metadata = {
  * root layouts is deliberate: navigating between them is always a full page load, so a page
  * never keeps the other surface's Content Security Policy after a client-side navigation.
  */
-export function RootDocument({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+export function RootDocument({
+  locale,
+  googleConnected,
+  children,
+}: {
+  locale: Locale;
+  /** Texts of the "Google is connected" notice; without them it is not offered. */
+  googleConnected?: { message: string; dismiss: string };
+  children: React.ReactNode;
+}) {
   return (
     <html lang={locale} className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {googleConnected && <GoogleConnectedNotice {...googleConnected} />}
+        {children}
+      </body>
     </html>
   );
 }

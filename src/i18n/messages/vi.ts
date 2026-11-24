@@ -222,6 +222,8 @@ export const vi = {
     googleContinue: "Tiếp tục với Google",
     orDivider: "hoặc",
     googleFailed: "Đăng nhập bằng Google không thành công. Hãy thử lại, hoặc dùng email và mật khẩu.",
+    googleConnected: "Đã kết nối Google thành công. Từ giờ bạn có thể đăng nhập bằng Google.",
+    noticeDismiss: "Đóng",
     toLogin: "Đã có tài khoản? Đăng nhập",
     backToLogin: "Quay lại đăng nhập",
     registerIntro: "Mã QR tĩnh miễn phí không bao giờ cần tài khoản. Tài khoản dùng để lưu và quản lý mã.",

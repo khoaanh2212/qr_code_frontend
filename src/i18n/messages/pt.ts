@@ -222,6 +222,8 @@ export const pt = {
     googleContinue: "Continuar com o Google",
     orDivider: "ou",
     googleFailed: "Não foi possível entrar com o Google. Tente novamente ou use seu e-mail e senha.",
+    googleConnected: "Google conectado. A partir de agora você pode entrar com o Google.",
+    noticeDismiss: "Fechar",
     toLogin: "Já tem conta? Entre",
     backToLogin: "Voltar para entrar",
     registerIntro: "QR Codes estáticos grátis nunca precisam de conta. A conta serve para salvar e gerenciar códigos.",

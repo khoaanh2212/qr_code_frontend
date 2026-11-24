@@ -40,7 +40,11 @@ type State = { kind: "loading" } | { kind: "ready"; user: User; workspaces: Work
 
 /** Full page load to the login page in the current language. */
 export function redirectToLogin(): void {
-  const here = window.location.pathname + window.location.search;
+  // The "Google is connected" marker belongs to the login that set it, not to the next one.
+  const params = new URLSearchParams(window.location.search);
+  params.delete("google");
+  const query = params.toString();
+  const here = window.location.pathname + (query ? `?${query}` : "");
   const { locale } = splitLocale(window.location.pathname);
   window.location.replace(`${localizePath(locale, "/login")}?return_to=${encodeURIComponent(here)}`);
 }

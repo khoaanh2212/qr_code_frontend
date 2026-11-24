@@ -222,6 +222,8 @@ export const fr = {
     googleContinue: "Continuer avec Google",
     orDivider: "ou",
     googleFailed: "La connexion avec Google n’a pas fonctionné. Réessayez, ou utilisez votre e-mail et votre mot de passe.",
+    googleConnected: "Google est connecté. Vous pouvez désormais vous connecter avec Google.",
+    noticeDismiss: "Fermer",
     toLogin: "Déjà un compte ? Connectez-vous",
     backToLogin: "Retour à la connexion",
     registerIntro: "Les QR codes statiques gratuits ne demandent jamais de compte. Un compte sert à enregistrer et gérer vos codes.",

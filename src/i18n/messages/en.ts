@@ -226,6 +226,8 @@ export const en = {
     googleContinue: "Continue with Google",
     orDivider: "or",
     googleFailed: "Signing in with Google did not work. Try again, or use your email and password.",
+    googleConnected: "Google is connected. You can sign in with Google from now on.",
+    noticeDismiss: "Dismiss",
     toLogin: "Already have an account? Log in",
     backToLogin: "Back to log in",
     registerIntro: "Free static QR codes never need an account. An account is for saving and managing codes.",

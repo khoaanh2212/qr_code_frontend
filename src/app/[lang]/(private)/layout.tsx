@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { baseMetadata, RootDocument } from "@/components/root-document";
 import { renderPerRequest } from "@/features/auth/private-shell";
 import { LOCALES } from "@/i18n/config";
-import { getLocale } from "@/i18n/server";
+import { getLocale, getMessages } from "@/i18n/server";
 
 export const metadata: Metadata = { ...baseMetadata, robots: { index: false, follow: false } };
 
@@ -20,5 +20,13 @@ export function generateStaticParams() {
  */
 export default async function PrivateLayout({ children }: LayoutProps<"/[lang]">) {
   await renderPerRequest();
-  return <RootDocument locale={await getLocale()}>{children}</RootDocument>;
+  const t = await getMessages();
+  return (
+    <RootDocument
+      locale={await getLocale()}
+      googleConnected={{ message: t.auth.googleConnected, dismiss: t.auth.noticeDismiss }}
+    >
+      {children}
+    </RootDocument>
+  );
 }

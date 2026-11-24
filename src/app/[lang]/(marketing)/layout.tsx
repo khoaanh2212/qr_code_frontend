@@ -25,7 +25,7 @@ export default async function MarketingLayout({ children }: LayoutProps<"/[lang]
   const locale = await getLocale();
   const t = await getMessages();
   return (
-    <RootDocument locale={locale}>
+    <RootDocument locale={locale} googleConnected={{ message: t.auth.googleConnected, dismiss: t.auth.noticeDismiss }}>
       <header className="border-b border-border bg-header">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link href={localizePath(locale, "/")} className="inline-flex min-h-11 items-center">

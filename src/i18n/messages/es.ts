@@ -222,6 +222,8 @@ export const es = {
     googleContinue: "Continuar con Google",
     orDivider: "o",
     googleFailed: "No se pudo iniciar sesión con Google. Inténtalo de nuevo o usa tu correo y contraseña.",
+    googleConnected: "Google está conectado. A partir de ahora puedes iniciar sesión con Google.",
+    noticeDismiss: "Cerrar",
     toLogin: "¿Ya tienes cuenta? Inicia sesión",
     backToLogin: "Volver a iniciar sesión",
     registerIntro: "Los códigos QR estáticos gratis nunca necesitan cuenta. La cuenta sirve para guardar y gestionar códigos.",
