@@ -73,6 +73,7 @@ describe("QrEditor", () => {
       url: "https://example.com/menu",
       fg: "#000000",
       bg: "#ffffff",
+      style: { module: "square", eye: "square", frame: "none", frameText: "" },
     });
     sessionStorage.clear();
   });

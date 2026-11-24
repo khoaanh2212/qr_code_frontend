@@ -2,7 +2,7 @@ import { authFailure, type AuthMessages } from "@/features/auth/form-rules";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 
-export type CodeField = "target_url" | "name" | "colors";
+export type CodeField = "target_url" | "name" | "colors" | "frame_text";
 
 /** What to show for a failed code request: a field message or a form alert. */
 export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessages): { field?: CodeField; message: string } {
@@ -12,6 +12,8 @@ export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessag
       if (err.field === "target_url") return { field: "target_url", message: t.errors.targetUrl };
       if (err.field === "name") return { field: "name", message: t.errors.generic };
       if (err.field === "fg" || err.field === "bg") return { field: "colors", message: t.errors.colors };
+      // The caption's message lives with the style picker (generator messages).
+      if (err.field === "frame_text") return { field: "frame_text", message: t.errors.generic };
       return { message: t.errors.generic };
     case "email_not_verified":
       return { message: t.errors.verifyFirst };

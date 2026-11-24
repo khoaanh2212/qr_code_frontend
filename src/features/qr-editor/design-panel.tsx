@@ -6,7 +6,8 @@ import { format } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { normalizeHex } from "@/lib/qr/color";
 import { LogoError, readLogo } from "@/lib/qr/logo";
-import { ECC_LEVELS, MARGIN_MAX, type Ecc, type QrDesign } from "@/lib/qr/types";
+import { ECC_LEVELS, FRAME_MARGIN_MIN, MARGIN_MAX, type Ecc, type QrDesign } from "@/lib/qr/types";
+import { StylePicker } from "./style-picker";
 
 type T = Messages["generator"];
 
@@ -111,11 +112,13 @@ export function DesignPanel({
       </div>
       {/* The preview's status announces this; here it is shown next to the colors. */}
       {!contrastOk && <p className="text-sm font-medium text-warning">{t.design.lowContrast}</p>}
-      {error && error.field !== "logo" && (
+      {error && error.field !== "logo" && error.field !== "frame_text" && (
         <p role="alert" className="text-sm font-medium text-danger">
           {error.message}
         </p>
       )}
+
+      <StylePicker t={t} design={design} onChange={onChange} error={error} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
@@ -146,7 +149,7 @@ export function DesignPanel({
           <input
             id={ids.margin}
             type="range"
-            min={0}
+            min={design.frame === "none" ? 0 : FRAME_MARGIN_MIN}
             max={MARGIN_MAX}
             value={design.margin}
             onChange={(e) => {

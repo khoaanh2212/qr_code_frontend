@@ -21,7 +21,7 @@ import { useRenderPreview } from "./use-render";
 
 type T = Messages["generator"];
 
-const DESIGN_FIELDS = new Set(["fg", "bg", "margin", "ecc", "logo", "size"]);
+const DESIGN_FIELDS = new Set(["fg", "bg", "margin", "ecc", "logo", "size", "module", "eye", "frame", "frame_text"]);
 const URL_FIELDS = new Set(["url", "website"]);
 const PREVIEW_ID = "qr-preview";
 const PREVIEW_SIZE = 512;
@@ -113,7 +113,15 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
   if (serverContentField) fieldErrors[serverContentField] ??= t.validation.invalid;
   const designError =
     serverField && DESIGN_FIELDS.has(serverField)
-      ? { field: serverField, message: serverField === "logo" ? t.design.logoType : t.validation.invalid }
+      ? {
+          field: serverField,
+          message:
+            serverField === "logo"
+              ? t.design.logoType
+              : serverField === "frame_text"
+                ? t.design.frameTextInvalid
+                : t.validation.invalid,
+        }
       : undefined;
 
   const setField = (name: string, value: string) =>
@@ -149,7 +157,14 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
             <MakeDynamic
               t={t}
               href={localizePath(locale, "/app/codes/new")}
-              onFollow={() => saveHandoff({ url: data.url ?? "", fg: design.fg, bg: design.bg })}
+              onFollow={() =>
+                saveHandoff({
+                  url: data.url ?? "",
+                  fg: design.fg,
+                  bg: design.bg,
+                  style: { module: design.module, eye: design.eye, frame: design.frame, frameText: design.frameText },
+                })
+              }
             />
           )}
         </section>

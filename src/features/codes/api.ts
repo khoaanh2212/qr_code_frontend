@@ -30,6 +30,8 @@ export async function createCode(workspaceId: string, body: NewCode): Promise<Dy
 export interface CodeChanges {
   name?: string;
   target_url?: string;
+  /** Replaces the whole design. */
+  design?: CodeDesign;
   status?: Exclude<CodeStatus, "locked">;
 }
 

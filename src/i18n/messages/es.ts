@@ -348,6 +348,18 @@ export const es = {
       logoEcc: "Con logotipo se usa la corrección de errores alta para que el código se siga leyendo.",
       logoType: "Elige una imagen PNG o JPEG.",
       logoSize: "El logotipo debe ocupar 1 MB o menos.",
+      module: "Patrón",
+      eye: "Cuadrados de las esquinas",
+      frame: "Marco",
+      styles: {
+        modules: { square: "Cuadrado", rounded: "Redondeado", dots: "Puntos", bars: "Barras" },
+        eyes: { square: "Cuadrado", rounded: "Redondeado", circle: "Círculo", leaf: "Hoja" },
+        frames: { none: "Ninguno", "label-bottom": "Etiqueta abajo", "label-top": "Etiqueta arriba", box: "Contorno" },
+      },
+      frameText: "Texto del marco",
+      frameTextHelp: "Hasta 24 caracteres: letras, números y signos de puntuación.",
+      frameTextDefault: "ESCANÉAME",
+      frameTextInvalid: "Usa solo letras, números y signos de puntuación (sin emojis ni alfabetos no latinos).",
     },
     preview: {
       title: "Vista previa",
@@ -502,6 +514,8 @@ export const es = {
     devices: "Dispositivos",
     unknown: "Desconocido",
     deviceNames: { mobile: "Móvil", tablet: "Tableta", desktop: "Ordenador", other: "Otro" },
+    designTitle: "Diseño",
+    designIntro: "Colores y estilo del código impreso. El enlace corto no cambia; vuelve a descargar la imagen después de un cambio.",
     deleteTitle: "Eliminar código",
     deleteIntro:
       "El enlace corto deja de funcionar para siempre: a quien escanee el código impreso se le indicará que ya no está en uso.",

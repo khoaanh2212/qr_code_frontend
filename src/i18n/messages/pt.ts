@@ -348,6 +348,18 @@ export const pt = {
       logoEcc: "Com logo, a correção de erros alta é usada para que o código continue legível.",
       logoType: "Escolha uma imagem PNG ou JPEG.",
       logoSize: "O logo deve ter no máximo 1 MB.",
+      module: "Padrão",
+      eye: "Quadrados dos cantos",
+      frame: "Moldura",
+      styles: {
+        modules: { square: "Quadrado", rounded: "Arredondado", dots: "Pontos", bars: "Barras" },
+        eyes: { square: "Quadrado", rounded: "Arredondado", circle: "Círculo", leaf: "Folha" },
+        frames: { none: "Nenhuma", "label-bottom": "Legenda abaixo", "label-top": "Legenda acima", box: "Contorno" },
+      },
+      frameText: "Texto da moldura",
+      frameTextHelp: "Até 24 caracteres: letras, números e pontuação.",
+      frameTextDefault: "ESCANEIE",
+      frameTextInvalid: "Use apenas letras, números e pontuação (sem emojis nem alfabetos não latinos).",
     },
     preview: {
       title: "Pré-visualização",
@@ -502,6 +514,8 @@ export const pt = {
     devices: "Dispositivos",
     unknown: "Desconhecido",
     deviceNames: { mobile: "Celular", tablet: "Tablet", desktop: "Computador", other: "Outro" },
+    designTitle: "Design",
+    designIntro: "Cores e estilo do código impresso. O link curto continua o mesmo; baixe a imagem novamente depois de uma alteração.",
     deleteTitle: "Excluir código",
     deleteIntro:
       "O link curto para de funcionar para sempre: quem escanear o código impresso verá que ele não está mais em uso.",

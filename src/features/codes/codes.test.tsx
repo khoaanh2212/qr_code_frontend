@@ -194,7 +194,7 @@ describe("CodeDetail", () => {
 
   it("shows the short link, scans, top countries and devices", async () => {
     detailApi();
-    withSession(<CodeDetail t={t} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
     expect(await screen.findByRole("heading", { name: "Menu", level: 1 })).toBeTruthy();
     expect(screen.getByText(code.short_url)).toBeTruthy();
     expect(await screen.findByText("3 scans")).toBeTruthy();
@@ -208,10 +208,10 @@ describe("CodeDetail", () => {
 
   it("changes the destination and pauses the code", async () => {
     detailApi();
-    withSession(<CodeDetail t={t} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
     type(new RegExp(t.target), "https://example.com/new");
-    await click(t.save);
+    await act(async () => void fireEvent.click(screen.getAllByRole("button", { name: t.save })[0]));
     expect(request).toHaveBeenCalledWith("/v1/workspaces/w1/codes/c1", {
       method: "PATCH",
       body: { target_url: "https://example.com/new" },
@@ -223,9 +223,26 @@ describe("CodeDetail", () => {
     expect(screen.getByRole("button", { name: t.resume })).toBeTruthy();
   });
 
+  it("restyles the code and draws its image again", async () => {
+    detailApi();
+    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
+    await screen.findByRole("heading", { name: "Menu", level: 1 });
+    const images = vi.mocked(sessionApi.requestBlob).mock.calls.length;
+    await act(async () => void fireEvent.click(screen.getByRole("radio", { name: en.generator.design.styles.modules.dots })));
+    await act(async () => void fireEvent.click(screen.getByRole("radio", { name: en.generator.design.styles.frames["label-bottom"] })));
+    expect(field(en.generator.design.frameText).value).toBe(en.generator.design.frameTextDefault);
+    const save = screen.getAllByRole("button", { name: t.save })[1]; // Destination, then Design
+    await act(async () => void fireEvent.click(save));
+    expect(request).toHaveBeenCalledWith("/v1/workspaces/w1/codes/c1", {
+      method: "PATCH",
+      body: { design: { fg: "#000000", bg: "#ffffff", module: "dots", frame: "label-bottom", frame_text: "SCAN ME" } },
+    });
+    expect(vi.mocked(sessionApi.requestBlob).mock.calls.length).toBeGreaterThan(images);
+  });
+
   it("deletes only after confirming, then returns to the list", async () => {
     detailApi();
-    withSession(<CodeDetail t={t} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
     await click(t.deleteStart);
     expect(requestVoid).not.toHaveBeenCalled();
@@ -236,7 +253,7 @@ describe("CodeDetail", () => {
 
   it("leaves a locked code read-only", async () => {
     detailApi({ status: "locked" });
-    withSession(<CodeDetail t={t} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
     expect(screen.getByText(t.lockedIntro)).toBeTruthy();
     expect(field(new RegExp(t.target)).matches(":disabled")).toBe(true); // via the fieldset
@@ -249,7 +266,7 @@ describe("CodeDetail", () => {
       if (path === "/v1/me") return me;
       throw new ApiError(404, "not_found", "nope");
     });
-    withSession(<CodeDetail t={t} auth={auth} locale="en" />);
+    withSession(<CodeDetail t={t} generator={en.generator} auth={auth} locale="en" />);
     expect(await screen.findByText(t.notFound)).toBeTruthy();
   });
 });

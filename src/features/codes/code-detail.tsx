@@ -14,20 +14,23 @@ import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 import type { CodeStats, DynamicCode } from "@/lib/api/types";
 import { saveBlob } from "@/lib/browser/download";
+import { isScannable } from "@/lib/qr/color";
 import { normalizeUrlInput } from "@/lib/qr/validate";
 import { codeImage, codeStats, deleteCode, getCode, updateCode } from "./api";
+import { designFromLook, lookFromDesign, type CodeLook } from "./design";
+import { LookFields } from "./look-fields";
 import { NAME_MAX } from "./code-form";
 import { codeFailure, type CodeField } from "./errors";
 import { ScanChart, TopList } from "./scan-chart";
 import { StatusBadge } from "./status-badge";
 
 type T = Messages["codes"];
-type Props = { t: T; auth: AuthMessages; locale: Locale };
+type Props = { t: T; generator: Messages["generator"]; auth: AuthMessages; locale: Locale };
 
 type Load = { kind: "loading" } | { kind: "missing" } | { kind: "error" } | { kind: "ready"; code: DynamicCode };
 
 /** One dynamic code: its image and short link, destination, status, scans, and deletion. */
-export function CodeDetail({ t, auth, locale }: Props) {
+export function CodeDetail({ t, generator, auth, locale }: Props) {
   const { id } = useParams<{ id: string }>();
   const workspace = usePersonalWorkspace();
   const [load, setLoad] = useState<Load>({ kind: "loading" });
@@ -91,6 +94,7 @@ export function CodeDetail({ t, auth, locale }: Props) {
       <CodeCard t={t} ws={ws} code={code} />
       <div>
         <DestinationSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
+        <DesignSection t={t} generator={generator} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <StatusSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <ScansSection t={t} locale={locale} ws={ws} code={code} />
         <DeleteSection t={t} auth={auth} ws={ws} code={code} locale={locale} />
@@ -106,6 +110,8 @@ function CodeCard({ t, ws, code }: { t: T; ws: string; code: DynamicCode }) {
   const [copied, setCopied] = useState(false);
   const [downloadError, setDownloadError] = useState<string>();
 
+  // The image follows the design: a saved restyle draws it again.
+  const designKey = JSON.stringify(code.design);
   useEffect(() => {
     let url: string | null = null;
     let cancelled = false;
@@ -114,6 +120,7 @@ function CodeCard({ t, ws, code }: { t: T; ws: string; code: DynamicCode }) {
         if (cancelled) return;
         url = URL.createObjectURL(blob);
         setSrc(url);
+        setImageFailed(false);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -124,7 +131,7 @@ function CodeCard({ t, ws, code }: { t: T; ws: string; code: DynamicCode }) {
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [ws, code.id]);
+  }, [ws, code.id, designKey]);
 
   async function download(fmt: "png" | "svg") {
     setDownloadError(undefined);
@@ -262,6 +269,62 @@ function DestinationSection({ t, auth, ws, code, onSaved }: EditProps) {
             }}
           />
           <FormAlert message={error && error.field !== "target_url" ? error.message : undefined} />
+          <div className="flex flex-wrap items-center gap-4">
+            <Button type="submit" variant="secondary" busy={busy}>
+              {t.save}
+            </Button>
+            <SavedNote message={saved ? t.saved : undefined} />
+          </div>
+        </fieldset>
+      </form>
+    </Section>
+  );
+}
+
+function DesignSection({ t, generator, auth, ws, code, onSaved }: EditProps & { generator: Messages["generator"] }) {
+  const [look, setLook] = useState<CodeLook>(() => lookFromDesign(code.design));
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<{ field?: CodeField; message: string } | null>(null);
+  const locked = code.status === "locked";
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (busy || locked) return;
+    setSaved(false);
+    if (!isScannable(look.fg, look.bg)) {
+      setError({ field: "colors", message: t.errors.colors });
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      onSaved(await updateCode(ws, code.id, { design: designFromLook(look, code.design) }));
+      setSaved(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return redirectToLogin();
+      setError(codeFailure(err, t, auth));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Section title={t.designTitle} description={t.designIntro}>
+      <form noValidate onSubmit={submit}>
+        <fieldset disabled={locked} className="flex flex-col gap-4">
+          <LookFields
+            t={t}
+            generator={generator}
+            look={look}
+            onChange={(update) => {
+              setLook(update);
+              setSaved(false);
+              setError(null); // a field message describes the old value
+            }}
+            error={error}
+          />
+          <FormAlert message={error && !error.field ? error.message : undefined} />
           <div className="flex flex-wrap items-center gap-4">
             <Button type="submit" variant="secondary" busy={busy}>
               {t.save}

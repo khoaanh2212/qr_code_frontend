@@ -348,6 +348,18 @@ export const fr = {
       logoEcc: "Avec un logo, la correction d’erreurs élevée est utilisée pour que le code reste lisible.",
       logoType: "Choisissez une image PNG ou JPEG.",
       logoSize: "Le logo ne doit pas dépasser 1 Mo.",
+      module: "Motif",
+      eye: "Carrés d’angle",
+      frame: "Cadre",
+      styles: {
+        modules: { square: "Carré", rounded: "Arrondi", dots: "Points", bars: "Barres" },
+        eyes: { square: "Carré", rounded: "Arrondi", circle: "Cercle", leaf: "Feuille" },
+        frames: { none: "Aucun", "label-bottom": "Légende en bas", "label-top": "Légende en haut", box: "Contour" },
+      },
+      frameText: "Texte du cadre",
+      frameTextHelp: "24 caractères maximum : lettres, chiffres et ponctuation.",
+      frameTextDefault: "SCANNEZ-MOI",
+      frameTextInvalid: "Utilisez uniquement des lettres, des chiffres et de la ponctuation (pas d’émoji ni d’écriture non latine).",
     },
     preview: {
       title: "Aperçu",
@@ -502,6 +514,8 @@ export const fr = {
     devices: "Appareils",
     unknown: "Inconnu",
     deviceNames: { mobile: "Téléphone", tablet: "Tablette", desktop: "Ordinateur", other: "Autre" },
+    designTitle: "Design",
+    designIntro: "Couleurs et style du code imprimé. Le lien court reste le même ; téléchargez de nouveau l’image après une modification.",
     deleteTitle: "Supprimer le code",
     deleteIntro:
       "Le lien court cesse définitivement de fonctionner : les personnes qui scannent le code imprimé sont informées qu’il n’est plus utilisé.",

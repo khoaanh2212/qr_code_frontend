@@ -8,16 +8,16 @@ import { Captcha, type CaptchaConfig } from "@/features/auth/captcha";
 import { FormAlert, TextLink } from "@/features/auth/form-bits";
 import type { AuthMessages } from "@/features/auth/form-rules";
 import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-session";
-import { ColorInput } from "@/features/qr-editor/design-panel";
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 import { isScannable } from "@/lib/qr/color";
-import { DEFAULT_DESIGN } from "@/lib/qr/types";
 import { normalizeUrlInput } from "@/lib/qr/validate";
 import { createCode } from "./api";
+import { DEFAULT_LOOK, designFromLook, type CodeLook } from "./design";
 import { codeFailure, type CodeField } from "./errors";
 import { clearHandoff, readHandoff } from "./handoff";
+import { LookFields } from "./look-fields";
 
 export const NAME_MAX = 100;
 
@@ -37,21 +37,25 @@ export function CodeForm({
 }) {
   const router = useRouter();
   const workspace = usePersonalWorkspace();
-  // The public generator's "Make it dynamic" hands over its destination and colors. The form
+  // The public generator's "Make it dynamic" hands over its destination and look. The form
   // renders only on the client (after the session check), so reading storage here is safe.
   const [handoff] = useState(readHandoff);
   useEffect(clearHandoff, []);
   const [name, setName] = useState("");
   const [target, setTarget] = useState(handoff?.url ?? "");
-  const [fg, setFg] = useState(handoff?.fg ?? DEFAULT_DESIGN.fg);
-  const [bg, setBg] = useState(handoff?.bg ?? DEFAULT_DESIGN.bg);
+  const [look, setLook] = useState<CodeLook>(() => ({
+    ...DEFAULT_LOOK,
+    ...handoff?.style,
+    fg: handoff?.fg ?? DEFAULT_LOOK.fg,
+    bg: handoff?.bg ?? DEFAULT_LOOK.bg,
+  }));
   const [token, setToken] = useState<string | null>(null);
   const [reset, setReset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ field?: CodeField; message: string } | null>(null);
   const targetRef = useRef<HTMLInputElement>(null);
 
-  const contrastOk = isScannable(fg, bg);
+  const contrastOk = isScannable(look.fg, look.bg);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -77,7 +81,7 @@ export function CodeForm({
       const code = await createCode(workspace.id, {
         name: name.trim(),
         target_url: url,
-        design: { fg, bg },
+        design: designFromLook(look),
         captcha_token: token,
       });
       router.push(localizePath(locale, `/app/codes/${code.id}`));
@@ -122,18 +126,16 @@ export function CodeForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <fieldset className="flex flex-col gap-3">
-          <legend className="sr-only">
-            {t.foreground}, {t.background}
-          </legend>
-          <div className="flex flex-wrap gap-6">
-            <ColorInput t={generator} label={t.foreground} value={fg} onChange={setFg} />
-            <ColorInput t={generator} label={t.background} value={bg} onChange={setBg} />
-          </div>
-          {(!contrastOk || error?.field === "colors") && (
-            <p className="text-xs font-medium text-danger">{contrastOk ? error?.message : t.lowContrast}</p>
-          )}
-        </fieldset>
+        <LookFields
+          t={t}
+          generator={generator}
+          look={look}
+          onChange={(update) => {
+            setLook(update);
+            if (error?.field === "colors" || error?.field === "frame_text") setError(null);
+          }}
+          error={error}
+        />
         <Captcha
           config={captcha}
           locale={locale}

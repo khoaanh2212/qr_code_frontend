@@ -348,6 +348,18 @@ export const de = {
       logoEcc: "Mit Logo wird hohe Fehlerkorrektur verwendet, damit der Code lesbar bleibt.",
       logoType: "Wähle ein PNG- oder JPEG-Bild.",
       logoSize: "Das Logo darf höchstens 1 MB groß sein.",
+      module: "Muster",
+      eye: "Eckquadrate",
+      frame: "Rahmen",
+      styles: {
+        modules: { square: "Quadratisch", rounded: "Abgerundet", dots: "Punkte", bars: "Balken" },
+        eyes: { square: "Quadratisch", rounded: "Abgerundet", circle: "Kreis", leaf: "Blatt" },
+        frames: { none: "Keiner", "label-bottom": "Beschriftung unten", "label-top": "Beschriftung oben", box: "Umriss" },
+      },
+      frameText: "Rahmentext",
+      frameTextHelp: "Bis zu 24 Zeichen: Buchstaben, Zahlen und Satzzeichen.",
+      frameTextDefault: "JETZT SCANNEN",
+      frameTextInvalid: "Verwende nur Buchstaben, Zahlen und Satzzeichen (keine Emojis oder nicht-lateinischen Schriften).",
     },
     preview: {
       title: "Vorschau",
@@ -502,6 +514,8 @@ export const de = {
     devices: "Geräte",
     unknown: "Unbekannt",
     deviceNames: { mobile: "Smartphone", tablet: "Tablet", desktop: "Computer", other: "Sonstige" },
+    designTitle: "Design",
+    designIntro: "Farben und Stil des gedruckten Codes. Der Kurzlink bleibt gleich; lade das Bild nach einer Änderung erneut herunter.",
     deleteTitle: "Code löschen",
     deleteIntro:
       "Der Kurzlink funktioniert dann dauerhaft nicht mehr: Wer den gedruckten Code scannt, erfährt, dass er nicht mehr verwendet wird.",

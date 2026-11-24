@@ -43,6 +43,10 @@ export interface CodeDesign {
   bg?: string;
   ecc?: "L" | "M" | "Q" | "H";
   margin?: number;
+  module?: string;
+  eye?: string;
+  frame?: string;
+  frame_text?: string;
 }
 
 export type CodeStatus = "active" | "paused" | "locked";

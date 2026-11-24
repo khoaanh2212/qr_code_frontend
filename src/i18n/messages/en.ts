@@ -352,6 +352,18 @@ export const en = {
       logoEcc: "A logo uses high error correction so the code still scans.",
       logoType: "Choose a PNG or JPEG image.",
       logoSize: "The logo must be 1 MB or smaller.",
+      module: "Pattern",
+      eye: "Corner squares",
+      frame: "Frame",
+      styles: {
+        modules: { square: "Square", rounded: "Rounded", dots: "Dots", bars: "Bars" },
+        eyes: { square: "Square", rounded: "Rounded", circle: "Circle", leaf: "Leaf" },
+        frames: { none: "None", "label-bottom": "Label below", "label-top": "Label above", box: "Outline" },
+      },
+      frameText: "Frame text",
+      frameTextHelp: "Up to 24 characters: letters, numbers and punctuation.",
+      frameTextDefault: "SCAN ME",
+      frameTextInvalid: "Use letters, numbers and punctuation only (no emoji or non-Latin scripts).",
     },
     preview: {
       title: "Preview",
@@ -507,6 +519,8 @@ export const en = {
     devices: "Devices",
     unknown: "Unknown",
     deviceNames: { mobile: "Phone", tablet: "Tablet", desktop: "Computer", other: "Other" },
+    designTitle: "Design",
+    designIntro: "Colors and style of the printed code. The short link stays the same; download the image again after a change.",
     deleteTitle: "Delete code",
     deleteIntro:
       "The short link stops working for good: people who scan the printed code are told it is no longer in use.",

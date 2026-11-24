@@ -1,4 +1,4 @@
-import type { QrData, QrDesign, QrFormat, QrType } from "./types";
+import { styleParams, type QrData, type QrDesign, type QrFormat, type QrType } from "./types";
 
 /** Types whose content is a secret or personal data: never put in a URL. */
 const SENSITIVE_TYPES = new Set(["wifi", "vcard"]);
@@ -21,7 +21,7 @@ export interface RenderPostBody {
   size: number;
   margin: number;
   ecc: string;
-  style: { fg: string; bg: string; logo_base64?: string };
+  style: { fg: string; bg: string; logo_base64?: string } & ReturnType<typeof styleParams>;
 }
 
 export type RenderRequest =
@@ -59,12 +59,13 @@ export function buildRenderRequest(input: RenderInput, { post = false } = {}): R
       ecc,
       fg: design.fg.replace(/^#/, ""),
       bg: design.bg.replace(/^#/, ""),
+      ...styleParams(design),
     });
     for (const [k, v] of Object.entries(data)) q.append(k, v);
     return { method: "GET", path: `/v1/qr/render?${q.toString()}` };
   }
 
-  const style: RenderPostBody["style"] = { fg: design.fg, bg: design.bg };
+  const style: RenderPostBody["style"] = { fg: design.fg, bg: design.bg, ...styleParams(design) };
   if (design.logo) style.logo_base64 = design.logo.base64;
   return {
     method: "POST",
@@ -89,6 +90,7 @@ export function missingRequired(type: QrType, data: QrData): string[] {
 /** A cheap identity of a request: the logo is represented by its id, not its bytes. */
 export function requestKey(request: RenderRequest, logoId?: string): string {
   if (request.method === "GET") return request.path;
-  const style = { fg: request.body.style.fg, bg: request.body.style.bg };
+  const style = { ...request.body.style };
+  delete style.logo_base64;
   return JSON.stringify({ ...request.body, style, logo: logoId ?? null });
 }

@@ -348,6 +348,18 @@ export const vi = {
       logoEcc: "Khi có logo, mã dùng mức sửa lỗi cao để vẫn quét được.",
       logoType: "Hãy chọn ảnh PNG hoặc JPEG.",
       logoSize: "Logo phải nhỏ hơn hoặc bằng 1 MB.",
+      module: "Hoa văn",
+      eye: "Mắt",
+      frame: "Khung",
+      styles: {
+        modules: { square: "Vuông", rounded: "Bo tròn", dots: "Chấm", bars: "Thanh" },
+        eyes: { square: "Vuông", rounded: "Bo tròn", circle: "Tròn", leaf: "Hình lá" },
+        frames: { none: "Không", "label-bottom": "Nhãn bên dưới", "label-top": "Nhãn bên trên", box: "Viền" },
+      },
+      frameText: "Chữ trên khung",
+      frameTextHelp: "Tối đa 24 ký tự: chữ cái, số và dấu câu.",
+      frameTextDefault: "QUÉT MÃ",
+      frameTextInvalid: "Chỉ dùng chữ cái, số và dấu câu (không dùng emoji hay chữ không phải Latin).",
     },
     preview: {
       title: "Xem trước",
@@ -502,6 +514,8 @@ export const vi = {
     devices: "Thiết bị",
     unknown: "Không xác định",
     deviceNames: { mobile: "Điện thoại", tablet: "Máy tính bảng", desktop: "Máy tính", other: "Khác" },
+    designTitle: "Thiết kế",
+    designIntro: "Màu sắc và kiểu dáng của mã in ra. Liên kết ngắn không đổi; hãy tải lại ảnh sau khi thay đổi.",
     deleteTitle: "Xoá mã",
     deleteIntro:
       "Link rút gọn sẽ ngừng hoạt động vĩnh viễn: người quét mã đã in sẽ được báo rằng mã không còn được sử dụng.",

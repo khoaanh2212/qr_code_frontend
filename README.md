@@ -172,6 +172,11 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
    edits destination and name, pauses and resumes, shows 30 days of scans as a bar chart (with a
    table view) plus top countries and devices, and deletes after a confirmation. Locked codes are
    read-only. Team workspaces and custom date ranges come later.
-7. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
+7. ~~QR styles~~ Done (backend item 42, `src/features/qr-editor/style-picker.tsx`): pattern,
+   eye shape and frame with a caption, as radio cards with small drawings, in the generator's
+   design panel, the new-code form, and a "Design" section on a code's page. Only options that
+   differ from the plain look are sent, so plain GET URLs (and their CDN copies) are unchanged.
+   Choosing a frame fills in the localized caption and keeps the margin at 2 or more.
+8. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.

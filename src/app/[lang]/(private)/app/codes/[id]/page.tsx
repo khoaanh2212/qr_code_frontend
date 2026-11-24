@@ -12,5 +12,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CodePage() {
   const locale = await getLocale();
   const t = await getMessages();
-  return <CodeDetail t={t.codes} auth={t.auth} locale={locale} />;
+  return <CodeDetail t={t.codes} generator={t.generator} auth={t.auth} locale={locale} />;
 }

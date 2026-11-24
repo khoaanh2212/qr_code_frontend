@@ -23,6 +23,22 @@ describe("buildRenderRequest", () => {
     expect(r.path.startsWith("/v1/qr/render?")).toBe(true);
   });
 
+  it("adds only the style options that differ from the plain look", () => {
+    const design = { ...DEFAULT_DESIGN, module: "dots" as const, frame: "box" as const, frameText: "  Menu  " };
+    const r = buildRenderRequest({ ...url, design, format: "svg", size: 512 });
+    if (r.method !== "GET") throw new Error("expected GET");
+    const q = new URL(r.path, "https://api.test").searchParams;
+    expect(q.get("module")).toBe("dots");
+    expect(q.get("frame")).toBe("box");
+    expect(q.get("frame_text")).toBe("Menu");
+    expect(q.has("eye")).toBe(false);
+
+    const post = buildRenderRequest({ ...url, design: { ...design, frame: "none" }, format: "png", size: 512 }, { post: true });
+    if (post.method !== "POST") throw new Error("expected POST");
+    // Without a frame its caption is not sent (the API refuses a caption without a frame).
+    expect(post.body.style).toEqual({ fg: "#000000", bg: "#ffffff", module: "dots" });
+  });
+
   it("encodes a leading + so it is not read as a space", () => {
     const r = buildRenderRequest({ type: "phone", data: { phone: "+84 912" }, design: DEFAULT_DESIGN, format: "svg", size: 256 });
     expect(r.method === "GET" && r.path).toContain("phone=%2B84+912");
