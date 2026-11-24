@@ -357,9 +357,11 @@ export const pt = {
         frames: { none: "Nenhuma", "label-bottom": "Legenda abaixo", "label-top": "Legenda acima", box: "Contorno" },
       },
       frameText: "Texto da moldura",
-      frameTextHelp: "Até 24 caracteres: letras, números e pontuação.",
+      frameTextHelp: "Até 24 caracteres. Texto próprio exige uma conta gratuita; o padrão não.",
       frameTextDefault: "ESCANEIE",
       frameTextInvalid: "Use apenas letras, números e pontuação (sem emojis nem alfabetos não latinos).",
+      frameTextSignIn: "Entre para colocar seu próprio texto na moldura, ou mantenha o padrão.",
+      frameTextSignInLink: "Entrar",
     },
     preview: {
       title: "Pré-visualização",

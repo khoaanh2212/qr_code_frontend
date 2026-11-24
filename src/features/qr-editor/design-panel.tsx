@@ -1,7 +1,7 @@
 "use client";
 
 import { ImagePlus, X } from "lucide-react";
-import { useEffect, useId, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useId, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { format } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { normalizeHex } from "@/lib/qr/color";
@@ -79,6 +79,7 @@ export function DesignPanel({
   onChange,
   contrastOk,
   error,
+  captionAction,
 }: {
   t: T;
   design: QrDesign;
@@ -86,6 +87,8 @@ export function DesignPanel({
   contrastOk: boolean;
   /** Server-side error of a design field ("fg", "bg", "margin", "logo"). */
   error?: { field: string; message: string };
+  /** Under the frame caption (e.g. a sign-in link when the caption needs an account). */
+  captionAction?: ReactNode;
 }) {
   const ids = { ecc: useId(), margin: useId(), logo: useId(), logoHelp: useId(), logoError: useId() };
   const [logoError, setLogoError] = useState<string | null>(null);
@@ -118,7 +121,7 @@ export function DesignPanel({
         </p>
       )}
 
-      <StylePicker t={t} design={design} onChange={onChange} error={error} />
+      <StylePicker t={t} design={design} onChange={onChange} error={error} captionAction={captionAction} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">

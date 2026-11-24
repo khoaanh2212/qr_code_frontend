@@ -28,12 +28,15 @@ export function StylePicker<D extends StyleDesign>({
   design,
   onChange,
   error,
+  captionAction,
 }: {
   t: T;
   design: D;
   onChange: (update: (d: D) => D) => void;
   /** Server-side error of a style field ("module", "eye", "frame", "frame_text"). */
   error?: { field: string; message: string };
+  /** Shown under the caption's message (e.g. a sign-in link). */
+  captionAction?: ReactNode;
 }) {
   const captionId = useId();
   const captionHelp = useId();
@@ -97,6 +100,7 @@ export function StylePicker<D extends StyleDesign>({
           <p id={captionHelp} aria-live="polite" className={`text-xs ${captionError ? "font-medium text-danger" : "text-muted"}`}>
             {captionError ?? t.design.frameTextHelp}
           </p>
+          {captionAction}
         </div>
       )}
     </div>

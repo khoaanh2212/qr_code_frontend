@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildRenderRequest, missingRequired, requestKey } from "./render-request";
-import { DEFAULT_DESIGN, type QrType } from "./types";
+import { buildRenderRequest, missingRequired, requestKey, SIGNED_IN_RENDER } from "./render-request";
+import { DEFAULT_DESIGN, isPresetCaption, type QrType } from "./types";
 
 const url = { type: "url", data: { url: "https://example.com/a?b=1" } };
 
@@ -24,19 +24,35 @@ describe("buildRenderRequest", () => {
   });
 
   it("adds only the style options that differ from the plain look", () => {
-    const design = { ...DEFAULT_DESIGN, module: "dots" as const, frame: "box" as const, frameText: "  Menu  " };
+    const design = { ...DEFAULT_DESIGN, module: "dots" as const, frame: "box" as const, frameText: "  Scan me  " };
     const r = buildRenderRequest({ ...url, design, format: "svg", size: 512 });
     if (r.method !== "GET") throw new Error("expected GET");
     const q = new URL(r.path, "https://api.test").searchParams;
     expect(q.get("module")).toBe("dots");
     expect(q.get("frame")).toBe("box");
-    expect(q.get("frame_text")).toBe("Menu");
+    expect(q.get("frame_text")).toBe("Scan me");
     expect(q.has("eye")).toBe(false);
 
     const post = buildRenderRequest({ ...url, design: { ...design, frame: "none" }, format: "png", size: 512 }, { post: true });
     if (post.method !== "POST") throw new Error("expected POST");
     // Without a frame its caption is not sent (the API refuses a caption without a frame).
     expect(post.body.style).toEqual({ fg: "#000000", bg: "#ffffff", module: "dots" });
+  });
+
+  it("sends a caption of the user's own to the signed-in render, presets to the public one", () => {
+    const framed = { ...DEFAULT_DESIGN, frame: "box" as const };
+    const own = buildRenderRequest({ ...url, design: { ...framed, frameText: "Thực đơn" }, format: "png", size: 512 });
+    expect(own.method === "POST" && own.path).toBe(SIGNED_IN_RENDER);
+    const preset = buildRenderRequest({ ...url, design: { ...framed, frameText: "quét mã" }, format: "png", size: 512 });
+    expect(preset.method).toBe("GET");
+  });
+
+  it("recognizes presets in any case and composition", () => {
+    expect(isPresetCaption("")).toBe(true);
+    expect(isPresetCaption(" Scan me ")).toBe(true);
+    expect(isPresetCaption("Que\u0301t ma\u0303")).toBe(true);
+    expect(isPresetCaption("PAY HERE")).toBe(false);
+    expect(isPresetCaption("\u017fcan me")).toBe(false);
   });
 
   it("encodes a leading + so it is not read as a space", () => {

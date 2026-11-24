@@ -357,9 +357,11 @@ export const es = {
         frames: { none: "Ninguno", "label-bottom": "Etiqueta abajo", "label-top": "Etiqueta arriba", box: "Contorno" },
       },
       frameText: "Texto del marco",
-      frameTextHelp: "Hasta 24 caracteres: letras, números y signos de puntuación.",
+      frameTextHelp: "Hasta 24 caracteres. Tu propio texto requiere una cuenta gratuita; el predeterminado no.",
       frameTextDefault: "ESCANÉAME",
       frameTextInvalid: "Usa solo letras, números y signos de puntuación (sin emojis ni alfabetos no latinos).",
+      frameTextSignIn: "Inicia sesión para poner tu propio texto en el marco, o deja el predeterminado.",
+      frameTextSignInLink: "Iniciar sesión",
     },
     preview: {
       title: "Vista previa",

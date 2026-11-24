@@ -33,6 +33,20 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // The one exception: a frame caption of the user's own is rendered by POST /v1/me/qr/render,
+    // with the session cookie, at runtime and only on the user's request. The page itself (HTML,
+    // CDN copy) still never depends on the session, and every other render stays session-free.
+    files: ["src/features/qr-editor/use-render.ts", "src/features/qr-editor/qr-editor.test.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [routeImports, { group: ["@/features/auth", "@/features/auth/*"], message: "Marketing pages never use the session." }],
+        },
+      ],
+    },
+  },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ]);
 

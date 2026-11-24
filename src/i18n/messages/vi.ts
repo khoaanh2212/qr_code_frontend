@@ -357,9 +357,11 @@ export const vi = {
         frames: { none: "Không", "label-bottom": "Nhãn bên dưới", "label-top": "Nhãn bên trên", box: "Viền" },
       },
       frameText: "Chữ trên khung",
-      frameTextHelp: "Tối đa 24 ký tự: chữ cái, số và dấu câu.",
+      frameTextHelp: "Tối đa 24 ký tự. Chữ riêng cần tài khoản miễn phí; chữ mặc định thì không cần.",
       frameTextDefault: "QUÉT MÃ",
       frameTextInvalid: "Chỉ dùng chữ cái, số và dấu câu (không dùng emoji hay chữ không phải Latin).",
+      frameTextSignIn: "Đăng nhập để dùng chữ riêng trên khung, hoặc giữ chữ mặc định.",
+      frameTextSignInLink: "Đăng nhập",
     },
     preview: {
       title: "Xem trước",

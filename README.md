@@ -176,7 +176,9 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
    eye shape and frame with a caption, as radio cards with small drawings, in the generator's
    design panel, the new-code form, and a "Design" section on a code's page. Only options that
    differ from the plain look are sent, so plain GET URLs (and their CDN copies) are unchanged.
-   Choosing a frame fills in the localized caption and keeps the margin at 2 or more.
+   Choosing a frame fills in the localized caption and keeps the margin at 2 or more. A caption
+   of the user's own is rendered by `POST /v1/me/qr/render` with the session (the only session
+   call on a public page, see the ESLint exception); signed out, the caption asks to sign in.
 8. Deployment (with backend work item 11). The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.

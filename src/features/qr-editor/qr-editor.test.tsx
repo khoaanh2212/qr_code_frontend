@@ -2,10 +2,12 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "@/i18n/messages/en";
-import { ApiError, publicApi } from "@/lib/api";
+import { ApiError, publicApi, sessionApi } from "@/lib/api";
 import type { MockInstance } from "vitest";
 import type { QrCatalog } from "@/lib/qr/types";
 import { QrEditor } from "./qr-editor";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/vi/url-qr-code" }));
 
 const t = en.generator;
 
@@ -76,6 +78,22 @@ describe("QrEditor", () => {
       style: { module: "square", eye: "square", frame: "none", frameText: "" },
     });
     sessionStorage.clear();
+  });
+
+  it("renders an own caption through the session and asks to sign in on 401", async () => {
+    const signedIn = vi
+      .spyOn(sessionApi, "requestBlob")
+      .mockRejectedValue(new ApiError(401, "unauthenticated", "Sign in first."));
+    render(<QrEditor t={t} locale="vi" />);
+    fireEvent.change(await screen.findByLabelText(/Website address/), { target: { value: "https://example.com" } });
+    fireEvent.click(screen.getByRole("radio", { name: t.design.styles.frames.box }));
+    fireEvent.change(screen.getByRole("textbox", { name: t.design.frameText }), { target: { value: "Thực đơn" } });
+    await settle();
+
+    expect(signedIn).toHaveBeenCalledWith("/v1/me/qr/render", expect.objectContaining({ method: "POST" }));
+    expect(screen.getByText(t.design.frameTextSignIn)).toBeTruthy();
+    const link = screen.getByRole("link", { name: t.design.frameTextSignInLink });
+    expect(link.getAttribute("href")).toBe("/vi/login?return_to=%2Fvi%2Furl-qr-code");
   });
 
   it("does not call the API until required content is there", async () => {

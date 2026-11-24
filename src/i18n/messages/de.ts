@@ -357,9 +357,11 @@ export const de = {
         frames: { none: "Keiner", "label-bottom": "Beschriftung unten", "label-top": "Beschriftung oben", box: "Umriss" },
       },
       frameText: "Rahmentext",
-      frameTextHelp: "Bis zu 24 Zeichen: Buchstaben, Zahlen und Satzzeichen.",
+      frameTextHelp: "Bis zu 24 Zeichen. Eigener Text braucht ein kostenloses Konto; der Standardtext nicht.",
       frameTextDefault: "JETZT SCANNEN",
       frameTextInvalid: "Verwende nur Buchstaben, Zahlen und Satzzeichen (keine Emojis oder nicht-lateinischen Schriften).",
+      frameTextSignIn: "Melde dich an, um eigenen Text auf den Rahmen zu setzen, oder behalte den Standardtext.",
+      frameTextSignInLink: "Anmelden",
     },
     preview: {
       title: "Vorschau",

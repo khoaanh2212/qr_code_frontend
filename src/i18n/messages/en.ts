@@ -361,9 +361,11 @@ export const en = {
         frames: { none: "None", "label-bottom": "Label below", "label-top": "Label above", box: "Outline" },
       },
       frameText: "Frame text",
-      frameTextHelp: "Up to 24 characters: letters, numbers and punctuation.",
+      frameTextHelp: "Up to 24 characters. Your own text needs a free account; the default works without one.",
       frameTextDefault: "SCAN ME",
       frameTextInvalid: "Use letters, numbers and punctuation only (no emoji or non-Latin scripts).",
+      frameTextSignIn: "Sign in to put your own text on the frame, or keep the default.",
+      frameTextSignInLink: "Sign in",
     },
     preview: {
       title: "Preview",

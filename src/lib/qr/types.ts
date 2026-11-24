@@ -56,6 +56,21 @@ export type QrModule = (typeof MODULES)[number];
 export type QrEye = (typeof EYES)[number];
 export type QrFrame = (typeof FRAMES)[number];
 export const FRAME_TEXT_MAX = 24;
+/**
+ * Captions anyone may use (the API's list: each language's default). Own text needs an account,
+ * since public images are cached and served from our domain.
+ */
+export const CAPTION_PRESETS = ["SCAN ME", "QUÉT MÃ", "ESCANÉAME", "JETZT SCANNEN", "SCANNEZ-MOI", "ESCANEIE"];
+
+/** Whether a caption is a preset (empty means the default), ignoring case and composition. */
+export function isPresetCaption(text: string): boolean {
+  const t = text.normalize("NFC").trim();
+  if (t === "") return true;
+  // Both directions, as the API does: one alone maps look-alikes ("ſ" → "S") onto a preset.
+  const upper = t.toLocaleUpperCase("en");
+  const lower = t.toLocaleLowerCase("en");
+  return CAPTION_PRESETS.some((p) => p === upper && p.toLocaleLowerCase("en") === lower);
+}
 /** A frame needs this much quiet zone between its border and the code. */
 export const FRAME_MARGIN_MIN = 2;
 

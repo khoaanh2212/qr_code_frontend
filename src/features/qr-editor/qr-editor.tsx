@@ -2,6 +2,7 @@
 
 import { RotateCw, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 import { saveHandoff } from "@/features/codes/handoff";
 import { localizePath, type Locale } from "@/i18n/config";
@@ -79,7 +80,14 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
   const key = useMemo(() => (request ? requestKey(request, design.logo?.id) : null), [request, design.logo?.id]);
   const preview = useRenderPreview(request, key, qrType.type);
 
-  const serverField = preview.error?.code === "validation_error" ? preview.error.field : undefined;
+  // A caption of the user's own goes to the signed-in render; 401 means "sign in first".
+  const captionNeedsSignIn = preview.error?.status === 401;
+  const serverField = captionNeedsSignIn
+    ? "frame_text"
+    : preview.error?.code === "validation_error"
+      ? preview.error.field
+      : undefined;
+  const pathname = usePathname();
   const serverContentField = serverField && !DESIGN_FIELDS.has(serverField) ? serverField : undefined;
 
   // What blocks a printable code, first problem first.
@@ -91,7 +99,11 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
   else if (!contrastOk) blocker = "lowContrast";
   else if (serverField) blocker = "invalid";
   const invalidField = invalidName ? qrType.fields.find((f) => f.name === invalidName) : undefined;
-  const invalidLabel = invalidField ? fieldText(t, qrType.type, invalidField).label : undefined;
+  const invalidLabel = invalidField
+    ? fieldText(t, qrType.type, invalidField).label
+    : serverField === "frame_text"
+      ? t.design.frameText
+      : undefined;
 
   // Field messages: shown once, at the field, after the user has left it (or the API refused it).
   const problemText: Record<FieldProblem, string> = {
@@ -119,7 +131,9 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
             serverField === "logo"
               ? t.design.logoType
               : serverField === "frame_text"
-                ? t.design.frameTextInvalid
+                ? captionNeedsSignIn
+                  ? t.design.frameTextSignIn
+                  : t.design.frameTextInvalid
                 : t.validation.invalid,
         }
       : undefined;
@@ -174,7 +188,23 @@ function Editor({ t, types, initialType, locale }: { t: T; types: QrType[]; init
         <h2 id={headingIds.design} className="text-lg font-semibold">
           {t.sections.design}
         </h2>
-        <DesignPanel t={t} design={design} onChange={setDesign} contrastOk={contrastOk} error={designError} />
+        <DesignPanel
+          t={t}
+          design={design}
+          onChange={setDesign}
+          contrastOk={contrastOk}
+          error={designError}
+          captionAction={
+            captionNeedsSignIn && (
+              <Link
+                href={`${localizePath(locale, "/login")}?return_to=${encodeURIComponent(pathname)}`}
+                className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-accent underline-offset-4 hover:underline"
+              >
+                {t.design.frameTextSignInLink}
+              </Link>
+            )
+          }
+        />
       </section>
 
       <aside

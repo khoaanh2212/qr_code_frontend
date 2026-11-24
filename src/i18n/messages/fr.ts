@@ -357,9 +357,11 @@ export const fr = {
         frames: { none: "Aucun", "label-bottom": "Légende en bas", "label-top": "Légende en haut", box: "Contour" },
       },
       frameText: "Texte du cadre",
-      frameTextHelp: "24 caractères maximum : lettres, chiffres et ponctuation.",
+      frameTextHelp: "24 caractères maximum. Un texte personnalisé nécessite un compte gratuit ; le texte par défaut, non.",
       frameTextDefault: "SCANNEZ-MOI",
       frameTextInvalid: "Utilisez uniquement des lettres, des chiffres et de la ponctuation (pas d’émoji ni d’écriture non latine).",
+      frameTextSignIn: "Connectez-vous pour mettre votre propre texte sur le cadre, ou gardez le texte par défaut.",
+      frameTextSignInLink: "Se connecter",
     },
     preview: {
       title: "Aperçu",
