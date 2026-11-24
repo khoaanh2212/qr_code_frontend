@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { Captcha, type CaptchaConfig } from "@/features/auth/captcha";
-import { FormAlert, TextLink } from "@/features/auth/form-bits";
+import { FormAlert, TextLink } from "@/components/form/form-bits";
 import type { AuthMessages } from "@/features/auth/form-rules";
 import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-session";
 import { localizePath, type Locale } from "@/i18n/config";

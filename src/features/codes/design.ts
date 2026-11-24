@@ -13,6 +13,7 @@ import {
   LOGO_ICONS,
   MODULES,
   styleParams,
+  mapTriple,
   type EyeTriple,
   type QrDesign,
 } from "@/lib/qr/types";
@@ -73,9 +74,9 @@ export function lookFromDesign(d: CodeDesign): CodeLook {
     d.eye && Object.hasOwn(EYE_SHORTHAND, d.eye) ? EYE_SHORTHAND[d.eye] : (["square", "square"] as const);
   const eyeFrames = triple(EYE_FRAMES, d.eye_frame ?? legacyFrame, "square");
   // A pair the API refuses (saved before the rule) loads with a square center.
-  const eyeBalls = triple(EYE_BALLS, d.eye_ball ?? legacyBall, "square").map((b, i) =>
+  const eyeBalls = mapTriple(triple(EYE_BALLS, d.eye_ball ?? legacyBall, "square"), (b, i) =>
     eyePairAllowed(eyeFrames[i], b) ? b : "square",
-  ) as unknown as EyeTriple<QrDesign["eyeBalls"][number]>;
+  );
   return {
     fg: d.fg ?? DEFAULT_LOOK.fg,
     bg: d.bg ?? DEFAULT_LOOK.bg,

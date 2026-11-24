@@ -1,6 +1,5 @@
-import { format } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
-import { ApiError } from "@/lib/api";
+import { commonErrorMessage, toApiError } from "@/lib/api";
 import { validEmail } from "@/lib/forms/email";
 
 export type AuthMessages = Messages["auth"];
@@ -32,20 +31,12 @@ export interface AuthFailure {
 
 /** A translated message for an API error, chosen by its code; API messages are English. */
 export function authFailure(err: unknown, t: AuthMessages): AuthFailure {
-  const e = err instanceof ApiError ? err : new ApiError(0, "network_error", "");
+  const e = toApiError(err);
+  const common = commonErrorMessage(e, t.errors);
+  if (common !== undefined) return { message: common };
   switch (e.code) {
     case "invalid_credentials":
       return { message: t.errors.invalidCredentials };
-    case "captcha_failed":
-      return { message: t.errors.captchaFailed };
-    case "captcha_unavailable":
-      return { message: t.errors.captchaUnavailable };
-    case "rate_limited":
-      return { message: format(t.errors.rateLimited, { seconds: e.retryAfter ?? 60 }) };
-    case "busy":
-      return { message: t.errors.busy };
-    case "network_error":
-      return { message: t.errors.network };
     case "validation_error":
       if (e.field === "email") return { field: "email", message: t.errors.emailInvalid };
       if (e.field === "password") return { field: "password", message: t.errors.passwordShort };

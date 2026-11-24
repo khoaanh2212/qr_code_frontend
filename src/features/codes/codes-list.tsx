@@ -3,7 +3,7 @@
 import { Plus, Shapes } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ButtonLink, FormAlert } from "@/features/auth/form-bits";
+import { ButtonLink, FormAlert } from "@/components/form/form-bits";
 import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-session";
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";

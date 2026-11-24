@@ -4,9 +4,9 @@ import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { format, localizePath, type Locale } from "@/i18n/config";
-import { sessionApi } from "@/lib/api";
+import { forgotPassword } from "./api";
 import { Captcha, type CaptchaConfig } from "./captcha";
-import { FormAlert, Notice, ReturnToLink } from "./form-bits";
+import { FormAlert, Notice, ReturnToLink } from "@/components/form/form-bits";
 import { authFailure, emailError, type AuthMessages } from "./form-rules";
 import { rememberEmail, useRememberedEmail } from "./remembered-email";
 
@@ -32,10 +32,7 @@ export function ForgotForm({ t, locale, captcha }: { t: AuthMessages; locale: Lo
 
     setBusy(true);
     try {
-      await sessionApi.request("/v1/auth/forgot-password", {
-        method: "POST",
-        body: { email: email.trim(), captcha_token: token },
-      });
+      await forgotPassword({ email: email.trim(), captcha_token: token });
       setSentTo(email.trim());
     } catch (err) {
       setAlert(authFailure(err, t).message);

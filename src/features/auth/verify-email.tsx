@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { localizePath, type Locale } from "@/i18n/config";
 import { ApiError, sessionApi } from "@/lib/api";
 import type { CaptchaConfig } from "./captcha";
-import { ButtonLink, Notice } from "./form-bits";
+import { ButtonLink, Notice } from "@/components/form/form-bits";
 import { authFailure, type AuthMessages } from "./form-rules";
 import { useFragmentToken } from "./fragment-token";
 import { ResendForm } from "./resend-form";

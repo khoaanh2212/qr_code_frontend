@@ -7,12 +7,13 @@ import { TextField } from "@/components/ui/text-field";
 import { redirectToLogin, useSetUser, useUser } from "@/features/auth/require-session";
 import type { CaptchaConfig } from "@/features/auth/captcha";
 import { authFailure } from "@/features/auth/form-rules";
-import { FormAlert } from "@/features/auth/form-bits";
+import { FormAlert } from "@/components/form/form-bits";
 import { Captcha } from "@/features/auth/captcha";
 import { format, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
-import { ApiError, sessionApi } from "@/lib/api";
-import type { MeResponse } from "@/lib/api/types";
+import { ApiError } from "@/lib/api";
+import { resendVerification } from "@/features/auth/api";
+import { updateProfile } from "./api";
 import { formatDate } from "@/lib/format/time";
 import { SavedNote, Section } from "./section";
 
@@ -70,7 +71,7 @@ function ResendInline({ t, auth, locale, captcha, email }: { t: T; auth: AuthT; 
     setPhase("sending");
     setAlert(undefined);
     try {
-      await sessionApi.request("/v1/auth/resend-verification", { method: "POST", body: { email, captcha_token: token } });
+      await resendVerification({ email, captcha_token: token });
       setPhase("sent");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return redirectToLogin();
@@ -133,7 +134,7 @@ function DisplayNameForm({ t, auth }: { t: T; auth: AuthT }) {
     setSaved(undefined);
     setBusy(true);
     try {
-      const res = await sessionApi.request<MeResponse>("/v1/me", { method: "PATCH", body: { display_name: name.trim() } });
+      const res = await updateProfile({ display_name: name.trim() });
       setUser(res.user);
       setName(res.user.display_name);
       setSaved(t.saved);

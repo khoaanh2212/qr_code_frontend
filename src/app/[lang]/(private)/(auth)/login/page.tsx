@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { GoogleSignIn } from "@/features/auth/google";
 import { LoginForm } from "@/features/auth/login-form";
 import { RedirectIfSignedIn } from "@/features/auth/redirect-if-signed-in";
-import { ReturnToLink } from "@/features/auth/form-bits";
+import { ReturnToLink } from "@/components/form/form-bits";
 import { localizePath } from "@/i18n/config";
 import { getLocale, getMessages } from "@/i18n/server";
 

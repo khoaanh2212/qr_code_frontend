@@ -2,6 +2,7 @@ import { config } from "@/lib/config";
 import { ApiClient } from "./client";
 
 export { ApiClient, ApiError } from "./client";
+export { commonErrorMessage, DEFAULT_RETRY_AFTER_SECONDS, toApiError, type CommonErrorMessages } from "./common-errors";
 
 /** No cookies: the only client marketing pages may use. */
 export const publicApi = new ApiClient({ baseUrl: config.apiBaseUrl, credentials: "omit" });

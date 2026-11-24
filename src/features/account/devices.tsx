@@ -4,11 +4,12 @@ import { Monitor, RotateCw, Smartphone } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { authFailure } from "@/features/auth/form-rules";
-import { FormAlert } from "@/features/auth/form-bits";
+import { FormAlert } from "@/components/form/form-bits";
 import { format, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { redirectToLogin } from "@/features/auth/require-session";
 import { ApiError, sessionApi } from "@/lib/api";
+import { revokeSession } from "./api";
 import { formatRelative } from "@/lib/format/time";
 import { describeUserAgent } from "@/lib/user-agent";
 import { SavedNote, Section } from "./section";
@@ -68,7 +69,7 @@ export function Devices({ t, auth, locale }: { t: T; auth: AuthT; locale: Locale
     setNotice(undefined);
     setAlert(undefined);
     try {
-      await sessionApi.requestVoid(`/v1/me/sessions/${encodeURIComponent(session.id)}`, { method: "DELETE" });
+      await revokeSession(session.id);
       drop(session.id);
       setNotice(format(t.deviceLoggedOutNamed, { device: deviceLabel(t, session.user_agent) }));
     } catch (err) {
@@ -88,7 +89,7 @@ export function Devices({ t, auth, locale }: { t: T; auth: AuthT; locale: Locale
     setNotice(undefined);
     setAlert(undefined);
     const results = await Promise.allSettled(
-      others.map((s) => sessionApi.requestVoid(`/v1/me/sessions/${encodeURIComponent(s.id)}`, { method: "DELETE" })),
+      others.map((s) => revokeSession(s.id)),
     );
     const isGone = (r: PromiseSettledResult<void>) =>
       r.status === "fulfilled" || (r.reason instanceof ApiError && r.reason.status === 404);

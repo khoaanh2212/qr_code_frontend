@@ -46,7 +46,10 @@ const PREVIEW_SIZE = 512;
 
 /**
  * The static QR code generator: pick a type, fill in its fields, adjust the design, download.
- * Public and session-free: talks to the API through `publicApi` only.
+ * The page never depends on the session: renders go through `publicApi`. Two parts use the
+ * session cookie, at runtime and only on the person's request (the ESLint exception in
+ * eslint.config.mjs): a frame caption of their own (`use-render.ts`, POST /v1/me/qr/render) and
+ * the design templates section (`generator-templates.tsx`).
  * `initialType` opens it on that type (per-type pages); unknown types fall back to the first.
  */
 export function QrEditor({
