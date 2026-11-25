@@ -1,8 +1,11 @@
 import { authFailure, type AuthMessages } from "@/features/auth/form-rules";
 import type { Messages } from "@/i18n/messages";
+import { format } from "@/i18n/config";
 import { ApiError } from "@/lib/api";
 
-export type CodeField = "target_url" | "name" | "colors" | "frame_text";
+import { SLUG_LIMITS } from "./slug-rules";
+
+export type CodeField = "target_url" | "name" | "colors" | "frame_text" | "short_code";
 
 /** What to show for a failed code request: a field message or a form alert. */
 export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessages): { field?: CodeField; message: string } {
@@ -10,6 +13,7 @@ export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessag
   switch (err.code) {
     case "validation_error":
       if (err.field === "target_url") return { field: "target_url", message: t.errors.targetUrl };
+      if (err.field === "short_code") return { field: "short_code", message: t.errors.slugRefused };
       if (err.field === "name") return { field: "name", message: t.errors.generic };
       if (["fg", "bg", "eye_color", "eye_ball_color", "frame_color"].includes(err.field ?? ""))
         return { field: "colors", message: t.errors.colors };
@@ -20,6 +24,12 @@ export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessag
       return { message: t.errors.verifyFirst };
     case "code_limit_reached":
       return { message: t.errors.limit };
+    case "short_code_taken":
+      return { field: "short_code", message: t.errors.slugTaken };
+    case "short_code_change_limit":
+      return { message: format(t.errors.slugChangeLimit, SLUG_LIMITS) };
+    case "short_code_workspace_limit":
+      return { message: format(t.errors.slugWorkspaceLimit, SLUG_LIMITS) };
     case "code_locked":
       return { message: t.errors.locked };
     default:

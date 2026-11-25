@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { format } from "@/i18n/config";
 import { RequireSession } from "@/features/auth/require-session";
 import { en } from "@/i18n/messages/en";
 import { ApiError, sessionApi } from "@/lib/api";
@@ -222,6 +223,259 @@ describe("CodeDetail", () => {
     expect(field(new RegExp(t.target)).matches(":disabled")).toBe(true); // via the fieldset
     expect(screen.queryByRole("button", { name: t.pause })).toBeNull();
     expect(screen.queryByRole("button", { name: t.deleteStart })).toBeNull();
+  });
+
+  describe("custom short link", () => {
+    const origin = "http://localhost:8180/";
+    const rules = { min: 4, max: 40, changes: 3, slugs: 50 };
+    const custom = { short_code: "my-shop", short_url: `${origin}my-shop` };
+    const render_ = () =>
+      withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+    const open = async () => {
+      render_();
+      await screen.findByRole("heading", { name: "Menu", level: 1 });
+      await click(t.editLink);
+    };
+    const editor = () => within(screen.getByRole("form", { name: t.editLink }));
+    const patches = () => request.mock.calls.filter(([, o]) => o?.method === "PATCH");
+    const failWith = (err: ApiError) => {
+      detailApi();
+      const base = request.getMockImplementation()!;
+      request.mockImplementation(async (path, opts) => {
+        if (opts?.method === "PATCH") throw err;
+        return base(path, opts);
+      });
+    };
+    const save = () => act(async () => void fireEvent.click(editor().getByRole("button", { name: t.save })));
+    const alerts = () => screen.getAllByRole("alert").map((a) => a.textContent);
+
+    it("opens an editor with the origin in the input row, the rule as help and the note, focused in an empty field", async () => {
+      detailApi();
+      await open();
+      const input = field(t.slugLabel);
+      expect(document.activeElement).toBe(input);
+      expect(input.value).toBe(""); // a generated code is never a valid custom link
+      expect(screen.getByText(origin)).toBeTruthy();
+      expect(document.getElementById(input.getAttribute("aria-describedby")!)?.textContent).toBe(
+        format(t.slugHelp, { origin, ...rules }),
+      );
+      expect(screen.getByText(format(t.slugNote, rules))).toBeTruthy();
+      expect(screen.queryByRole("button", { name: t.editLink })).toBeNull();
+    });
+
+    it("prefills a custom link and selects it all, so typing replaces it", async () => {
+      detailApi(custom);
+      await open();
+      const input = field(t.slugLabel);
+      expect(input.value).toBe("my-shop");
+      expect([input.selectionStart, input.selectionEnd]).toEqual([0, 7]);
+    });
+
+    it("cancels without calling the API and returns focus to the edit control", async () => {
+      detailApi();
+      await open();
+      type(t.slugLabel, "changed-link");
+      await act(async () => void fireEvent.click(editor().getByRole("button", { name: t.cancel })));
+      expect(patches()).toHaveLength(0);
+      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: t.editLink })));
+    });
+
+    it("cancels on Escape", async () => {
+      detailApi();
+      await open();
+      await act(async () => void fireEvent.keyDown(field(t.slugLabel), { key: "Escape" }));
+      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: t.editLink })));
+    });
+
+    it.each([
+      ["empty", ""],
+      ["too short", "abc"],
+      ["too long", "a".repeat(41)],
+      ["uppercase", "MyShop"],
+      ["leading hyphen", "-shop"],
+      ["trailing hyphen", "shop-"],
+      ["double hyphen", "my--shop"],
+      ["a space inside", "my shop"],
+      ["a slash", "my/shop"],
+      ["non-ASCII letters", "caf\u00e9-shop"],
+    ])("refuses %s on the client and focuses the field", async (_, value) => {
+      detailApi();
+      await open();
+      type(t.slugLabel, value);
+      await save();
+      expect(patches()).toHaveLength(0);
+      expect(screen.getByText(format(t.errors.slugShape, rules))).toBeTruthy();
+      expect(field(t.slugLabel).getAttribute("aria-invalid")).toBe("true");
+      expect(document.activeElement).toBe(field(t.slugLabel));
+    });
+
+    it("announces a field error when Enter submits from inside the input", async () => {
+      detailApi();
+      await open();
+      type(t.slugLabel, "abc");
+      await act(async () => void fireEvent.submit(screen.getByRole("form", { name: t.editLink })));
+      expect(alerts()).toContain(format(t.errors.slugShape, rules));
+      expect(patches()).toHaveLength(0);
+    });
+
+    it("saves the trimmed slug, shows and copies the new link, redraws the image, and focuses the edit control", async () => {
+      detailApi();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal("navigator", { clipboard: { writeText } });
+      await open();
+      const images = vi.mocked(sessionApi.requestBlob).mock.calls.length;
+      const drawn = vi.mocked(URL.createObjectURL).mock.calls.length;
+      type(t.slugLabel, "  my-shop  ");
+      request.mockImplementation(async (path, opts) => {
+        if (path === "/v1/me") return me;
+        if (path === "/v1/workspaces/w1/codes/c1" && opts?.method === "PATCH") return { code: { ...code, ...custom } };
+        throw new Error(`unexpected ${path}`);
+      });
+      await save();
+      expect(patches()[0]).toEqual(["/v1/workspaces/w1/codes/c1", { method: "PATCH", body: { short_code: "my-shop" } }]);
+      expect(screen.getByText(custom.short_url)).toBeTruthy();
+      expect(screen.queryByText(code.short_url)).toBeNull();
+      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
+      expect(screen.getByText(t.linkSaved).closest("[role=status]")).toBeTruthy();
+      await waitFor(() => expect(vi.mocked(sessionApi.requestBlob).mock.calls.length).toBeGreaterThan(images));
+      await waitFor(() => expect(vi.mocked(URL.createObjectURL).mock.calls.length).toBeGreaterThan(drawn));
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:qr"); // the old preview is released
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: t.editLink })));
+      await click(t.copy);
+      expect(writeText).toHaveBeenCalledWith(custom.short_url);
+    });
+
+    it("lets a paused code be edited", async () => {
+      detailApi({ status: "paused" });
+      await open();
+      expect(screen.getByRole("textbox", { name: t.slugLabel })).toBeTruthy();
+    });
+
+    it("sends one request when saved twice while busy", async () => {
+      detailApi();
+      const base = request.getMockImplementation()!;
+      let release: () => void = () => {};
+      request.mockImplementation(async (path, opts) => {
+        if (opts?.method === "PATCH") {
+          await new Promise<void>((r) => (release = r));
+          return { code: { ...code, ...custom } };
+        }
+        return base(path, opts);
+      });
+      await open();
+      type(t.slugLabel, "my-shop");
+      const form = screen.getByRole("form", { name: t.editLink });
+      await act(async () => {
+        fireEvent.submit(form);
+        fireEvent.submit(form);
+      });
+      expect(patches()).toHaveLength(1);
+      await act(async () => release());
+    });
+
+    it("goes to the login page on 401", async () => {
+      failWith(new ApiError(401, "unauthorized", "x"));
+      await open();
+      type(t.slugLabel, "my-shop");
+      await save();
+      expect(window.location.replace).toHaveBeenCalledWith(expect.stringContaining("/login"));
+    });
+
+    it("closes with focus back on Edit and no saved message when the slug is unchanged", async () => {
+      detailApi(custom);
+      await open();
+      await save();
+      expect(patches()).toHaveLength(0);
+      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
+      expect(screen.queryByText(t.linkSaved)).toBeNull();
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: t.editLink })));
+    });
+
+    it("clears the saved message after a moment and when Copy is used", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        detailApi();
+        vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+        const patchReturns = (slug: string) =>
+          request.mockImplementation(async (path, opts) => {
+            if (path === "/v1/me") return me;
+            if (opts?.method === "PATCH") return { code: { ...code, short_code: slug, short_url: origin + slug } };
+            throw new Error(`unexpected ${path}`);
+          });
+        await open();
+        patchReturns("my-shop");
+        type(t.slugLabel, "my-shop");
+        await save();
+        expect(screen.getByText(t.linkSaved).closest("[role=status]")).toBeTruthy();
+        await act(async () => void vi.advanceTimersByTime(2100));
+        expect(screen.queryByText(t.linkSaved)).toBeNull();
+
+        await click(t.editLink);
+        patchReturns("other-shop");
+        type(t.slugLabel, "other-shop");
+        await save();
+        expect(screen.getByText(t.linkSaved)).toBeTruthy();
+        await click(t.copy);
+        expect(screen.queryByText(t.linkSaved)).toBeNull();
+        expect(screen.getByText(t.copied)).toBeTruthy();
+        await act(async () => void vi.advanceTimersByTime(2100));
+        expect(screen.queryByText(t.linkSaved)).toBeNull(); // does not come back with the copy note
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it.each([
+      ["validation_error", 422, "short_code", "slugRefused"],
+      ["short_code_taken", 409, undefined, "slugTaken"],
+    ] as const)("shows %s at the field", async (errCode, status, errField, key) => {
+      failWith(new ApiError(status, errCode, "x", errField));
+      await open();
+      type(t.slugLabel, "my-shop");
+      await save();
+      expect(screen.getByText(t.errors[key])).toBeTruthy();
+      expect(field(t.slugLabel).getAttribute("aria-invalid")).toBe("true");
+      expect(document.activeElement).toBe(field(t.slugLabel));
+      expect(screen.getByText(code.short_url)).toBeTruthy(); // link unchanged
+    });
+
+    it.each([
+      [new ApiError(409, "short_code_change_limit", "x"), () => format(t.errors.slugChangeLimit, rules)],
+      [new ApiError(409, "short_code_workspace_limit", "x"), () => format(t.errors.slugWorkspaceLimit, rules)],
+      [new ApiError(409, "code_locked", "x"), () => t.errors.locked],
+      [new ApiError(403, "email_not_verified", "x"), () => t.errors.verifyFirst],
+      [new ApiError(429, "rate_limited", "x", undefined, 30), () => format(auth.errors.rateLimited!, { seconds: 30 })],
+      [new ApiError(500, "internal", "x"), () => t.errors.generic],
+    ])("shows %s as the form alert and keeps the editor open", async (err, message) => {
+      failWith(err);
+      await open();
+      type(t.slugLabel, "my-shop");
+      await save();
+      expect(alerts()).toContain(message());
+      expect(screen.getByRole("textbox", { name: t.slugLabel })).toBeTruthy();
+    });
+
+    it("closes the editor if the code becomes locked while it is open", async () => {
+      detailApi();
+      const base = request.getMockImplementation()!;
+      request.mockImplementation(async (path, opts) => {
+        if (opts?.method === "PATCH") return { code: { ...code, status: "locked" } };
+        return base(path, opts);
+      });
+      await open();
+      await click(t.pause);
+      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
+      expect(screen.queryByRole("button", { name: t.editLink })).toBeNull();
+    });
+
+    it("offers no edit control on a locked code", async () => {
+      detailApi({ status: "locked" });
+      render_();
+      await screen.findByRole("heading", { name: "Menu", level: 1 });
+      expect(screen.queryByRole("button", { name: t.editLink })).toBeNull();
+    });
   });
 
   it("says when the code does not exist", async () => {
