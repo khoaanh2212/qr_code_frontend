@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 import { format } from "@/i18n/config";
 import { RequireSession } from "@/features/auth/require-session";
 import { en } from "@/i18n/messages/en";
+import { plural } from "@/i18n/plural";
 import { ApiError, sessionApi } from "@/lib/api";
-import type { CodeStats, DynamicCode } from "@/lib/api/types";
+import type { CodeStats, DynamicCode, Folder } from "@/lib/api/types";
 import { CodeDetail } from "./code-detail";
 import { CodeForm } from "./code-form";
 import { saveHandoff } from "./handoff";
@@ -37,6 +38,7 @@ const code: DynamicCode = {
   target_url: "https://example.com/menu",
   design: { fg: "#000000", bg: "#ffffff" },
   status: "active",
+  folder_id: null,
   created_at: "2026-11-20T10:00:00Z",
   updated_at: "2026-11-20T10:00:00Z",
 };
@@ -145,9 +147,10 @@ describe("CodeForm", () => {
 });
 
 describe("CodeDetail", () => {
-  const detailApi = (overrides: Partial<DynamicCode> = {}) =>
+  const detailApi = (overrides: Partial<DynamicCode> = {}, folders: Folder[] = [], role: "owner" | "viewer" = "owner") =>
     request.mockImplementation(async (path, opts) => {
-      if (path === "/v1/me") return me;
+      if (path === "/v1/me") return { ...me, workspaces: [{ ...me.workspaces[0], role }] };
+      if (path === "/v1/workspaces/w1/folders") return { folders };
       if (path === "/v1/workspaces/w1/codes/c1" && !opts?.method) return { code: { ...code, ...overrides } };
       if (path === "/v1/workspaces/w1/codes/c1/stats") return stats;
       if (path === "/v1/workspaces/w1/codes/c1" && opts?.method === "PATCH")
@@ -223,6 +226,87 @@ describe("CodeDetail", () => {
     expect(field(new RegExp(t.target)).matches(":disabled")).toBe(true); // via the fieldset
     expect(screen.queryByRole("button", { name: t.pause })).toBeNull();
     expect(screen.queryByRole("button", { name: t.deleteStart })).toBeNull();
+  });
+
+  describe("folder", () => {
+    const f = t.folders;
+    const folder = (id: string, name: string): Folder => ({ id, name, code_count: 1, created_at: code.created_at, updated_at: code.updated_at });
+    const folders = [folder("f2", "Events"), folder("f1", "Brunch")];
+    const open = async (overrides: Partial<DynamicCode> = {}, list = folders, role: "owner" | "viewer" = "owner") => {
+      detailApi(overrides, list, role);
+      withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+      await screen.findByRole("heading", { name: "Menu", level: 1 });
+    };
+    const picker = () => screen.findByRole("combobox", { name: f.detailTitle }) as Promise<HTMLSelectElement>;
+    const patches = () => request.mock.calls.filter(([, o]) => o?.method === "PATCH").map(([, o]) => o?.body);
+
+    it("offers No folder and each folder, with the current one chosen", async () => {
+      await open({ folder_id: "f1" });
+      const select = await picker();
+      expect(select.value).toBe("f1");
+      expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([f.none, "Events", "Brunch"]);
+    });
+
+    it("moves the code into a folder and says so", async () => {
+      await open();
+      const select = await picker();
+      expect(select.value).toBe("none");
+      await act(async () => void fireEvent.change(select, { target: { value: "f1" } }));
+      expect(patches()).toEqual([{ folder_id: "f1" }]);
+      expect(screen.getByText(format(f.movedOne, { folder: "Brunch" }))).toBeTruthy();
+      expect(((await picker()) as HTMLSelectElement).value).toBe("f1");
+    });
+
+    it("takes the code out of its folder with No folder", async () => {
+      await open({ folder_id: "f1" });
+      const select = await picker(); // found outside act: state updates wait for it to end
+      await act(async () => void fireEvent.change(select, { target: { value: "none" } }));
+      expect(patches()).toEqual([{ folder_id: null }]);
+      expect(screen.getByText(f.movedOut)).toBeTruthy();
+      expect(((await picker()) as HTMLSelectElement).value).toBe("none");
+    });
+
+    it("keeps the chosen folder out of the request when it is the current one", async () => {
+      await open({ folder_id: "f1" });
+      const select = await picker();
+      await act(async () => void fireEvent.change(select, { target: { value: "f1" } }));
+      expect(patches()).toEqual([]);
+    });
+
+    it("shows why a move failed and keeps the folder the code is in", async () => {
+      await open({ folder_id: "f1" });
+      const select = await picker(); // the folders are loaded before the API starts failing
+      request.mockImplementation(async (path, opts) => {
+        if (opts?.method === "PATCH") throw new ApiError(422, "validation_error", "folder", "folder_id");
+        throw new Error(`unexpected ${path}`);
+      });
+      await act(async () => void fireEvent.change(select, { target: { value: "f2" } }));
+      expect(screen.getAllByRole("alert").some((a) => a.textContent === plural("en", f.moveFolderGone, 1))).toBe(true);
+      expect(((await picker()) as HTMLSelectElement).value).toBe("f1");
+    });
+
+    it("says a locked code cannot be moved", async () => {
+      await open({ folder_id: "f1" });
+      const select = await picker();
+      request.mockImplementation(async () => {
+        throw new ApiError(409, "code_locked", "locked");
+      });
+      await act(async () => void fireEvent.change(select, { target: { value: "f2" } }));
+      expect(screen.getAllByRole("alert").some((a) => a.textContent === t.errors.locked)).toBe(true);
+    });
+
+    it("leaves a locked code's folder as it is", async () => {
+      await open({ status: "locked", folder_id: "f1" });
+      expect((await picker()).matches(":disabled")).toBe(true); // via the fieldset
+    });
+
+    it("is hidden for viewers, and when there are no folders to choose", async () => {
+      await open({}, folders, "viewer");
+      expect(screen.queryByRole("combobox", { name: f.detailTitle })).toBeNull();
+      cleanup();
+      await open({}, []);
+      expect(screen.queryByRole("combobox", { name: f.detailTitle })).toBeNull();
+    });
   });
 
   describe("custom short link", () => {

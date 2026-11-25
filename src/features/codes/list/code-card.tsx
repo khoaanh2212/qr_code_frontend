@@ -1,6 +1,6 @@
 "use client";
 
-import { CornerDownRight, Download, Pause, Play, ScanLine, Trash2 } from "lucide-react";
+import { CornerDownRight, Download, Folder, FolderInput, Pause, Play, ScanLine, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { memo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +20,8 @@ export interface CodeCardActions {
   onDownload: (code: DynamicCode, format: QrFormat) => void;
   onToggleStatus: (code: DynamicCode) => void;
   onDelete: (code: DynamicCode) => void;
+  /** Absent when the person may not move codes (a viewer) or there is no folder to move to. */
+  onMove?: (code: DynamicCode) => void;
 }
 
 export interface CodeCardProps extends CodeCardActions {
@@ -32,6 +34,8 @@ export interface CodeCardProps extends CodeCardActions {
   onSelectedChange: (id: string, selected: boolean) => void;
   /** Another action is running: changes wait for it (downloads stay available). */
   busy?: boolean;
+  /** The name of the folder the code is in, when it has one. */
+  folderName?: string;
 }
 
 /** "https://example.com/menu/" → "example.com/menu", as people read a link. */
@@ -54,9 +58,11 @@ export const CodeCard = memo(function CodeCard({
   selected,
   onSelectedChange,
   busy = false,
+  folderName,
   onDownload,
   onToggleStatus,
   onDelete,
+  onMove,
 }: CodeCardProps) {
   const l = t.list;
   const name = code.name || t.untitled;
@@ -75,6 +81,11 @@ export const CodeCard = memo(function CodeCard({
         {l.downloadSvg}
       </MenuItem>
       <MenuSeparator />
+      {onMove && (
+        <MenuItem icon={FolderInput} disabled={busy || code.status === "locked"} onSelect={() => onMove(code)}>
+          {t.folders.move}
+        </MenuItem>
+      )}
       <MenuItem icon={code.status === "paused" ? Play : Pause} disabled={busy || code.status === "locked"} onSelect={() => onToggleStatus(code)}>
         {code.status === "paused" ? l.resume : l.pause}
       </MenuItem>
@@ -105,6 +116,15 @@ export const CodeCard = memo(function CodeCard({
           <ScanLine aria-hidden="true" className="size-4" />
           {plural(locale, l.scans, code.scans_total)}
         </span>
+        {folderName && (
+          <span className="inline-flex min-w-0 max-w-full items-center gap-1">
+            <Folder aria-hidden="true" className="size-4 shrink-0" />
+            <span className="sr-only">{t.folders.inFolder}: </span>
+            <span className="truncate" title={folderName}>
+              {folderName}
+            </span>
+          </span>
+        )}
       </div>
       <div className="-my-1 flex min-w-0 items-center gap-1">
         <span className="truncate font-mono text-sm">{displayUrl(code.short_url)}</span>

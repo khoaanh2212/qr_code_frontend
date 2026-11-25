@@ -230,7 +230,21 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     states the limits (3 changes per code, 50 custom links per workspace), mirrored in
     `slug-rules.ts`; taken, refused and over-limit links get translated errors. Enter saves,
     Escape cancels, and the code image is redrawn after a change.
-17. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
+17. ~~Folders~~ Done (backend PLAN item 54, `src/features/codes/folders`): codes are grouped into
+    flat folders (at most 100 per workspace, names of 1-60 characters, limits mirrored in
+    `folders/rules.ts`). The dashboard filters by folder through `?folder=` (all codes, "No folder"
+    or one folder, each with its code count): a column beside the list from the `lg` breakpoint, a
+    select in the toolbar below it. The choice lives in the list's query state like status and
+    order, so it is not remembered across page loads; a folder deleted elsewhere (the API answers
+    200 with no codes for it, so an empty first page under a folder filter makes the app check the folder
+    list) falls back to all codes with a note instead of an error. Editors create, rename and delete folders (inline name
+    form with translated errors for a taken name, the limit and an invalid name; deleting asks for a
+    confirmation that says the codes are kept) and move codes: "Move to folder…" in a code's menu,
+    "Move to folder" in the selection bar (bulk requests of up to 100 codes, per-code results
+    reported, codes not moved stay selected) and a folder select on the code's page. Viewers can
+    filter but see no folder or move controls. Folder names are rendered as text and long ones are
+    cut with the full name in a tooltip.
+18. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
     server so the generator is in the prerendered HTML instead of a skeleton (better LCP and first
     input). It needs a server-side API URL (e.g. `API_INTERNAL_URL=http://api:8080` in compose),
     a fallback to today's browser fetch when the API is unreachable at build or render time

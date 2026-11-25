@@ -32,6 +32,7 @@ const code = (over: Partial<ListedCode>): ListedCode => ({
   target_url: "https://example.com/menu",
   design: {},
   status: "active",
+  folder_id: null,
   created_at: "2026-11-20T10:00:00Z",
   updated_at: "2026-11-20T10:00:00Z",
   scans_total: 0,
@@ -42,6 +43,7 @@ const wifi = code({ id: "c2", short_code: "Zz9yX8wV", short_url: "http://localho
 const flyer = code({ id: "c3", short_code: "Fl1yEr00", short_url: "http://localhost:8180/Fl1yEr00", name: "Flyer", status: "paused" });
 
 const LIST = "/v1/workspaces/w1/codes?limit=50";
+const FOLDERS = "/v1/workspaces/w1/folders";
 
 let request: MockInstance<typeof sessionApi.request>;
 let requestVoid: MockInstance<typeof sessionApi.requestVoid>;
@@ -58,6 +60,7 @@ function serve(
 ) {
   request.mockImplementation(async (path, opts) => {
     if (path === "/v1/me") return me;
+    if (path === FOLDERS) return { folders: [] };
     if (opts?.method === "PATCH" && patch) return { code: patch(path.split("/").pop()!, opts.body) };
     if (path === "/v1/workspaces/w1/codes/bulk" && opts?.method === "POST" && bulk) return { results: bulk(opts.body as Bulk) };
     const page = pages[path];

@@ -1,22 +1,31 @@
 import type { CodeSort, CodeStatus } from "@/lib/api/types";
 import type { CodeListParams } from "../api";
+import { NO_FOLDER } from "../folders/rules";
 
 /**
- * Search, status filter and order of the codes list, as the toolbar holds them. The API applies
- * them (backend PLAN item 50): search ignores case and accents and matches the name, the short
- * code and the destination; `listParams` turns the toolbar state into query parameters.
+ * Search, status filter, folder and order of the codes list, as the toolbar holds them. The API
+ * applies them (backend PLAN items 50 and 54): search ignores case and accents and matches the
+ * name, the short code and the destination; `listParams` turns the toolbar state into query
+ * parameters.
  */
 
 export type { CodeSort };
 export type StatusFilter = "all" | CodeStatus;
 
+/** Every code, whatever its folder. */
+export const ALL_FOLDERS = "all";
+export { NO_FOLDER };
+/** "all", "none" or a folder id. */
+export type FolderFilter = string;
+
 export interface CodeQuery {
   readonly search: string;
   readonly status: StatusFilter;
+  readonly folder: FolderFilter;
   readonly sort: CodeSort;
 }
 
-export const DEFAULT_QUERY: CodeQuery = { search: "", status: "all", sort: "newest" };
+export const DEFAULT_QUERY: CodeQuery = { search: "", status: "all", folder: ALL_FOLDERS, sort: "newest" };
 
 /** What the API takes for `q` (backend PLAN item 50); more is refused with 422. */
 export const MAX_SEARCH_CHARS = 100;
@@ -41,11 +50,12 @@ export function listParams(q: CodeQuery): CodeListParams {
   const search = normalizeSearch(q.search);
   if (search) out.q = search;
   if (q.status !== "all") out.status = q.status;
+  if (q.folder !== ALL_FOLDERS) out.folder = q.folder;
   if (q.sort !== "newest") out.sort = q.sort;
   return out;
 }
 
 /** No filter narrows the list (the order does not count). */
 export function isDefaultQuery(q: CodeQuery): boolean {
-  return q.search.trim() === "" && q.status === "all";
+  return q.search.trim() === "" && q.status === "all" && q.folder === ALL_FOLDERS;
 }
