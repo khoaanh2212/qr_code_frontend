@@ -6,7 +6,7 @@ import { PasswordField, TextField } from "@/components/ui/text-field";
 import { localizePath, type Locale } from "@/i18n/config";
 import { login } from "./api";
 import { safeReturnTo } from "@/lib/navigation/return-to";
-import { FormAlert, ReturnToLink } from "@/components/form/form-bits";
+import { FormAlert, ReturnToLink, withReturnTo } from "@/components/form/form-bits";
 import { authFailure, emailError, type AuthMessages } from "./form-rules";
 import { rememberEmail, useRememberedEmail } from "./remembered-email";
 
@@ -46,8 +46,9 @@ export function LoginForm({ t, locale }: { t: AuthMessages; locale: Locale }) {
 
     setBusy(true);
     try {
-      await login({ email: email.trim(), password });
-      window.location.assign(afterLoginTarget(locale));
+      const res = await login({ email: email.trim(), password });
+      // Two-step verification: the password was right, the second step comes next.
+      window.location.assign(res.mfa_required === true ? withReturnTo(localizePath(locale, "/login/verify")) : afterLoginTarget(locale));
     } catch (err) {
       setAlert(authFailure(err, t).message);
       setBusy(false);
