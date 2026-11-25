@@ -2,6 +2,7 @@
 
 import { CircleCheck, CircleX, FolderOpen, Info, Plus, QrCode, SearchX, Shapes } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ButtonLink, FormAlert } from "@/components/form/form-bits";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { useFolderEditing } from "../folders/use-folder-editing";
 import { useFolders } from "../folders/use-folders";
 import { CodeCard } from "./code-card";
 import { CodesToolbar, SelectionBar, statusOptions } from "./codes-toolbar";
+import { ReadyDialog } from "./ready-dialog";
 import { ALL_FOLDERS, DEFAULT_QUERY, isDefaultQuery, listParams, NO_FOLDER, type CodeQuery } from "./query";
 import { useCodeActions } from "./use-code-actions";
 import { useCodes } from "./use-codes";
@@ -84,6 +86,26 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
   // Phones get the list: the grid's small cards have no room for a card's shortcuts.
   const view: CodesView = usePhone() ? "list" : chosenView;
   const [panelOpen, setPanelOpen] = useState(false);
+  // A code that was just created is greeted with its download dialog (`?ready={id}`, set by the
+  // create flow). Read through the router: on a client-side navigation `window.location` still
+  // holds the previous address while this renders. The parameter then leaves the address, so a
+  // reload or a shared link does not greet again; the id is kept here until the dialog closes.
+  const arrived = readyParam(useSearchParams()?.get("ready"));
+  const [readyId, setReadyId] = useState<string | null>(arrived);
+  // Another code arriving while the list stays mounted: adjusting state while rendering.
+  const [seen, setSeen] = useState(arrived);
+  if (arrived && arrived !== seen) {
+    setSeen(arrived);
+    setReadyId(arrived);
+  }
+  useEffect(() => {
+    if (!arrived) return;
+    // Only `ready` goes: the router's own state on this entry, other parameters and the hash stay.
+    const rest = new URLSearchParams(window.location.search ?? "");
+    rest.delete("ready");
+    const query = rest.toString();
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash ?? ""}`);
+  }, [arrived]);
   // The panel belongs to narrow screens: a window that grows past `lg` (a rotated tablet) has the
   // folder column instead, and must not keep a modal over it.
   useEffect(() => {
@@ -410,6 +432,21 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
         {folderNav()}
       </Drawer>
 
+      {readyId && ws && (
+        <ReadyDialog
+          t={t}
+          locale={locale}
+          workspaceId={ws}
+          id={readyId}
+          onDownload={actions.download}
+          onClose={() => {
+            setReadyId(null);
+            // The dialog was opened by the page itself, so there is no opener to return to:
+            // continue from the list's heading rather than from the top of the page.
+            setTimeout(() => heading.current?.focus());
+          }}
+        />
+      )}
       <MoveDialog
         t={t}
         pending={pendingMove}
@@ -447,6 +484,14 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
       </ConfirmDialog>
     </div>
   );
+}
+
+/**
+ * The `ready` parameter as a code id, or null. It comes from the address, so anyone can put
+ * anything there: only the shape of an id (a UUID) is ever sent to the API.
+ */
+function readyParam(value: string | null | undefined): string | null {
+  return value && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value) ? value : null;
 }
 
 const PHONE = "(max-width: 639px)"; // below Tailwind's `sm`

@@ -282,3 +282,18 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     active selection is pinned to the bottom edge, and the layout is always the list. Viewers and
     locked codes get no shortcuts into the forms. Not built: the workspace overview and weekly
     scans tiles of the reference layout, which need a backend endpoint first.
+21. ~~Create flow~~ Done (`src/features/codes/code-form.tsx`, `list/ready-dialog.tsx`): "New dynamic
+    code" is two steps, after the flow the established QR generators share: the destination (and
+    a name), then the design beside a live preview. The preview draws the design on a sample
+    link (the code's own short link exists only once it is created) through the public render
+    API, on white, with "Reset the design". The actions sit in a bar fixed to the bottom edge at
+    every width ("Next: design" and "Create with the default design" on the first step, "Back"
+    and "Create dynamic code" on the second); below `lg` the preview comes first and the bar
+    carries a thumbnail that jumps to it. The code is created by the last button only, so leaving
+    earlier leaves nothing behind (unlike the reference, which saves at the content step). An
+    address the API refuses brings the first step back with the message on its field. After
+    creating, the list opens with `?ready={id}` and greets the code in a dialog (the code large
+    on white, its short link, PNG and SVG downloads, a link to its design); the parameter is
+    dropped from the address at once. Not built: a type gallery as the first step, which waits
+    for hosted page types (backend PLAN items 22-28); the design groups keep the order of the
+    shared style picker (colors, pattern, corners, frame, icon) rather than the reference's.

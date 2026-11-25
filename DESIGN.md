@@ -237,6 +237,13 @@ on its corner, name and facts, then shortcuts above the scan count. The count is
 large figure (the title size, tabular numerals), set in Ink with its unit in muted text beside it.
 Below 640px the same parts stack and the code grows to 9rem on a tinted panel in the middle.
 
+A guided flow (creating a code) names its steps in a row under the title: a numbered disc and a
+label each, the current one in Signal Teal, the others outlined. Its actions live in a bar fixed to
+the bottom edge at every width (Surface, a Rule line above, the primary action last), and the page
+keeps room below so nothing ends under it. The design step is the tool-page grid: options left, the
+proof right in the 22rem column that stays in view; below 1024px the proof comes first and the bar
+shows it as a 44px thumbnail that jumps back to it.
+
 ## Elevation & Depth
 
 Flat by default. Surfaces separate by tone (paper, sheet, masthead) and by a 1px rule, not by
