@@ -111,6 +111,7 @@ export const CodeCard = memo(function CodeCard({
   const grid = layout === "grid";
   const editable = canEdit && code.status !== "locked";
   const to = (anchor: CodeAnchor) => `${href}#${anchor}`;
+  const insights = `${href}/insights`;
 
   const select = (
     <Checkbox label={format(l.selectCode, { name })} hideLabel checked={selected} onChange={(e) => onSelectedChange(code.id, e.target.checked)} />
@@ -212,7 +213,7 @@ export const CodeCard = memo(function CodeCard({
   const at = scansText.indexOf(figure);
   const scans = (
     <Link
-      href={to(CODE_ANCHORS.scans)}
+      href={insights}
       aria-label={format(l.scansLink, { scans: scansText })}
       className="inline-flex min-h-11 shrink-0 items-baseline rounded-md px-2 text-sm whitespace-pre text-muted transition-colors duration-150 hover:bg-foreground/5"
     >
@@ -232,7 +233,7 @@ export const CodeCard = memo(function CodeCard({
   const shortcuts = (
     <div className="flex items-center">
       <IconLink
-        href={to(CODE_ANCHORS.scans)}
+        href={insights}
         label={format(l.statsOf, { name })}
         icon={ChartColumn}
         pointerOnly

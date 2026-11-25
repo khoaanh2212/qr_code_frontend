@@ -1,6 +1,7 @@
 "use client";
 
-import { Copy, Download, Pencil } from "lucide-react";
+import { ChartColumn, Copy, Download, Pencil } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,6 @@ import { NAME_MAX } from "./code-form";
 import { codeFailure, type CodeField } from "./errors";
 
 import { StatusBadge } from "./status-badge";
-import { ScansSection } from "./code-scans";
 import { SlugEditor } from "./slug-editor";
 import { FolderSection } from "./folder-section";
 import { CODE_ANCHORS, codeAnchorOf } from "./anchors";
@@ -60,7 +60,7 @@ export function CodeDetail({ t, generator, templates, auth, locale }: Props) {
     return () => abort.abort();
   }, [workspace, id, attempt]);
 
-  // A link from the list leads to one section (`#scans`, `#destination`, `#design`): the page
+  // A link from the list leads to one section (`#destination`, `#design`): the page
   // only has it once the code is loaded, so the browser's own jump came too early.
   const ready = load.kind === "ready";
   useEffect(() => {
@@ -116,13 +116,20 @@ export function CodeDetail({ t, generator, templates, auth, locale }: Props) {
         <StatusBadge status={code.status} t={t} />
       </header>
       <CodeCard t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
+      {/* The scans have a page of their own. */}
+      <Link
+        href={localizePath(locale, `/app/codes/${encodeURIComponent(code.id)}/insights`)}
+        className="inline-flex min-h-11 w-fit items-center gap-2 rounded-md border border-control bg-surface px-3 text-sm font-medium hover:bg-foreground/5"
+      >
+        <ChartColumn aria-hidden="true" className="size-4" />
+        {t.insights.view}
+      </Link>
       <div>
         <DestinationSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <DesignSection t={t} generator={generator} templates={templates} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <StatusSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <CampaignSection t={t} auth={auth} locale={locale} ws={ws} code={code} canEdit={workspace.role !== "viewer"} onSaved={setCode} />
         <FolderSection t={t} locale={locale} ws={ws} code={code} canEdit={workspace.role !== "viewer"} onSaved={setCode} />
-        <ScansSection t={t} locale={locale} ws={ws} code={code} />
         <DeleteSection t={t} auth={auth} ws={ws} code={code} locale={locale} />
       </div>
     </div>

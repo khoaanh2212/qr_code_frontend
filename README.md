@@ -275,7 +275,7 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     opened with "Filters" (a native `<dialog>`, `components/ui/drawer.tsx`), which also carries
     the status filter the toolbar drops on phones; this replaces the folder select of item 17.
     Each card shows its scan count as its figure (a link to the code's statistics), shortcuts to
-    statistics, destination and design (`/app/codes/{id}#scans|#destination|#design`; the code's
+    statistics, destination and design (the insights page of item 22, and `/app/codes/{id}#destination|#design`; the code's
     page jumps there once it has loaded), "Change" beside the destination and a download button
     on the thumbnail. On phones the card stacks with the code large in the middle, "New dynamic
     code" and "Manage templates" shrink to their icons, the search takes a row of its own, an
@@ -297,3 +297,19 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     dropped from the address at once. Not built: a type gallery as the first step, which waits
     for hosted page types (backend PLAN items 22-28); the design groups keep the order of the
     shared style picker (colors, pattern, corners, frame, icon) rather than the reference's.
+22. ~~Insights page~~ Done (`src/features/codes/insights`, `/app/codes/{id}/insights`): a code's
+    scans have a page of their own, after the insights page of the established QR generators.
+    On top: what the code is (status, name, creation date, destination, "Edit code"), two
+    figures (total and unique scans, the latter with how it is counted) and the code on white
+    with its short link; the code sits to the right from `lg` and below the figures under it.
+    Then the scans of a period: last 7, 30 (the default) or 90 days or a custom span of up to 366
+    days, grouped by day, week (from Monday) or month. Grouping happens in the browser from the
+    API's days (`insights/range.ts`), so it asks the API for nothing; a group's unique count is
+    the sum of its days'. A stacked bar chart (unique in Signal Teal, repeated in its tint, with
+    a legend and a table behind it) and four ranked lists: operating systems, countries, devices,
+    browsers. "Download CSV" exports the periods shown (cells quoted, formula-like cells
+    defused), made in the browser. The code's page keeps destination, design, status, folder and
+    deletion and links to its insights; the list's scan count and statistics icon lead there
+    (the `#scans` anchor is gone). Not built, each needing the backend first: top cities (PLAN
+    item 56) and resetting scans. Campaign details stay on the code's page until item 18 is
+    merged, then move here.

@@ -15,7 +15,7 @@ export function Section({
   title: string;
   description?: string;
   danger?: boolean;
-  /** The section's id, when links lead straight to it (`/app/codes/{id}#scans`); its heading then takes focus by script. */
+  /** The section's id, when links lead straight to it (`/app/codes/{id}#design`); its heading then takes focus by script. */
   anchor?: string;
   children: ReactNode;
 }) {

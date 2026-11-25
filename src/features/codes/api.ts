@@ -96,6 +96,8 @@ export async function codeImage(workspaceId: string, id: string, format: QrForma
   return sessionApi.requestBlob(`${one(workspaceId, id)}/image?${q}`);
 }
 
-export async function codeStats(workspaceId: string, id: string, signal?: AbortSignal): Promise<CodeStats> {
-  return sessionApi.request<CodeStats>(`${one(workspaceId, id)}/stats`, { signal });
+/** A code's scans over a period of UTC days, both ends included (at most 366 days). */
+export async function codeStats(workspaceId: string, id: string, range: { from: string; to: string }, signal?: AbortSignal): Promise<CodeStats> {
+  const q = new URLSearchParams(range);
+  return sessionApi.request<CodeStats>(`${one(workspaceId, id)}/stats?${q}`, { signal });
 }
