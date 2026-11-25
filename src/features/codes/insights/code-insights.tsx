@@ -1,7 +1,6 @@
 "use client";
 
-import { Download, Pencil } from "lucide-react";
-import Link from "next/link";
+import { Download } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useId, useMemo, useState } from "react";
 import { FormAlert, TextLink } from "@/components/form/form-bits";
@@ -9,17 +8,20 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { TextField } from "@/components/ui/text-field";
-import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-session";
+import type { AuthMessages } from "@/features/auth/form-rules";
+import { redirectToLogin } from "@/features/auth/require-session";
 import { format, localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
-import type { CodeStats, DynamicCode } from "@/lib/api/types";
-import { formatDate } from "@/lib/format/time";
-import { codeStats, getCode } from "../api";
+import type { CodeStats } from "@/lib/api/types";
+import { codeStats } from "../api";
+import { CampaignSection } from "../campaign/campaign-section";
+import { CodePageState } from "../pages/code-page-state";
+import { useCode } from "../use-code";
+import { CodeHeader } from "./code-header";
 import { displayUrl } from "../list/code-card";
 import { CodeThumbnail } from "../list/code-thumbnail";
 import { TopList, dayLabel } from "../scan-chart";
-import { StatusBadge } from "../status-badge";
 import { BROWSER_NAMES, OS_NAMES, countryName, familyName, rankByLabel } from "./breakdown";
 import { PeriodChart } from "./period-chart";
 import { MAX_RANGE_DAYS, PRESET_DAYS, bucketize, csvOf, presetRange, totalsOf, utcToday, validRange, type Bucket, type PresetDays, type Range } from "./range";
@@ -27,7 +29,6 @@ import { MAX_RANGE_DAYS, PRESET_DAYS, bucketize, csvOf, presetRange, totalsOf, u
 type T = Messages["codes"];
 type Choice = `${PresetDays}` | "custom";
 
-type CodeLoad = { kind: "loading" } | { kind: "ready"; code: DynamicCode } | { kind: "missing" } | { kind: "error" };
 type StatsLoad = { key: string; stats: CodeStats | null; failed: boolean };
 
 const DEFAULT_DAYS: PresetDays = 30;
@@ -36,24 +37,23 @@ const keyOf = (r: Range) => `${r.from}:${r.to}`;
 /**
  * A code's insights: what it is (name, status, the code itself and its short link), then its scans
  * over a chosen period: totals, a chart by day, week or month, and where the scans came from.
- * Reading only; changing the code happens on its own page ("Edit code"). The stats API answers a
+ * It is the code's home: its header carries the ways to change it (content and design pages, a
+ * menu of dialogs), and its campaign details sit under it. The stats API answers a
  * period of days, so grouping and the CSV export are made here from what it sent.
  */
-export function CodeInsights({ t, locale }: { t: T; locale: Locale }) {
+export function CodeInsights({ t, auth, locale }: { t: T; auth: AuthMessages; locale: Locale }) {
   const { id } = useParams<{ id: string }>();
   // Keyed by the code: another code's page starts from nothing, never from this one's numbers.
-  return <Insights key={id} id={id} t={t} locale={locale} />;
+  return <Insights key={id} id={id} t={t} auth={auth} locale={locale} />;
 }
 
 /** Above this many days a period opens grouped by week: a bar per day would be a hairline. */
 const WEEKLY_FROM_DAYS = 92;
 const spanDays = (r: Range) => Math.round((Date.parse(`${r.to}T00:00:00Z`) - Date.parse(`${r.from}T00:00:00Z`)) / 86_400_000) + 1;
 
-function Insights({ id, t, locale }: { id: string; t: T; locale: Locale }) {
+function Insights({ id, t, auth, locale }: { id: string; t: T; auth: AuthMessages; locale: Locale }) {
   const i = t.insights;
-  const workspace = usePersonalWorkspace();
-  const ws = workspace?.id;
-  const [load, setLoad] = useState<CodeLoad>({ kind: "loading" });
+  const { load, setCode, workspaceId: ws, canEdit } = useCode(id);
   const [choice, setChoice] = useState<Choice>(`${DEFAULT_DAYS}`);
   // The custom period as typed; `range` follows it only while it is one the API accepts.
   const [typed, setTyped] = useState<Range>(() => presetRange(DEFAULT_DAYS));
@@ -61,19 +61,6 @@ function Insights({ id, t, locale }: { id: string; t: T; locale: Locale }) {
   const [bucket, setBucket] = useState<Bucket>("day");
   const [result, setResult] = useState<StatsLoad | null>(null);
   const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    if (!ws) return;
-    const abort = new AbortController();
-    getCode(ws, id, abort.signal)
-      .then((code) => setLoad({ kind: "ready", code }))
-      .catch((err: unknown) => {
-        if (abort.signal.aborted) return;
-        if (err instanceof ApiError && err.status === 401) return redirectToLogin();
-        setLoad({ kind: err instanceof ApiError && err.status === 404 ? "missing" : "error" });
-      });
-    return () => abort.abort();
-  }, [ws, id]);
 
   const key = keyOf(range);
   useEffect(() => {
@@ -101,27 +88,8 @@ function Insights({ id, t, locale }: { id: string; t: T; locale: Locale }) {
   // One source for "are there scans": the days the figures and the chart are made of.
   const scans = totals?.scans ?? 0;
 
-  const back = <TextLink href={localizePath(locale, "/app")}>← {t.back}</TextLink>;
-  if (!workspace || load.kind === "missing" || load.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-4">
-        {back}
-        <FormAlert message={load.kind === "missing" ? t.notFound : t.loadFailed} />
-      </div>
-    );
-  }
-  if (load.kind === "loading") {
-    return (
-      <div className="flex flex-col items-start gap-4">
-        {back}
-        <p role="status" className="text-sm text-muted">
-          {i.loading}
-        </p>
-      </div>
-    );
-  }
+  if (load.kind !== "ready" || !ws) return <CodePageState t={t} locale={locale} load={load} loading={i.loading} />;
   const { code } = load;
-  const name = code.name || t.untitled;
 
   function choose(next: Choice) {
     setChoice(next);
@@ -152,7 +120,6 @@ function Insights({ id, t, locale }: { id: string; t: T; locale: Locale }) {
     { value: "month", label: i.bucketMonth },
   ];
   const devices: Record<string, string> = t.deviceNames;
-  const created = formatDate(code.created_at, locale);
   // A date still being typed (an empty field) is not an error yet; the data shown stays as it was.
   const typedInvalid = choice === "custom" && typed.from !== "" && typed.to !== "" && !validRange(typed);
   const shown = `${dayLabel(range.from, locale)} – ${dayLabel(range.to, locale)}`;
@@ -160,42 +127,26 @@ function Insights({ id, t, locale }: { id: string; t: T; locale: Locale }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {back}
+      <TextLink href={localizePath(locale, "/app")}>← {t.back}</TextLink>
       {/* What the code is: facts and totals on the left, the code itself on the right from `lg`. */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="flex min-w-0 flex-col gap-4">
-          <header className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <StatusBadge status={code.status} t={t} />
-              <Link
-                href={localizePath(locale, `/app/codes/${encodeURIComponent(code.id)}`)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-md border border-control bg-surface px-3 text-sm font-medium hover:bg-foreground/5"
-              >
-                <Pencil aria-hidden="true" className="size-4" />
-                {i.edit}
-              </Link>
-            </div>
-            <h1 className="text-2xl font-semibold text-balance break-words">{name}</h1>
-            <p className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-              {created && <span>{format(i.created, { date: created })}</span>}
-              <span className="max-w-full truncate" title={code.target_url}>
-                {displayUrl(code.target_url)}
-              </span>
-            </p>
-          </header>
+          <CodeHeader t={t} auth={auth} locale={locale} ws={ws} code={code} canEdit={canEdit} onSaved={setCode} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Tile label={i.totalScans} value={totals ? nf.format(totals.scans) : "–"} />
             <Tile label={i.uniqueScans} value={totals ? nf.format(totals.unique) : "–"} help={i.uniqueHelp} />
           </div>
         </div>
         <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface p-5">
-          <CodeThumbnail workspaceId={workspace.id} code={code} className="w-40" />
+          <CodeThumbnail workspaceId={ws} code={code} className="w-40" />
           <div className="flex max-w-full min-w-0 items-center gap-1">
             <span className="truncate font-mono text-sm">{displayUrl(code.short_url)}</span>
             <CopyButton value={code.short_url} label={t.list.copyLink} copiedLabel={t.list.copied} failedLabel={t.list.copyFailed} />
           </div>
         </div>
       </div>
+
+      <CampaignSection t={t} auth={auth} locale={locale} ws={ws} code={code} canEdit={canEdit} onSaved={setCode} />
 
       <section aria-labelledby="scans-heading" className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end justify-between gap-3">

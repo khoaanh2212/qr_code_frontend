@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import { CodeDetail } from "@/features/codes/code-detail";
+import { CodeHome } from "@/features/codes/pages/code-home";
 import { getLocale, getMessages } from "@/i18n/server";
 import { pageTitle } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getMessages();
-  return { title: pageTitle(t.codes.title) };
+  return { title: pageTitle(t.codes.insights.title) };
 }
 
-/** The code's id is read on the client (useParams): the page holds nothing per code on the server. */
+/** A code's home is its insights page (the id is read on the client, as on every page of a code). */
 export default async function CodePage() {
-  const locale = await getLocale();
-  const t = await getMessages();
-  return <CodeDetail t={t.codes} generator={t.generator} templates={t.templates} auth={t.auth} locale={locale} />;
+  return <CodeHome locale={await getLocale()} />;
 }

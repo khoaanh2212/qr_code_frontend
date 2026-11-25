@@ -114,7 +114,7 @@ afterEach(() => {
 const show = () =>
   render(
     <RequireSession messages={en.session}>
-      <CodesList t={t} templatesLabel="Manage templates" locale="en" />
+      <CodesList t={t} auth={en.auth} templatesLabel="Manage templates" locale="en" />
     </RequireSession>,
   );
 const nav = () => screen.getByRole("navigation", { name: f.nav });

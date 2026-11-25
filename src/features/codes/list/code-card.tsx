@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartColumn, CornerDownRight, Download, Folder, FolderInput, Palette, Pause, Pencil, Play, Trash2, type LucideIcon } from "lucide-react";
+import { ChartColumn, CornerDownRight, Download, Folder, FolderInput, Link2, Palette, Pause, Pencil, Play, Trash2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { memo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,7 +12,6 @@ import { plural } from "@/i18n/plural";
 import type { DynamicCode, ListedCode } from "@/lib/api/types";
 import { formatDate } from "@/lib/format/time";
 import type { QrFormat } from "@/lib/qr/types";
-import { CODE_ANCHORS, type CodeAnchor } from "../anchors";
 import { StatusBadge } from "../status-badge";
 import { CodeThumbnail } from "./code-thumbnail";
 import type { CodesView } from "./use-codes-view";
@@ -23,6 +22,8 @@ export interface CodeCardActions {
   onDelete: (code: DynamicCode) => void;
   /** Absent when the person may not move codes (a viewer) or there is no folder to move to. */
   onMove?: (code: DynamicCode) => void;
+  /** Opens the short link editor; absent for viewers. */
+  onEditLink?: (code: DynamicCode) => void;
 }
 
 export interface CodeCardProps extends CodeCardActions {
@@ -104,14 +105,16 @@ export const CodeCard = memo(function CodeCard({
   onToggleStatus,
   onDelete,
   onMove,
+  onEditLink,
 }: CodeCardProps) {
   const l = t.list;
   const name = code.name || t.untitled;
   const href = localizePath(locale, `/app/codes/${encodeURIComponent(code.id)}`);
   const grid = layout === "grid";
   const editable = canEdit && code.status !== "locked";
-  const to = (anchor: CodeAnchor) => `${href}#${anchor}`;
   const insights = `${href}/insights`;
+  const contentPage = `${href}/edit`;
+  const designPage = `${href}/design`;
 
   const select = (
     <Checkbox label={format(l.selectCode, { name })} hideLabel checked={selected} onChange={(e) => onSelectedChange(code.id, e.target.checked)} />
@@ -125,6 +128,11 @@ export const CodeCard = memo(function CodeCard({
         {l.downloadSvg}
       </MenuItem>
       <MenuSeparator />
+      {onEditLink && (
+        <MenuItem icon={Link2} disabled={busy || code.status === "locked"} onSelect={() => onEditLink(code)}>
+          {t.pages.editShortLink}
+        </MenuItem>
+      )}
       {onMove && (
         <MenuItem icon={FolderInput} disabled={busy || code.status === "locked"} onSelect={() => onMove(code)}>
           {t.folders.move}
@@ -197,7 +205,7 @@ export const CodeCard = memo(function CodeCard({
         </span>
         {editable && (
           <Link
-            href={to(CODE_ANCHORS.destination)}
+            href={contentPage}
             aria-label={format(l.changeDestinationOf, { name })}
             className="-my-3 inline-flex shrink-0 items-center py-3 font-medium text-foreground underline underline-offset-4 hover:no-underline"
           >
@@ -241,14 +249,14 @@ export const CodeCard = memo(function CodeCard({
       />
       {editable && (
         <IconLink
-          href={to(CODE_ANCHORS.destination)}
+          href={contentPage}
           label={format(l.editDestinationOf, { name })}
           icon={Pencil}
           pointerOnly
           className={grid ? "hidden" : "hidden sm:inline-flex"}
         />
       )}
-      {editable && <IconLink href={to(CODE_ANCHORS.design)} label={format(l.editDesignOf, { name })} icon={Palette} />}
+      {editable && <IconLink href={designPage} label={format(l.editDesignOf, { name })} icon={Palette} />}
       {menu}
     </div>
   );

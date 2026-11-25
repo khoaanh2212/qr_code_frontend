@@ -759,7 +759,6 @@ export const pt = {
     insights: {
       title: "Estatísticas",
       view: "Ver estatísticas",
-      edit: "Editar código",
       created: "Criado em {date}",
       totalScans: "Total de leituras",
       uniqueScans: "Leituras únicas",
@@ -840,6 +839,19 @@ export const pt = {
         video: "Vídeo",
         other: "Outro",
       },
+    },
+    pages: {
+      contentTitle: "Editar conteúdo",
+      contentIntro: "Mude para onde o código leva e como ele se chama. Os códigos impressos acompanham na hora.",
+      backToCode: "Voltar ao código",
+      saveChanges: "Salvar alterações",
+      viewerNote: "Só os editores deste espaço de trabalho podem alterar o código.",
+      moreActions: "Mais ações para {name}",
+      editContent: "Editar conteúdo",
+      editDesign: "Editar design",
+      editShortLink: "Editar link curto",
+      downloadTitle: "Baixar o código",
+      noFolder: "Sem pasta",
     },
     folders: {
       nav: "Pastas",

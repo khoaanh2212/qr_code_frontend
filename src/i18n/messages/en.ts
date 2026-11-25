@@ -812,7 +812,6 @@ export const en = {
     insights: {
       title: "Insights",
       view: "View insights",
-      edit: "Edit code",
       created: "Created {date}",
       totalScans: "Total scans",
       uniqueScans: "Unique scans",
@@ -895,6 +894,20 @@ export const en = {
         video: "Video",
         other: "Other",
       },
+    },
+    /** The pages of one code: insights (its hub), content and design. */
+    pages: {
+      contentTitle: "Edit content",
+      contentIntro: "Change where the code leads and what you call it. Printed codes follow at once.",
+      backToCode: "Back to the code",
+      saveChanges: "Save changes",
+      viewerNote: "Only editors of this workspace can change the code.",
+      moreActions: "More actions for {name}",
+      editContent: "Edit content",
+      editDesign: "Edit design",
+      editShortLink: "Edit short link",
+      downloadTitle: "Download the code",
+      noFolder: "No folder",
     },
     folders: {
       nav: "Folders",

@@ -275,7 +275,7 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     opened with "Filters" (a native `<dialog>`, `components/ui/drawer.tsx`), which also carries
     the status filter the toolbar drops on phones; this replaces the folder select of item 17.
     Each card shows its scan count as its figure (a link to the code's statistics), shortcuts to
-    statistics, destination and design (the insights page of item 22, and `/app/codes/{id}#destination|#design`; the code's
+    statistics, destination and design (the insights page of item 22, and the content and design pages of item 23; the code's
     page jumps there once it has loaded), "Change" beside the destination and a download button
     on the thumbnail. On phones the card stacks with the code large in the middle, "New dynamic
     code" and "Manage templates" shrink to their icons, the search takes a row of its own, an
@@ -311,5 +311,15 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     defused), made in the browser. The code's page keeps destination, design, status, folder and
     deletion and links to its insights; the list's scan count and statistics icon lead there
     (the `#scans` anchor is gone). Not built, each needing the backend first: top cities (PLAN
-    item 56) and resetting scans. Campaign details stay on the code's page until item 18 is
-    merged, then move here.
+    item 56) and resetting scans. Campaign details moved here with item 23.
+23. ~~Pages of a code~~ Done (`src/features/codes/pages`, `insights/code-header.tsx`): the single
+    page that held everything about a code is split as the established QR generators split it.
+    The insights page is the code's home (`/app/codes/{id}` leads there): its header carries the
+    status, name, creation date, folder and destination, "Edit content", "Download" (the download
+    dialog of item 21) and a menu of the rest: "Edit design", "Edit short link" (a dialog),
+    "Move to folder" (the folder dialog), pause or resume, delete (a confirmation); the campaign
+    details sit under it. Content (`/edit`: destination and name) and design (`/design`: the
+    options beside a live drawing of the code itself) are pages of their own with the action
+    bar of item 21 ("Save changes"). The list's row menu also gets "Edit short link", and its
+    shortcuts lead to these pages. Viewers get the download only; a locked code keeps its
+    download and deletion, and its edit pages show why they are read-only.

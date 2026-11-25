@@ -759,7 +759,6 @@ export const vi = {
     insights: {
       title: "Thống kê",
       view: "Xem thống kê",
-      edit: "Sửa mã",
       created: "Tạo ngày {date}",
       totalScans: "Tổng lượt quét",
       uniqueScans: "Lượt quét không trùng",
@@ -840,6 +839,19 @@ export const vi = {
         video: "Video",
         other: "Khác",
       },
+    },
+    pages: {
+      contentTitle: "Sửa nội dung",
+      contentIntro: "Đổi nơi mã dẫn tới và tên gọi của mã. Các mã đã in sẽ theo ngay.",
+      backToCode: "Quay lại mã",
+      saveChanges: "Lưu thay đổi",
+      viewerNote: "Chỉ người chỉnh sửa của workspace này mới đổi được mã.",
+      moreActions: "Thao tác khác cho {name}",
+      editContent: "Sửa nội dung",
+      editDesign: "Sửa thiết kế",
+      editShortLink: "Sửa link rút gọn",
+      downloadTitle: "Tải mã về",
+      noFolder: "Không có thư mục",
     },
     folders: {
       nav: "Thư mục",

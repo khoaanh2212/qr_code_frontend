@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { format } from "@/i18n/config";
 import { RequireSession } from "@/features/auth/require-session";
 import { en } from "@/i18n/messages/en";
-import { plural } from "@/i18n/plural";
 import { ApiError, publicApi, sessionApi } from "@/lib/api";
 import type { Campaign, CodeStats, DynamicCode, Folder } from "@/lib/api/types";
 import { EMPTY_CAMPAIGN } from "./campaign/rules";
-import { CodeDetail } from "./code-detail";
+import { CodeInsights } from "./insights/code-insights";
+import { CodeContent } from "./pages/code-content";
+import { CodeDesign } from "./pages/code-design";
 import { CodeForm } from "./code-form";
 import { saveHandoff } from "./handoff";
 
@@ -63,6 +64,16 @@ const stats: CodeStats = {
 let request: MockInstance<typeof sessionApi.request>;
 let requestVoid: MockInstance<typeof sessionApi.requestVoid>;
 let assign: ReturnType<typeof vi.fn>;
+
+beforeAll(() => {
+  // jsdom has <dialog> but not its modal API.
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    this.removeAttribute("open");
+  };
+});
 
 beforeEach(() => {
   push.mockReset();
@@ -252,13 +263,14 @@ describe("CodeForm", () => {
   });
 });
 
-describe("CodeDetail", () => {
+describe("code pages", () => {
   const detailApi = (overrides: Partial<DynamicCode> = {}, folders: Folder[] = [], role: "owner" | "viewer" = "owner") =>
     request.mockImplementation(async (path, opts) => {
       if (path === "/v1/me") return { ...me, workspaces: [{ ...me.workspaces[0], role }] };
       if (path === "/v1/workspaces/w1/folders") return { folders };
+      if (path === "/v1/workspaces/w1/templates") return { templates: [] };
       if (path === "/v1/workspaces/w1/codes/c1" && !opts?.method) return { code: { ...code, ...overrides } };
-      if (path === "/v1/workspaces/w1/codes/c1/stats") return stats;
+      if (path.startsWith("/v1/workspaces/w1/codes/c1/stats")) return stats;
       if (path === "/v1/workspaces/w1/codes/c1" && opts?.method === "PATCH") {
         const body = opts.body as Partial<DynamicCode> & { campaign?: Campaign | null };
         const before = { ...code, ...overrides };
@@ -267,175 +279,256 @@ describe("CodeDetail", () => {
       }
       throw new Error(`unexpected ${path}`);
     });
-
-  it("shows the short link and leads to the code's insights, where its scans live", async () => {
-    detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-    expect(await screen.findByRole("heading", { name: "Menu", level: 1 })).toBeTruthy();
-    expect(screen.getByText(code.short_url)).toBeTruthy();
-    expect(screen.getByRole("link", { name: t.insights.view }).getAttribute("href")).toBe("/app/codes/c1/insights");
-    expect(screen.queryByRole("region", { name: t.scansTitle })).toBeNull();
-    expect(request).not.toHaveBeenCalledWith(expect.stringContaining("/stats"), expect.anything());
-  });
-
-  it("changes the destination and pauses the code", async () => {
-    detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+  const patches = () => request.mock.calls.filter(([, o]) => o?.method === "PATCH").map(([, o]) => o?.body);
+  const showInsights = async () => {
+    withSession(<CodeInsights t={t} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
-    type(new RegExp(t.target), "https://example.com/new");
-    await act(async () => void fireEvent.click(screen.getAllByRole("button", { name: t.save })[0]));
-    expect(request).toHaveBeenCalledWith("/v1/workspaces/w1/codes/c1", {
-      method: "PATCH",
-      body: { target_url: "https://example.com/new" },
-    });
-    expect(screen.getByText(t.saved)).toBeTruthy();
+  };
+  const moreActions = () => fireEvent.click(screen.getByRole("button", { name: format(t.pages.moreActions, { name: "Menu" }) }));
+  const pick = (name: string) => act(async () => void fireEvent.click(screen.getByRole("menuitem", { name })));
+  const said = () => screen.getAllByRole("status").map((s) => s.textContent);
 
-    await click(t.pause);
-    expect(request).toHaveBeenCalledWith("/v1/workspaces/w1/codes/c1", { method: "PATCH", body: { status: "paused" } });
-    expect(screen.getByRole("button", { name: t.resume })).toBeTruthy();
-  });
-
-  it("restyles the code and draws its image again", async () => {
-    detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-    await screen.findByRole("heading", { name: "Menu", level: 1 });
-    const images = vi.mocked(sessionApi.requestBlob).mock.calls.length;
-    await act(async () => void fireEvent.click(screen.getByRole("radio", { name: en.generator.design.styles.modules.dots })));
-    await act(async () => void fireEvent.click(screen.getByRole("radio", { name: en.generator.design.styles.frames["label-bottom"] })));
-    expect(field(en.generator.design.frameText).value).toBe(en.generator.design.frameTextDefault);
-    const save = screen.getAllByRole("button", { name: t.save })[1]; // Destination, then Design
-    await act(async () => void fireEvent.click(save));
-    expect(request).toHaveBeenCalledWith("/v1/workspaces/w1/codes/c1", {
-      method: "PATCH",
-      body: { design: { fg: "#000000", bg: "#ffffff", module: "dots", frame: "label-bottom", frame_text: "SCAN ME" } },
-    });
-    expect(vi.mocked(sessionApi.requestBlob).mock.calls.length).toBeGreaterThan(images);
-  });
-
-  it("deletes only after confirming, then returns to the list", async () => {
-    detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-    await screen.findByRole("heading", { name: "Menu", level: 1 });
-    await click(t.deleteStart);
-    expect(requestVoid).not.toHaveBeenCalled();
-    await click(t.deleteConfirm);
-    expect(requestVoid).toHaveBeenCalledWith("/v1/workspaces/w1/codes/c1", { method: "DELETE" });
-    expect(push).toHaveBeenCalledWith("/app");
-  });
-
-  it("opens at the section a link from the list names, with its heading focused", async () => {
-    vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app/codes/c1", search: "", hash: "#design" });
-    const scrolled: string[] = [];
-    Element.prototype.scrollIntoView = function (this: Element) {
-      scrolled.push(this.id);
-    };
-    detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-    await screen.findByRole("heading", { name: "Menu", level: 1 });
-    await waitFor(() => expect(scrolled).toEqual(["design"]));
-    expect(document.activeElement).toBe(screen.getByRole("heading", { name: t.designTitle }));
-    expect(document.getElementById("destination")).toBeTruthy();
-    expect(document.getElementById("scans")).toBeNull(); // the scans moved to the insights page
-  });
-
-  it("stays at the top for a hash it does not know", async () => {
-    vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app/codes/c1", search: "", hash: "#scans" });
-    const scroll = vi.fn();
-    Element.prototype.scrollIntoView = scroll;
-    detailApi();
-    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-    await screen.findByRole("heading", { name: "Menu", level: 1 });
-    expect(scroll).not.toHaveBeenCalled();
-  });
-
-  it("leaves a locked code read-only", async () => {
-    detailApi({ status: "locked" });
-    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-    await screen.findByRole("heading", { name: "Menu", level: 1 });
-    expect(screen.getByText(t.lockedIntro)).toBeTruthy();
-    expect(field(new RegExp(t.target)).matches(":disabled")).toBe(true); // via the fieldset
-    expect(screen.queryByRole("button", { name: t.pause })).toBeNull();
-    expect(screen.queryByRole("button", { name: t.deleteStart })).toBeNull();
-  });
-
-  describe("folder", () => {
-    const f = t.folders;
-    const folder = (id: string, name: string): Folder => ({ id, name, code_count: 1, created_at: code.created_at, updated_at: code.updated_at });
-    const folders = [folder("f2", "Events"), folder("f1", "Brunch")];
-    const open = async (overrides: Partial<DynamicCode> = {}, list = folders, role: "owner" | "viewer" = "owner") => {
-      detailApi(overrides, list, role);
-      withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-      await screen.findByRole("heading", { name: "Menu", level: 1 });
-    };
-    const picker = () => screen.findByRole("combobox", { name: f.detailTitle }) as Promise<HTMLSelectElement>;
-    const patches = () => request.mock.calls.filter(([, o]) => o?.method === "PATCH").map(([, o]) => o?.body);
-
-    it("offers No folder and each folder, with the current one chosen", async () => {
-      await open({ folder_id: "f1" });
-      const select = await picker();
-      expect(select.value).toBe("f1");
-      expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([f.none, "Events", "Brunch"]);
+  describe("the code's header on its insights page", () => {
+    it("leads to the content page, downloads, and offers the rest in its menu", async () => {
+      detailApi({}, [{ id: "f1", name: "Brunch", code_count: 1, created_at: code.created_at, updated_at: code.updated_at }]);
+      await showInsights();
+      expect(screen.getByRole("link", { name: t.pages.editContent }).getAttribute("href")).toBe("/app/codes/c1/edit");
+      moreActions();
+      expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual([
+        t.pages.editDesign,
+        t.pages.editShortLink,
+        t.folders.move,
+        t.pause,
+        t.list.delete,
+      ]);
+      await pick(t.pages.editDesign);
+      expect(push).toHaveBeenCalledWith("/app/codes/c1/design");
     });
 
-    it("moves the code into a folder and says so", async () => {
-      await open();
-      const select = await picker();
-      expect(select.value).toBe("none");
-      await act(async () => void fireEvent.change(select, { target: { value: "f1" } }));
+    it("downloads the code from a dialog named for it", async () => {
+      detailApi();
+      await showInsights();
+      await click(t.download);
+      const dialog = screen.getByRole("dialog", { name: t.pages.downloadTitle });
+      const blobs = vi.spyOn(sessionApi, "requestBlob");
+      blobs.mockClear();
+      await act(async () => void fireEvent.click(within(dialog).getByRole("button", { name: t.list.downloadSvg })));
+      expect(blobs).toHaveBeenCalledWith(expect.stringContaining("/codes/c1/image?format=svg"));
+    });
+
+    it("pauses and resumes the code from its menu, and says so", async () => {
+      detailApi();
+      await showInsights();
+      moreActions();
+      await pick(t.pause);
+      expect(patches()).toEqual([{ status: "paused" }]);
+      expect(said()).toContain(t.pausedIntro);
+      moreActions();
+      expect(screen.getByRole("menuitem", { name: t.resume })).toBeTruthy();
+    });
+
+    it("moves the code into a folder through the folder dialog, and shows the folder", async () => {
+      detailApi({}, [{ id: "f1", name: "Brunch", code_count: 0, created_at: code.created_at, updated_at: code.updated_at }]);
+      await showInsights();
+      expect(screen.getByText(t.pages.noFolder)).toBeTruthy();
+      moreActions();
+      await pick(t.folders.move);
+      const dialog = screen.getByRole("dialog");
+      fireEvent.change(within(dialog).getByRole("combobox"), { target: { value: "f1" } });
+      await act(async () => void fireEvent.click(within(dialog).getByRole("button", { name: t.folders.moveConfirm })));
       expect(patches()).toEqual([{ folder_id: "f1" }]);
-      expect(screen.getByText(format(f.movedOne, { folder: "Brunch" }))).toBeTruthy();
-      expect(((await picker()) as HTMLSelectElement).value).toBe("f1");
+      expect(said()).toContain(format(t.folders.movedOne, { folder: "Brunch" }));
+      await waitFor(() => expect(screen.getByText("Brunch")).toBeTruthy());
     });
 
-    it("takes the code out of its folder with No folder", async () => {
-      await open({ folder_id: "f1" });
-      const select = await picker(); // found outside act: state updates wait for it to end
-      await act(async () => void fireEvent.change(select, { target: { value: "none" } }));
-      expect(patches()).toEqual([{ folder_id: null }]);
-      expect(screen.getByText(f.movedOut)).toBeTruthy();
-      expect(((await picker()) as HTMLSelectElement).value).toBe("none");
+    it("deletes only after confirming, then returns to the list", async () => {
+      detailApi();
+      await showInsights();
+      moreActions();
+      await pick(t.list.delete);
+      expect(requestVoid).not.toHaveBeenCalled();
+      await act(async () => void fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: t.deleteConfirm })));
+      expect(requestVoid).toHaveBeenCalledWith("/v1/workspaces/w1/codes/c1", { method: "DELETE" });
+      expect(push).toHaveBeenCalledWith("/app");
     });
 
-    it("keeps the chosen folder out of the request when it is the current one", async () => {
-      await open({ folder_id: "f1" });
-      const select = await picker();
-      await act(async () => void fireEvent.change(select, { target: { value: "f1" } }));
+    it("keeps a locked code's changes out of reach, but not its download or deletion", async () => {
+      detailApi({ status: "locked" });
+      await showInsights();
+      expect(screen.queryByRole("link", { name: t.pages.editContent })).toBeNull();
+      moreActions();
+      expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual([t.list.delete]);
+      expect(screen.getByRole("button", { name: t.download })).toBeTruthy();
+    });
+
+    it("gives viewers the download only", async () => {
+      detailApi({}, [], "viewer");
+      await showInsights();
+      expect(screen.queryByRole("link", { name: t.pages.editContent })).toBeNull();
+      expect(screen.queryByRole("button", { name: format(t.pages.moreActions, { name: "Menu" }) })).toBeNull();
+      expect(screen.getByRole("button", { name: t.download })).toBeTruthy();
+    });
+  });
+
+  describe("short link", () => {
+    const origin = "http://localhost:8180/";
+    const open = async () => {
+      await showInsights();
+      moreActions();
+      await pick(t.pages.editShortLink);
+    };
+    const dialog = () => within(screen.getByRole("dialog", { name: t.pages.editShortLink }));
+    const save = () => act(async () => void fireEvent.click(dialog().getByRole("button", { name: t.save })));
+
+    it("opens a dialog with the origin before the field, focused in an empty field", async () => {
+      detailApi();
+      await open();
+      const input = dialog().getByRole("textbox", { name: t.slugLabel }) as HTMLInputElement;
+      expect(input.value).toBe("");
+      expect(document.activeElement).toBe(input);
+      expect(dialog().getByText(origin)).toBeTruthy();
+    });
+
+    it("closes on Cancel and on Escape without calling the API", async () => {
+      detailApi();
+      await open();
+      await act(async () => void fireEvent.click(dialog().getByRole("button", { name: t.cancel })));
+      expect(screen.queryByRole("dialog")).toBeNull();
+      moreActions();
+      await pick(t.pages.editShortLink);
+      fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+      expect(screen.queryByRole("dialog")).toBeNull();
       expect(patches()).toEqual([]);
     });
 
-    it("shows why a move failed and keeps the folder the code is in", async () => {
-      await open({ folder_id: "f1" });
-      const select = await picker(); // the folders are loaded before the API starts failing
-      request.mockImplementation(async (path, opts) => {
-        if (opts?.method === "PATCH") throw new ApiError(422, "validation_error", "folder", "folder_id");
-        throw new Error(`unexpected ${path}`);
-      });
-      await act(async () => void fireEvent.change(select, { target: { value: "f2" } }));
-      expect(screen.getAllByRole("alert").some((a) => a.textContent === plural("en", f.moveFolderGone, 1))).toBe(true);
-      expect(((await picker()) as HTMLSelectElement).value).toBe("f1");
+    it("refuses an invalid slug on its field, without calling the API", async () => {
+      detailApi();
+      await open();
+      fireEvent.change(dialog().getByRole("textbox", { name: t.slugLabel }), { target: { value: "Mario--Pizza" } });
+      await save();
+      expect(patches()).toEqual([]);
+      expect(dialog().getByRole("textbox", { name: t.slugLabel }).getAttribute("aria-invalid")).toBe("true");
     });
 
-    it("says a locked code cannot be moved", async () => {
-      await open({ folder_id: "f1" });
-      const select = await picker();
-      request.mockImplementation(async () => {
-        throw new ApiError(409, "code_locked", "locked");
-      });
-      await act(async () => void fireEvent.change(select, { target: { value: "f2" } }));
-      expect(screen.getAllByRole("alert").some((a) => a.textContent === t.errors.locked)).toBe(true);
+    it("saves the trimmed slug, closes, shows the new link and says so", async () => {
+      detailApi();
+      await open();
+      fireEvent.change(dialog().getByRole("textbox", { name: t.slugLabel }), { target: { value: "  my-shop " } });
+      request.mockImplementationOnce(async () => ({ code: { ...code, short_code: "my-shop", short_url: `${origin}my-shop` } }));
+      await save();
+      expect(request).toHaveBeenCalledWith("/v1/workspaces/w1/codes/c1", { method: "PATCH", body: { short_code: "my-shop" } });
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.getByText("localhost:8180/my-shop")).toBeTruthy();
+      expect(said()).toContain(t.linkSaved);
     });
 
-    it("leaves a locked code's folder as it is", async () => {
-      await open({ status: "locked", folder_id: "f1" });
-      expect((await picker()).matches(":disabled")).toBe(true); // via the fieldset
+    it("goes to the login page on 401", async () => {
+      detailApi();
+      await open();
+      fireEvent.change(dialog().getByRole("textbox", { name: t.slugLabel }), { target: { value: "my-shop" } });
+      request.mockRejectedValueOnce(new ApiError(401, "unauthorized", "x"));
+      await save();
+      expect(window.location.replace).toHaveBeenCalledWith(expect.stringContaining("/login"));
+    });
+  });
+
+  describe("content page", () => {
+    const showContent = async () => {
+      withSession(<CodeContent t={t} auth={auth} locale="en" />);
+      await screen.findByRole("heading", { name: t.pages.contentTitle, level: 1 });
+    };
+
+    it("changes the destination and the name, and says so", async () => {
+      detailApi();
+      await showContent();
+      expect(screen.getByRole("link", { name: `← ${t.pages.backToCode}` }).getAttribute("href")).toBe("/app/codes/c1/insights");
+      type(new RegExp(t.target), "https://example.com/new-menu");
+      type(t.name, "  Brunch menu ");
+      await click(t.pages.saveChanges);
+      expect(patches()).toEqual([{ name: "Brunch menu", target_url: "https://example.com/new-menu" }]);
+      expect(screen.getByText(t.saved)).toBeTruthy();
     });
 
-    it("is hidden for viewers, and when there are no folders to choose", async () => {
-      await open({}, folders, "viewer");
-      expect(screen.queryByRole("combobox", { name: f.detailTitle })).toBeNull();
+    it("saves nothing when nothing changed, and keeps what is not a web address on its field", async () => {
+      detailApi();
+      await showContent();
+      await click(t.pages.saveChanges);
+      expect(patches()).toEqual([]);
+      expect(screen.getByText(t.saved)).toBeTruthy();
+      type(new RegExp(t.target), "mailto:a@example.com");
+      await click(t.pages.saveChanges);
+      expect(patches()).toEqual([]);
+      expect(screen.getByText(t.errors.targetUrl)).toBeTruthy();
+      expect(document.activeElement).toBe(field(new RegExp(t.target)));
+    });
+
+    it("shows the API's reason for refusing", async () => {
+      detailApi();
+      await showContent();
+      type(new RegExp(t.target), "https://example.com/x");
+      request.mockRejectedValueOnce(new ApiError(403, "email_not_verified", "verify"));
+      await click(t.pages.saveChanges);
+      expect(screen.getAllByRole("alert").some((a) => a.textContent === t.errors.verifyFirst)).toBe(true);
+    });
+
+    it("is read-only, with why, for a locked code and for viewers", async () => {
+      detailApi({ status: "locked" });
+      await showContent();
+      expect(screen.getByText(t.lockedIntro)).toBeTruthy();
+      expect(field(new RegExp(t.target)).matches(":disabled")).toBe(true); // via the fieldset
+      expect(screen.queryByRole("button", { name: t.pages.saveChanges })).toBeNull();
       cleanup();
-      await open({}, []);
-      expect(screen.queryByRole("combobox", { name: f.detailTitle })).toBeNull();
+      detailApi({}, [], "viewer");
+      await showContent();
+      expect(screen.getByText(t.pages.viewerNote)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: t.pages.saveChanges })).toBeNull();
+    });
+
+    it("says when the code does not exist", async () => {
+      request.mockImplementation(async (path) => {
+        if (path === "/v1/me") return me;
+        throw new ApiError(404, "not_found", "gone");
+      });
+      withSession(<CodeContent t={t} auth={auth} locale="en" />);
+      expect(await screen.findByText(t.notFound)).toBeTruthy();
+    });
+  });
+
+  describe("design page", () => {
+    const showDesign = async () => {
+      withSession(<CodeDesign t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+      await screen.findByRole("heading", { name: t.designTitle, level: 1 });
+    };
+    const color = () => screen.getByRole("textbox", { name: new RegExp(t.foreground) }) as HTMLInputElement;
+
+    it("draws the code itself as the preview, saves the new design and says so", async () => {
+      detailApi();
+      const drawn = vi.spyOn(publicApi, "requestBlob");
+      await showDesign();
+      expect(screen.getByRole("region", { name: t.wizard.previewTitle })).toBeTruthy();
+      fireEvent.change(color(), { target: { value: "#0f766e" } });
+      fireEvent.blur(color());
+      await waitFor(() => expect(drawn).toHaveBeenCalledWith(expect.stringContaining(encodeURIComponent(code.short_url)), expect.anything()));
+      await click(t.pages.saveChanges);
+      expect(patches()).toEqual([{ design: { fg: "#0f766e", bg: "#ffffff" } }]);
+      expect(screen.getByText(t.saved)).toBeTruthy();
+    });
+
+    it("puts the saved design back on Reset", async () => {
+      detailApi();
+      await showDesign();
+      fireEvent.change(color(), { target: { value: "#0f766e" } });
+      fireEvent.blur(color());
+      await click(t.wizard.resetDesign);
+      expect(color().value.toLowerCase()).toBe("#000000");
+    });
+
+    it("is read-only for a locked code", async () => {
+      detailApi({ status: "locked" });
+      await showDesign();
+      expect(screen.getByText(t.lockedIntro)).toBeTruthy();
+      expect(color().matches(":disabled")).toBe(true);
+      expect(screen.queryByRole("button", { name: t.pages.saveChanges })).toBeNull();
     });
   });
 
@@ -444,7 +537,7 @@ describe("CodeDetail", () => {
     const full: Campaign = { start_date: "2026-12-01", end_date: "2026-12-31", print_run: 5000, medium: "poster", medium_other: null };
     const open = async (overrides: Partial<DynamicCode> = {}, role: "owner" | "viewer" = "owner") => {
       detailApi(overrides, [], role);
-      withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+      withSession(<CodeInsights t={t} auth={auth} locale="en" />);
       await screen.findByRole("heading", { name: "Menu", level: 1 });
     };
     const section = () => within(screen.getByRole("region", { name: c.title }));
@@ -627,7 +720,7 @@ describe("CodeDetail", () => {
       request.mockImplementation(async (path, opts) => {
         if (path === "/v1/workspaces/w1/codes/c1" && opts?.method === "PATCH") throw new ApiError(409, "code_locked", "locked");
         if (path === "/v1/workspaces/w1/codes/c1") return { code: { ...code, campaign: full, status: "locked" } };
-        if (path === "/v1/workspaces/w1/codes/c1/stats") return stats;
+        if (path.startsWith("/v1/workspaces/w1/codes/c1/stats")) return stats;
         if (path === "/v1/workspaces/w1/folders") return { folders: [] };
         return me;
       });
@@ -737,265 +830,4 @@ describe("CodeDetail", () => {
     });
   });
 
-  describe("custom short link", () => {
-    const origin = "http://localhost:8180/";
-    const rules = { min: 4, max: 40, changes: 3, slugs: 50 };
-    const custom = { short_code: "my-shop", short_url: `${origin}my-shop` };
-    const render_ = () =>
-      withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-    const open = async () => {
-      render_();
-      await screen.findByRole("heading", { name: "Menu", level: 1 });
-      await click(t.editLink);
-    };
-    const editor = () => within(screen.getByRole("form", { name: t.editLink }));
-    const patches = () => request.mock.calls.filter(([, o]) => o?.method === "PATCH");
-    const failWith = (err: ApiError) => {
-      detailApi();
-      const base = request.getMockImplementation()!;
-      request.mockImplementation(async (path, opts) => {
-        if (opts?.method === "PATCH") throw err;
-        return base(path, opts);
-      });
-    };
-    const save = () => act(async () => void fireEvent.click(editor().getByRole("button", { name: t.save })));
-    const alerts = () => screen.getAllByRole("alert").map((a) => a.textContent);
-
-    it("opens an editor with the origin in the input row, the rule as help and the note, focused in an empty field", async () => {
-      detailApi();
-      await open();
-      const input = field(t.slugLabel);
-      expect(document.activeElement).toBe(input);
-      expect(input.value).toBe(""); // a generated code is never a valid custom link
-      expect(screen.getByText(origin)).toBeTruthy();
-      expect(document.getElementById(input.getAttribute("aria-describedby")!)?.textContent).toBe(
-        format(t.slugHelp, { origin, ...rules }),
-      );
-      expect(screen.getByText(format(t.slugNote, rules))).toBeTruthy();
-      expect(screen.queryByRole("button", { name: t.editLink })).toBeNull();
-    });
-
-    it("prefills a custom link and selects it all, so typing replaces it", async () => {
-      detailApi(custom);
-      await open();
-      const input = field(t.slugLabel);
-      expect(input.value).toBe("my-shop");
-      expect([input.selectionStart, input.selectionEnd]).toEqual([0, 7]);
-    });
-
-    it("cancels without calling the API and returns focus to the edit control", async () => {
-      detailApi();
-      await open();
-      type(t.slugLabel, "changed-link");
-      await act(async () => void fireEvent.click(editor().getByRole("button", { name: t.cancel })));
-      expect(patches()).toHaveLength(0);
-      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
-      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: t.editLink })));
-    });
-
-    it("cancels on Escape", async () => {
-      detailApi();
-      await open();
-      await act(async () => void fireEvent.keyDown(field(t.slugLabel), { key: "Escape" }));
-      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
-      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: t.editLink })));
-    });
-
-    it.each([
-      ["empty", ""],
-      ["too short", "abc"],
-      ["too long", "a".repeat(41)],
-      ["uppercase", "MyShop"],
-      ["leading hyphen", "-shop"],
-      ["trailing hyphen", "shop-"],
-      ["double hyphen", "my--shop"],
-      ["a space inside", "my shop"],
-      ["a slash", "my/shop"],
-      ["non-ASCII letters", "caf\u00e9-shop"],
-    ])("refuses %s on the client and focuses the field", async (_, value) => {
-      detailApi();
-      await open();
-      type(t.slugLabel, value);
-      await save();
-      expect(patches()).toHaveLength(0);
-      expect(screen.getByText(format(t.errors.slugShape, rules))).toBeTruthy();
-      expect(field(t.slugLabel).getAttribute("aria-invalid")).toBe("true");
-      expect(document.activeElement).toBe(field(t.slugLabel));
-    });
-
-    it("announces a field error when Enter submits from inside the input", async () => {
-      detailApi();
-      await open();
-      type(t.slugLabel, "abc");
-      await act(async () => void fireEvent.submit(screen.getByRole("form", { name: t.editLink })));
-      expect(alerts()).toContain(format(t.errors.slugShape, rules));
-      expect(patches()).toHaveLength(0);
-    });
-
-    it("saves the trimmed slug, shows and copies the new link, redraws the image, and focuses the edit control", async () => {
-      detailApi();
-      const writeText = vi.fn().mockResolvedValue(undefined);
-      vi.stubGlobal("navigator", { clipboard: { writeText } });
-      await open();
-      const images = vi.mocked(sessionApi.requestBlob).mock.calls.length;
-      const drawn = vi.mocked(URL.createObjectURL).mock.calls.length;
-      type(t.slugLabel, "  my-shop  ");
-      request.mockImplementation(async (path, opts) => {
-        if (path === "/v1/me") return me;
-        if (path === "/v1/workspaces/w1/codes/c1" && opts?.method === "PATCH") return { code: { ...code, ...custom } };
-        throw new Error(`unexpected ${path}`);
-      });
-      await save();
-      expect(patches()[0]).toEqual(["/v1/workspaces/w1/codes/c1", { method: "PATCH", body: { short_code: "my-shop" } }]);
-      expect(screen.getByText(custom.short_url)).toBeTruthy();
-      expect(screen.queryByText(code.short_url)).toBeNull();
-      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
-      expect(screen.getByText(t.linkSaved).closest("[role=status]")).toBeTruthy();
-      await waitFor(() => expect(vi.mocked(sessionApi.requestBlob).mock.calls.length).toBeGreaterThan(images));
-      await waitFor(() => expect(vi.mocked(URL.createObjectURL).mock.calls.length).toBeGreaterThan(drawn));
-      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:qr"); // the old preview is released
-      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: t.editLink })));
-      await click(t.copy);
-      expect(writeText).toHaveBeenCalledWith(custom.short_url);
-    });
-
-    it("lets a paused code be edited", async () => {
-      detailApi({ status: "paused" });
-      await open();
-      expect(screen.getByRole("textbox", { name: t.slugLabel })).toBeTruthy();
-    });
-
-    it("sends one request when saved twice while busy", async () => {
-      detailApi();
-      const base = request.getMockImplementation()!;
-      let release: () => void = () => {};
-      request.mockImplementation(async (path, opts) => {
-        if (opts?.method === "PATCH") {
-          await new Promise<void>((r) => (release = r));
-          return { code: { ...code, ...custom } };
-        }
-        return base(path, opts);
-      });
-      await open();
-      type(t.slugLabel, "my-shop");
-      const form = screen.getByRole("form", { name: t.editLink });
-      await act(async () => {
-        fireEvent.submit(form);
-        fireEvent.submit(form);
-      });
-      expect(patches()).toHaveLength(1);
-      await act(async () => release());
-    });
-
-    it("goes to the login page on 401", async () => {
-      failWith(new ApiError(401, "unauthorized", "x"));
-      await open();
-      type(t.slugLabel, "my-shop");
-      await save();
-      expect(window.location.replace).toHaveBeenCalledWith(expect.stringContaining("/login"));
-    });
-
-    it("closes with focus back on Edit and no saved message when the slug is unchanged", async () => {
-      detailApi(custom);
-      await open();
-      await save();
-      expect(patches()).toHaveLength(0);
-      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
-      expect(screen.queryByText(t.linkSaved)).toBeNull();
-      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: t.editLink })));
-    });
-
-    it("clears the saved message after a moment and when Copy is used", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
-      try {
-        detailApi();
-        vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
-        const patchReturns = (slug: string) =>
-          request.mockImplementation(async (path, opts) => {
-            if (path === "/v1/me") return me;
-            if (opts?.method === "PATCH") return { code: { ...code, short_code: slug, short_url: origin + slug } };
-            throw new Error(`unexpected ${path}`);
-          });
-        await open();
-        patchReturns("my-shop");
-        type(t.slugLabel, "my-shop");
-        await save();
-        expect(screen.getByText(t.linkSaved).closest("[role=status]")).toBeTruthy();
-        await act(async () => void vi.advanceTimersByTime(2100));
-        expect(screen.queryByText(t.linkSaved)).toBeNull();
-
-        await click(t.editLink);
-        patchReturns("other-shop");
-        type(t.slugLabel, "other-shop");
-        await save();
-        expect(screen.getByText(t.linkSaved)).toBeTruthy();
-        await click(t.copy);
-        expect(screen.queryByText(t.linkSaved)).toBeNull();
-        expect(screen.getByText(t.copied)).toBeTruthy();
-        await act(async () => void vi.advanceTimersByTime(2100));
-        expect(screen.queryByText(t.linkSaved)).toBeNull(); // does not come back with the copy note
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it.each([
-      ["validation_error", 422, "short_code", "slugRefused"],
-      ["short_code_taken", 409, undefined, "slugTaken"],
-    ] as const)("shows %s at the field", async (errCode, status, errField, key) => {
-      failWith(new ApiError(status, errCode, "x", errField));
-      await open();
-      type(t.slugLabel, "my-shop");
-      await save();
-      expect(screen.getByText(t.errors[key])).toBeTruthy();
-      expect(field(t.slugLabel).getAttribute("aria-invalid")).toBe("true");
-      expect(document.activeElement).toBe(field(t.slugLabel));
-      expect(screen.getByText(code.short_url)).toBeTruthy(); // link unchanged
-    });
-
-    it.each([
-      [new ApiError(409, "short_code_change_limit", "x"), () => format(t.errors.slugChangeLimit, rules)],
-      [new ApiError(409, "short_code_workspace_limit", "x"), () => format(t.errors.slugWorkspaceLimit, rules)],
-      [new ApiError(409, "code_locked", "x"), () => t.errors.locked],
-      [new ApiError(403, "email_not_verified", "x"), () => t.errors.verifyFirst],
-      [new ApiError(429, "rate_limited", "x", undefined, 30), () => format(auth.errors.rateLimited!, { seconds: 30 })],
-      [new ApiError(500, "internal", "x"), () => t.errors.generic],
-    ])("shows %s as the form alert and keeps the editor open", async (err, message) => {
-      failWith(err);
-      await open();
-      type(t.slugLabel, "my-shop");
-      await save();
-      expect(alerts()).toContain(message());
-      expect(screen.getByRole("textbox", { name: t.slugLabel })).toBeTruthy();
-    });
-
-    it("closes the editor if the code becomes locked while it is open", async () => {
-      detailApi();
-      const base = request.getMockImplementation()!;
-      request.mockImplementation(async (path, opts) => {
-        if (opts?.method === "PATCH") return { code: { ...code, status: "locked" } };
-        return base(path, opts);
-      });
-      await open();
-      await click(t.pause);
-      expect(screen.queryByRole("textbox", { name: t.slugLabel })).toBeNull();
-      expect(screen.queryByRole("button", { name: t.editLink })).toBeNull();
-    });
-
-    it("offers no edit control on a locked code", async () => {
-      detailApi({ status: "locked" });
-      render_();
-      await screen.findByRole("heading", { name: "Menu", level: 1 });
-      expect(screen.queryByRole("button", { name: t.editLink })).toBeNull();
-    });
-  });
-
-  it("says when the code does not exist", async () => {
-    request.mockImplementation(async (path) => {
-      if (path === "/v1/me") return me;
-      throw new ApiError(404, "not_found", "nope");
-    });
-    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
-    expect(await screen.findByText(t.notFound)).toBeTruthy();
-  });
 });

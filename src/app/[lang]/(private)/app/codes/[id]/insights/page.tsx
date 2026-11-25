@@ -12,5 +12,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CodeInsightsPage() {
   const locale = await getLocale();
   const t = await getMessages();
-  return <CodeInsights t={t.codes} locale={locale} />;
+  return <CodeInsights t={t.codes} auth={t.auth} locale={locale} />;
 }

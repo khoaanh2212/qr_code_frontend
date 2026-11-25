@@ -1,26 +1,23 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { FormAlert, TextLink } from "@/components/form/form-bits";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { Captcha, type CaptchaConfig } from "@/features/auth/captcha";
 import type { AuthMessages } from "@/features/auth/form-rules";
 import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-session";
-import { useRenderPreview, type PreviewState } from "@/features/qr-editor/use-render";
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
-import { buildRenderRequest, requestKey } from "@/lib/qr/render-request";
-import { DEFAULT_DESIGN } from "@/lib/qr/types";
 import { normalizeUrlInput } from "@/lib/qr/validate";
 import { createCode } from "./api";
 import { DEFAULT_LOOK, designFromLook, lookScannable, type CodeLook } from "./design";
 import { codeFailure, type CodeField } from "./errors";
 import { clearHandoff, readHandoff } from "./handoff";
 import { LookFields } from "./look-fields";
+import { PREVIEW_ID, PreviewPane, useLookPreview } from "./design-preview";
 
 export const NAME_MAX = 100;
 
@@ -32,8 +29,6 @@ type Step = "destination" | "design";
  * of the same shape stands in for it. The design is what the preview is for.
  */
 const SAMPLE_LINK = "https://example.com/AbCd1234";
-const PREVIEW_SIZE = 512;
-const PREVIEW_ID = "code-preview";
 /** How long after a step change a click on a creating button is taken for a double click. */
 const STEP_GUARD_MS = 500;
 
@@ -160,14 +155,7 @@ export function CodeForm({
     }
   }
 
-  const request = useMemo(
-    () =>
-      step === "design" && contrastOk
-        ? buildRenderRequest({ type: "url", data: { url: SAMPLE_LINK }, design: { ...DEFAULT_DESIGN, ...look }, format: "png", size: PREVIEW_SIZE })
-        : null,
-    [step, contrastOk, look],
-  );
-  const preview = useRenderPreview(request, request ? requestKey(request) : null);
+  const { preview } = useLookPreview(look, SAMPLE_LINK, step === "design");
 
   // A refusal about a field the current step does not show (the default design, say, from the
   // first step) is said in the alert, so it is never silent.
@@ -246,7 +234,14 @@ export function CodeForm({
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10">
           {/* First in the document, so it is first on narrow screens for everyone; beside the options from `lg`. */}
-          <PreviewPane t={t} preview={preview} blocked={!contrastOk} onReset={() => setLook(DEFAULT_LOOK)} />
+          <PreviewPane
+            t={t}
+            preview={preview}
+            blocked={!contrastOk}
+            note={w.previewNote}
+            resetLabel={w.resetDesign}
+            onReset={() => setLook(DEFAULT_LOOK)}
+          />
           <form
             id={formId}
             noValidate
@@ -327,43 +322,5 @@ export function CodeForm({
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * The design drawn on a sample link: the code on white (the Paper Rule), dimmed while the next
- * drawing loads, with what it stands for and a way back to the default design.
- */
-function PreviewPane({ t, preview, blocked, onReset }: { t: T; preview: PreviewState; blocked: boolean; onReset: () => void }) {
-  const w = t.wizard;
-  const titleId = useId();
-  return (
-    <section
-      id={PREVIEW_ID}
-      aria-labelledby={titleId}
-      className="flex scroll-mt-4 flex-col items-center gap-3 lg:sticky lg:top-6 lg:order-last"
-    >
-      <h2 id={titleId} className="self-start text-sm font-semibold text-muted">
-        {w.previewTitle}
-      </h2>
-      <div className="flex aspect-square w-full max-w-64 items-center justify-center rounded-[2px] border border-border bg-white p-3 lg:max-w-none">
-        {preview.src && !blocked && (
-          // A blob: URL from the API; next/image cannot optimize it.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={preview.src}
-            alt={w.previewTitle}
-            className={`size-full object-contain transition-opacity duration-150 ${preview.pending ? "opacity-50" : ""}`}
-          />
-        )}
-      </div>
-      <p role="status" className="text-xs text-pretty text-muted">
-        {blocked ? t.lowContrast : preview.error ? w.previewFailed : w.previewNote}
-      </p>
-      <Button variant="secondary" onClick={onReset}>
-        <RotateCcw aria-hidden="true" className="size-4" />
-        {w.resetDesign}
-      </Button>
-    </section>
   );
 }
