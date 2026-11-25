@@ -10,7 +10,8 @@ import { clearThumbnailCache } from "../list/code-thumbnail";
 import { CodeInsights } from "./code-insights";
 import { presetRange } from "./range";
 
-vi.mock("next/navigation", () => ({ useParams: () => ({ id: "c1" }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useParams: () => ({ id: "c1" }), useRouter: () => ({ push }) }));
 
 const t = en.codes;
 const i = t.insights;
@@ -59,6 +60,7 @@ const serve = (answer: (path: string) => unknown = () => stats()) =>
   request.mockImplementation(async (path) => {
     if (path === "/v1/me") return me;
     if (path === CODE) return { code };
+    if (path === "/v1/workspaces/w1/folders") return { folders: [] };
     if (path.startsWith(`${CODE}/stats`)) return answer(path);
     throw new Error(`unexpected ${path}`);
   });
@@ -66,10 +68,16 @@ const statsCalls = () => request.mock.calls.map(([path]) => path).filter((path) 
 const show = () =>
   render(
     <RequireSession messages={en.session}>
-      <CodeInsights t={t} locale="en" />
+      <CodeInsights t={t} auth={en.auth} locale="en" />
     </RequireSession>,
   );
 const select = (name: string) => screen.getByRole("combobox", { name }) as HTMLSelectElement;
+/** What the alerts say (empty live regions of the header and campaign stay mounted). */
+const alerts = () =>
+  screen
+    .queryAllByRole("alert")
+    .map((a) => a.textContent ?? "")
+    .filter(Boolean);
 const tile = (name: string) => within(screen.getByRole("group", { name })).getByText(/^[\d,]+$/).textContent;
 
 beforeEach(() => {
@@ -97,7 +105,7 @@ describe("CodeInsights", () => {
     expect(tile(i.totalScans)).toBe("10");
     expect(tile(i.uniqueScans)).toBe("8");
     expect(screen.getByText("localhost:8180/Ab3dE5gH")).toBeTruthy();
-    expect(screen.getByRole("link", { name: i.edit }).getAttribute("href")).toBe("/app/codes/c1");
+    expect(screen.getByRole("link", { name: t.pages.editContent }).getAttribute("href")).toBe("/app/codes/c1/edit");
     const list = (name: string) => within(screen.getByRole("region", { name })).getAllByRole("listitem").map((li) => li.textContent);
     expect(list(i.os)).toEqual(["iOS6", "Android4"]);
     expect(list(t.countries)).toEqual(["Vietnam7", `${t.unknown}3`]); // what the API left out is "Unknown"
@@ -122,12 +130,12 @@ describe("CodeInsights", () => {
     const to = screen.getByLabelText(i.to) as HTMLInputElement;
     expect([from.value, to.value]).toEqual([presetRange(30).from, presetRange(30).to]); // starts from what is shown
     fireEvent.change(from, { target: { value: "2031-01-01" } });
-    expect(screen.getByRole("alert").textContent).toContain("366");
+    expect(alerts().join(" ")).toContain("366");
     expect(statsCalls()).toHaveLength(1);
     fireEvent.change(from, { target: { value: "2026-10-01" } });
     fireEvent.change(to, { target: { value: "2026-10-31" } });
     await waitFor(() => expect(statsCalls().at(-1)).toBe(statsPath({ from: "2026-10-01", to: "2026-10-31" })));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(alerts()).toEqual([]);
   });
 
   it("groups the same days by week and by month, in the table behind the chart", async () => {
@@ -197,7 +205,7 @@ describe("CodeInsights", () => {
     await screen.findByRole("group", { name: i.totalScans });
     fireEvent.change(select(i.range), { target: { value: "custom" } });
     fireEvent.change(screen.getByLabelText(i.from), { target: { value: "" } });
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(alerts()).toEqual([]);
     expect(statsCalls()).toHaveLength(1);
   });
 

@@ -24,6 +24,8 @@ import { useFolders } from "../folders/use-folders";
 import { CodeCard } from "./code-card";
 import { CodesToolbar, SelectionBar, statusOptions } from "./codes-toolbar";
 import { ReadyDialog } from "./ready-dialog";
+import { SlugDialog } from "../slug-dialog";
+import type { AuthMessages } from "@/features/auth/form-rules";
 import { ALL_FOLDERS, DEFAULT_QUERY, isDefaultQuery, listParams, NO_FOLDER, type CodeQuery } from "./query";
 import { useCodeActions } from "./use-code-actions";
 import { useCodes } from "./use-codes";
@@ -54,7 +56,7 @@ const SEARCH_DELAY_MS = 300;
  * a panel ("Filters" in the toolbar) that also carries the status filter, which the toolbar drops
  * on phones; phones always get the list layout, whatever was chosen on a wider screen.
  */
-export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel: string; locale: Locale }) {
+export function CodesList({ t, auth, templatesLabel, locale }: { t: T; auth: AuthMessages; templatesLabel: string; locale: Locale }) {
   const l = t.list;
   const f = t.folders;
   const workspace = usePersonalWorkspace();
@@ -164,6 +166,7 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
     ? { onCreate: leavingPanel(editing.startCreate), onRename: leavingPanel(editing.startRename), onDelete: leavingPanel(editing.askDelete) }
     : undefined;
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  const [editingLink, setEditingLink] = useState<DynamicCode | null>(null);
   const folderNames = useMemo(() => new Map(folders.folders.map((x) => [x.id, x.name])), [folders.folders]);
 
   // After a delete the cards (and the button that opened the dialog) are gone: continue from
@@ -183,6 +186,7 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
   const toggleStatus = useCallback((c: DynamicCode) => setStatus([c], c.status === "paused" ? "active" : "paused", false), [setStatus]);
   const deleteOne = useCallback((c: DynamicCode) => askDelete([c], false), [askDelete]);
   const moveOne = useCallback((c: DynamicCode) => setPendingMove({ codes: [c], bulk: false }), [setPendingMove]);
+  const editLink = useCallback((c: DynamicCode) => setEditingLink(c), [setEditingLink]);
 
   const newHref = localizePath(locale, "/app/codes/new");
   const filtered = !isDefaultQuery(applied);
@@ -391,6 +395,7 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
                       folderName={code.folder_id ? folderNames.get(code.folder_id) : undefined}
                       canEdit={canEdit}
                       onMove={canMove ? moveOne : undefined}
+                      onEditLink={canEdit ? editLink : undefined}
                     />
                   </li>
                 ))}
@@ -444,6 +449,19 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
             // The dialog was opened by the page itself, so there is no opener to return to:
             // continue from the list's heading rather than from the top of the page.
             setTimeout(() => heading.current?.focus());
+          }}
+        />
+      )}
+      {editingLink && ws && (
+        <SlugDialog
+          t={t}
+          auth={auth}
+          ws={ws}
+          code={editingLink}
+          onSaved={update}
+          onClose={(saved) => {
+            setEditingLink(null);
+            if (saved) announce(t.linkSaved);
           }}
         />
       )}

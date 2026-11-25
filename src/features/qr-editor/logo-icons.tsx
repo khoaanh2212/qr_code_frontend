@@ -68,14 +68,14 @@ export function LogoIconPicker({
   return (
     <fieldset className="min-w-0">
       <legend className="mb-1.5 text-sm font-medium">{t.design.logoIcon}</legend>
-      <div className="grid grid-cols-3 gap-2 min-[25rem]:grid-cols-5 sm:grid-cols-9">
+      <div className="grid grid-cols-5 gap-2 min-[25rem]:grid-cols-6 sm:grid-cols-9">
         {options.map((icon) => {
           const label = icon ? t.design.logoIcons[icon] : t.design.logoIconNone;
           return (
             <label
               key={icon || "none"}
               title={label}
-              className="flex min-w-0 cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-border bg-surface px-1 py-2.5 text-center text-xs font-medium text-muted transition-colors duration-150 hover:border-foreground/40 hover:text-foreground has-checked:border-accent has-checked:bg-accent-soft has-checked:text-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
+              className="flex min-w-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-border bg-surface p-2 text-center text-xs font-medium text-muted transition-colors duration-150 hover:border-foreground/40 hover:text-foreground has-checked:border-accent has-checked:bg-accent-soft has-checked:text-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
             >
               <input
                 type="radio"
@@ -89,7 +89,7 @@ export function LogoIconPicker({
                   {icon ? ICONS[icon] : <path d="M.2 .2L.8 .8M.8 .2L.2 .8" stroke="currentColor" strokeWidth=".06" />}
                 </svg>
               </span>
-              <span className="w-full truncate">{label}</span>
+              <span className="sr-only">{label}</span>
             </label>
           );
         })}

@@ -12,7 +12,6 @@ import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 import type { DynamicCode } from "@/lib/api/types";
 import type { QrFormat } from "@/lib/qr/types";
-import { CODE_ANCHORS } from "../anchors";
 import { getCode } from "../api";
 import { displayUrl } from "./code-card";
 import { CodeThumbnail } from "./code-thumbnail";
@@ -30,13 +29,19 @@ export function ReadyDialog({
   locale,
   workspaceId,
   id,
+  code: given,
+  title,
   onDownload,
   onClose,
 }: {
   t: Messages["codes"];
   locale: Locale;
   workspaceId: string;
-  id: string;
+  /** The code to load (a code just created), or `code` when the page already has it. */
+  id?: string;
+  code?: DynamicCode;
+  /** Another title than "Your code is ready" (the Download button of a code's page). */
+  title?: string;
   onDownload: (code: DynamicCode, format: QrFormat) => void;
   onClose: () => void;
 }) {
@@ -44,7 +49,7 @@ export function ReadyDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const introId = useId();
-  const [load, setLoad] = useState<Load>({ kind: "loading" });
+  const [load, setLoad] = useState<Load>(() => (given ? { kind: "ready", code: given } : { kind: "loading" }));
 
   // Opened once it is in the page. No close on cleanup: an unmounted dialog leaves the page with
   // its element, and closing here would queue a `close` event that, in development (StrictMode
@@ -55,6 +60,7 @@ export function ReadyDialog({
   }, []);
 
   useEffect(() => {
+    if (given || !id) return;
     const abort = new AbortController();
     getCode(workspaceId, id, abort.signal)
       .then((code) => setLoad(code ? { kind: "ready", code } : { kind: "failed" }))
@@ -64,7 +70,7 @@ export function ReadyDialog({
         setLoad({ kind: "failed" });
       });
     return () => abort.abort();
-  }, [workspaceId, id]);
+  }, [workspaceId, id, given]);
 
   const code = load.kind === "ready" ? load.code : null;
   return (
@@ -89,7 +95,7 @@ export function ReadyDialog({
         <div className="-mt-8 flex flex-col gap-1">
           {/* A code that cannot be shown is not announced as ready. */}
           <h2 id={titleId} className="text-lg font-semibold text-balance">
-            {load.kind === "failed" ? t.loadFailed : r.title}
+            {load.kind === "failed" ? t.loadFailed : (title ?? r.title)}
           </h2>
           <p id={introId} className="text-sm text-pretty text-muted">
             {load.kind === "failed" ? "" : r.intro}
@@ -112,7 +118,7 @@ export function ReadyDialog({
               </Button>
             </div>
             <Link
-              href={`${localizePath(locale, `/app/codes/${encodeURIComponent(code.id)}`)}#${CODE_ANCHORS.design}`}
+              href={localizePath(locale, `/app/codes/${encodeURIComponent(code.id)}/design`)}
               className="inline-flex min-h-11 items-center gap-2 text-sm font-medium underline underline-offset-4 hover:no-underline"
             >
               <Palette aria-hidden="true" className="size-4" />

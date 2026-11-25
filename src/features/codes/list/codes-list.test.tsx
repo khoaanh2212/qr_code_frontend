@@ -105,7 +105,7 @@ afterEach(() => {
 const show = (locale: "en" | "vi" = "en") =>
   render(
     <RequireSession messages={en.session}>
-      <CodesList t={t} templatesLabel="Manage templates" locale={locale} />
+      <CodesList t={t} auth={en.auth} templatesLabel="Manage templates" locale={locale} />
     </RequireSession>,
   );
 const card = (name: string) => screen.getByRole("article", { name });
@@ -127,12 +127,12 @@ describe("CodesList card shortcuts", () => {
     show();
     const first = await screen.findByRole("article", { name: "Menu" });
     const link = (name: string) => within(first).getByRole("link", { name });
-    expect(link(format(l.editDesignOf, { name: "Menu" })).getAttribute("href")).toBe("/app/codes/c1#design");
+    expect(link(format(l.editDesignOf, { name: "Menu" })).getAttribute("href")).toBe("/app/codes/c1/design");
     // Statistics and destination are offered in words (the count, "Change"); their icons repeat
     // them for the mouse only, like the thumbnail: no second stop for the keyboard or a reader.
     for (const [name, target] of [
       [format(l.statsOf, { name: "Menu" }), "/app/codes/c1/insights"],
-      [format(l.editDestinationOf, { name: "Menu" }), "/app/codes/c1#destination"],
+      [format(l.editDestinationOf, { name: "Menu" }), "/app/codes/c1/edit"],
     ]) {
       const icon = within(first).getByTitle(name); // hidden from the accessibility tree: found by its tooltip
       expect(icon.getAttribute("href")).toBe(target);
@@ -199,7 +199,7 @@ describe("CodesList greeting a new code", () => {
     const dialog = await screen.findByRole("dialog", { name: r.title });
     expect(await within(dialog).findByText("localhost:8180/Nn9wCode")).toBeTruthy();
     expect(replaceState).toHaveBeenCalledWith(window.history.state, "", "/vi/app"); // only `ready` goes
-    expect(within(dialog).getByRole("link", { name: r.customize }).getAttribute("href")).toBe(`/app/codes/${NEW}#design`);
+    expect(within(dialog).getByRole("link", { name: r.customize }).getAttribute("href")).toBe(`/app/codes/${NEW}/design`);
     const blobs = vi.spyOn(sessionApi, "requestBlob");
     blobs.mockClear();
     await act(async () => void fireEvent.click(within(dialog).getByRole("button", { name: l.downloadSvg })));
@@ -706,5 +706,35 @@ describe("CodesList bulk actions", () => {
     fireEvent.change(status, { target: { value: "all" } });
     await screen.findByRole("article", { name: "Menu" });
     expect((screen.getByRole("checkbox", { name: format(l.selectCode, { name: "Menu" }) }) as HTMLInputElement).checked).toBe(false);
+  });
+});
+
+describe("CodesList short link from the row menu", () => {
+  beforeEach(() => {
+    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    };
+  });
+
+  it("edits a code's short link in a dialog and shows the new link on its card", async () => {
+    serve({ [LIST]: { codes: [code({})], next_cursor: null } }, (_id, body) => ({ ...code({}), ...(body as object), short_url: "http://localhost:8180/my-shop" }));
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    openMenu("Menu");
+    await pick(t.pages.editShortLink);
+    const dialog = screen.getByRole("dialog", { name: t.pages.editShortLink });
+    fireEvent.change(within(dialog).getByRole("textbox", { name: t.slugLabel }), { target: { value: "my-shop" } });
+    await act(async () => void fireEvent.click(within(dialog).getByRole("button", { name: t.save })));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(within(card("Menu")).getByText("localhost:8180/my-shop")).toBeTruthy();
+    expect(screen.getByText(t.linkSaved)).toBeTruthy();
+  });
+
+  it("offers no short link change for a locked code", async () => {
+    serve({ [LIST]: { codes: [code({ status: "locked" })], next_cursor: null } });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    openMenu("Menu");
+    expect(screen.getByRole("menuitem", { name: t.pages.editShortLink }).getAttribute("aria-disabled")).toBe("true");
   });
 });

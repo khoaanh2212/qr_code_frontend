@@ -336,11 +336,12 @@ function Choices<V extends string>({
   return (
     <fieldset className="min-w-0">
       <legend className="mb-1.5 text-sm font-medium">{legend}</legend>
-      <div className="grid grid-cols-2 gap-2 min-[25rem]:grid-cols-4 sm:grid-cols-6 lg:grid-cols-7">
+      <div className="grid grid-cols-4 gap-2 min-[25rem]:grid-cols-5 sm:grid-cols-7 lg:grid-cols-8">
         {values.map((v) => (
           <label
             key={v}
-            className="flex min-w-0 cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-border bg-surface px-1 py-2.5 text-center text-xs font-medium text-muted transition-colors duration-150 hover:border-foreground/40 hover:text-foreground has-disabled:cursor-not-allowed has-disabled:opacity-40 has-checked:border-accent has-checked:bg-accent-soft has-checked:text-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
+            title={label(v)}
+            className="flex min-w-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-border bg-surface p-2 text-center text-xs font-medium text-muted transition-colors duration-150 hover:border-foreground/40 hover:text-foreground has-disabled:cursor-not-allowed has-disabled:opacity-40 has-checked:border-accent has-checked:bg-accent-soft has-checked:text-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
           >
             <input
               type="radio"
@@ -354,7 +355,7 @@ function Choices<V extends string>({
             <span aria-hidden="true" className="text-foreground">
               {thumb(v)}
             </span>
-            <span className="w-full truncate">{label(v)}</span>
+            <span className="sr-only">{label(v)}</span>
           </label>
         ))}
       </div>

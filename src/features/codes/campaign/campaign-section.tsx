@@ -5,7 +5,7 @@ import { FormAlert } from "@/components/form/form-bits";
 import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { TextField } from "@/components/ui/text-field";
-import { Section, SavedNote } from "@/features/account/section";
+import { SavedNote } from "@/features/account/section";
 import type { AuthMessages } from "@/features/auth/form-rules";
 import { redirectToLogin } from "@/features/auth/require-session";
 import { format } from "@/i18n/config";
@@ -49,6 +49,7 @@ type Props = {
  */
 export function CampaignSection({ t, auth, locale, ws, code, canEdit, onSaved }: Props) {
   const c = t.campaign;
+  const headingId = useId();
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState<string>();
   const [error, setError] = useState<string>();
@@ -79,7 +80,13 @@ export function CampaignSection({ t, auth, locale, ws, code, canEdit, onSaved }:
   }
 
   return (
-    <Section title={c.title} description={c.intro}>
+    <section aria-labelledby={headingId} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5">
+      <div className="flex flex-col gap-1">
+        <h2 id={headingId} className="text-base font-semibold">
+          {c.title}
+        </h2>
+        <p className="text-sm text-pretty text-muted">{c.intro}</p>
+      </div>
       {open ? (
         <CampaignForm t={t} auth={auth} locale={locale} ws={ws} code={code} campaign={campaign} onSaved={onSaved} onClose={close} />
       ) : (
@@ -105,7 +112,7 @@ export function CampaignSection({ t, auth, locale, ws, code, canEdit, onSaved }:
           <SavedNote message={note} />
         </>
       )}
-    </Section>
+    </section>
   );
 }
 

@@ -759,7 +759,6 @@ export const de = {
     insights: {
       title: "Statistik",
       view: "Statistik ansehen",
-      edit: "Code bearbeiten",
       created: "Erstellt am {date}",
       totalScans: "Scans gesamt",
       uniqueScans: "Eindeutige Scans",
@@ -840,6 +839,19 @@ export const de = {
         video: "Video",
         other: "Sonstiges",
       },
+    },
+    pages: {
+      contentTitle: "Inhalt bearbeiten",
+      contentIntro: "Ändere, wohin der Code führt und wie er heißt. Gedruckte Codes folgen sofort.",
+      backToCode: "Zurück zum Code",
+      saveChanges: "Änderungen speichern",
+      viewerNote: "Nur Bearbeiter dieses Workspace können den Code ändern.",
+      moreActions: "Weitere Aktionen für {name}",
+      editContent: "Inhalt bearbeiten",
+      editDesign: "Design bearbeiten",
+      editShortLink: "Kurzlink bearbeiten",
+      downloadTitle: "Code herunterladen",
+      noFolder: "Ohne Ordner",
     },
     folders: {
       nav: "Ordner",
