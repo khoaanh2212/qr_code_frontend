@@ -14,10 +14,12 @@ interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
   error?: string;
   /** Rendered at the end of the input row (e.g. the show-password toggle). */
   trailing?: ReactNode;
+  /** A fixed, non-editable prefix attached to the input (e.g. the origin of a link). */
+  leading?: ReactNode;
 }
 
 /** Label, input, help and error, wired with aria-describedby (DESIGN.md "Inputs / Fields"). */
-export function TextField({ label, help, error, required, trailing, className = "", ...input }: FieldProps) {
+export function TextField({ label, help, error, required, trailing, leading, className = "", ...input }: FieldProps) {
   const id = useId();
   // The error replaces the help while it shows, so a screen reader hears the rule once.
   const showHelp = Boolean(help) && !error;
@@ -33,13 +35,18 @@ export function TextField({ label, help, error, required, trailing, className = 
           </span>
         )}
       </label>
-      <div className="relative">
+      <div className={`relative ${leading ? "flex" : ""}`}>
+        {leading && (
+          <span className="flex max-w-[55%] shrink items-center rounded-l-md border border-r-0 border-control bg-foreground/5 px-3 font-mono text-sm break-all text-muted">
+            {leading}
+          </span>
+        )}
         <input
           id={id}
           required={required}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={`${control} ${trailing ? "pr-12" : ""} ${className}`}
+          className={`${control} ${leading ? "min-w-0 flex-1 rounded-l-none" : ""} ${trailing ? "pr-12" : ""} ${className}`}
           {...input}
         />
         {trailing && <div className="absolute inset-y-0 right-0 flex items-center">{trailing}</div>}
@@ -50,7 +57,7 @@ export function TextField({ label, help, error, required, trailing, className = 
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="text-xs font-medium text-danger">
+        <p id={`${id}-error`} role="alert" className="text-xs font-medium text-danger">
           {error}
         </p>
       )}

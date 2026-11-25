@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, Pencil } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { codeFailure, type CodeField } from "./errors";
 
 import { StatusBadge } from "./status-badge";
 import { ScansSection } from "./code-scans";
+import { SlugEditor } from "./slug-editor";
 
 type T = Messages["codes"];
 type Props = {
@@ -98,7 +99,7 @@ export function CodeDetail({ t, generator, templates, auth, locale }: Props) {
         <h1 className="min-w-0 text-2xl font-semibold break-words">{code.name || t.untitled}</h1>
         <StatusBadge status={code.status} t={t} />
       </header>
-      <CodeCard t={t} ws={ws} code={code} />
+      <CodeCard t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
       <div>
         <DestinationSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <DesignSection t={t} generator={generator} templates={templates} auth={auth} ws={ws} code={code} onSaved={setCode} />
@@ -111,14 +112,34 @@ export function CodeDetail({ t, generator, templates, auth, locale }: Props) {
 }
 
 /** The printable code (it holds the short link), the link itself, and downloads. */
-function CodeCard({ t, ws, code }: { t: T; ws: string; code: DynamicCode }) {
+function CodeCard({ t, auth, ws, code, onSaved }: EditProps) {
   const [src, setSrc] = useState<string | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloadError, setDownloadError] = useState<string>();
+  const [editing, setEditing] = useState(false);
+  const [linkSaved, setLinkSaved] = useState(false);
+  const editRef = useRef<HTMLButtonElement>(null);
+  const editorOpen = editing && code.status !== "locked"; // a lock closes the editor
+  const returnFocus = useRef(false);
 
-  // The image follows the design: a saved restyle draws it again.
-  const designKey = JSON.stringify(code.design);
+  // Back from the editor (saved or cancelled): the control that opened it takes focus again.
+  useEffect(() => {
+    if (!editing && returnFocus.current) {
+      returnFocus.current = false;
+      editRef.current?.focus();
+    }
+  }, [editing]);
+
+  // The "link updated" note goes away like the "copied" one.
+  useEffect(() => {
+    if (!linkSaved) return;
+    const id = setTimeout(() => setLinkSaved(false), 2000);
+    return () => clearTimeout(id);
+  }, [linkSaved]);
+
+  // The image follows the design and the short link it encodes: a saved change draws it again.
+  const designKey = JSON.stringify(code.design) + code.short_url;
   useEffect(() => {
     let url: string | null = null;
     let cancelled = false;
@@ -164,6 +185,7 @@ function CodeCard({ t, ws, code }: { t: T; ws: string; code: DynamicCode }) {
             <Button
               variant="secondary"
               onClick={async () => {
+                setLinkSaved(false);
                 try {
                   await navigator.clipboard.writeText(code.short_url);
                   setCopied(true);
@@ -176,8 +198,35 @@ function CodeCard({ t, ws, code }: { t: T; ws: string; code: DynamicCode }) {
               <Copy aria-hidden="true" className="size-4" />
               {t.copy}
             </Button>
+            {code.status !== "locked" && !editorOpen && (
+              <Button
+                ref={editRef}
+                variant="secondary"
+                onClick={() => {
+                  setLinkSaved(false);
+                  setEditing(true);
+                }}
+              >
+                <Pencil aria-hidden="true" className="size-4" />
+                {t.editLink}
+              </Button>
+            )}
           </span>
-          <SavedNote message={copied ? t.copied : undefined} />
+          <SavedNote message={copied ? t.copied : linkSaved ? t.linkSaved : undefined} />
+          {editorOpen && (
+            <SlugEditor
+              t={t}
+              auth={auth}
+              ws={ws}
+              code={code}
+              onSaved={onSaved}
+              onClose={(saved) => {
+                returnFocus.current = true;
+                setLinkSaved(saved === true);
+                setEditing(false);
+              }}
+            />
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {FORMATS.map((fmt) => (

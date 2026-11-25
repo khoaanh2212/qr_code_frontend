@@ -222,7 +222,15 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     removed; the API has no single "off"). Every change asks for the password again (or Google for
     an account without one) when the API's 5-minute step-up has lapsed, then runs again; creating
     a passkey asks for a second click instead, as the browser wants a fresh gesture.
-16. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
+16. ~~Custom short link~~ Done (backend PLAN item 53, `src/features/codes/slug-editor.tsx`): on a
+    dynamic code's page, "Edit link" sets the end of the short link (4-40 lowercase letters,
+    digits and single hyphens) through `PATCH .../codes/{id}` (`short_code`). The origin is shown
+    as a fixed prefix, a generated code opens with an empty field and a custom one is prefilled
+    and selected. The page warns that printed codes keep working (old links redirect forever) and
+    states the limits (3 changes per code, 50 custom links per workspace), mirrored in
+    `slug-rules.ts`; taken, refused and over-limit links get translated errors. Enter saves,
+    Escape cancels, and the code image is redrawn after a change.
+17. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
     server so the generator is in the prerendered HTML instead of a skeleton (better LCP and first
     input). It needs a server-side API URL (e.g. `API_INTERNAL_URL=http://api:8080` in compose),
     a fallback to today's browser fetch when the API is unreachable at build or render time
