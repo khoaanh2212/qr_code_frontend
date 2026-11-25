@@ -52,6 +52,8 @@ const show = async (methods: string[] | ApiError, ...rest: Array<unknown | ApiEr
   api(methods, ...rest);
   render(<VerifyLogin t={t} locale="vi" />);
   await waitFor(() => expect(request).toHaveBeenCalledWith("/v1/auth/login/mfa", { method: "GET" }));
+  // The status has been applied: the loading line is gone.
+  await waitFor(() => expect(screen.queryByText(v.loading)).toBeNull());
 };
 const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const click = (name: string) => act(async () => void fireEvent.click(screen.getByRole("button", { name })));
