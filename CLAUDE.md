@@ -103,6 +103,9 @@ CI of PR #21               [█████████████████�
   results, task notifications. Say the numbers are estimates. Never read an agent's transcript
   (output) file to measure progress.
 - Show the bars again when the user asks, when an agent finishes, and in any longer update.
+- Refresh about every 30 seconds while anything runs (user's rule, 2026-11-25): start a
+  30-second background timer (`sleep 30` run in the background); each time it fires, post the
+  updated bars and start the next timer. Stop once nothing is running.
 
 ## ECC skills (mandatory)
 
