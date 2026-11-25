@@ -270,3 +270,53 @@ describe("CopyButton", () => {
     expect(screen.getByRole("status").textContent).toBe("Copy failed.");
   });
 });
+
+describe("Select", () => {
+  const options = [
+    { value: "", label: "Not set" },
+    { value: "poster", label: "Poster", group: "Print" },
+    { value: "flyer", label: "Flyer", group: "Print" },
+    { value: "website", label: "Website", group: "Digital" },
+    { value: "other", label: "Other" },
+  ] as const;
+
+  it("puts grouped options under their group and leaves the others outside, in order", () => {
+    const onChange = vi.fn();
+    render(<Select label="Medium" value="" options={options} onChange={onChange} />);
+    const select = screen.getByRole("combobox", { name: "Medium" }) as HTMLSelectElement;
+    expect([...select.children].map((el) => (el instanceof HTMLOptGroupElement ? `[${el.label}]` : el.textContent))).toEqual([
+      "Not set",
+      "[Print]",
+      "[Digital]",
+      "Other",
+    ]);
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "Poster", "Flyer", "Website", "Other"]);
+    expect([...select.querySelectorAll("optgroup")].map((g) => g.children.length)).toEqual([2, 1]);
+    fireEvent.change(select, { target: { value: "website" } });
+    expect(onChange).toHaveBeenCalledWith("website");
+  });
+
+  it("stays a flat list without groups, and stacks the label above when asked", () => {
+    const flat = options.map(({ value, label }) => ({ value, label }));
+    const { container } = render(<Select label="Medium" stacked value="poster" options={flat} onChange={() => {}} />);
+    expect(container.querySelector("optgroup")).toBeNull();
+    expect((screen.getByRole("combobox", { name: "Medium" }) as HTMLSelectElement).value).toBe("poster");
+    expect(container.firstElementChild?.className).toContain("flex-col");
+    cleanup();
+    // The default keeps the label beside the select, as every toolbar has it.
+    const beside = render(<Select label="Medium" value="poster" options={flat} onChange={() => {}} />);
+    expect(beside.container.firstElementChild?.className).not.toContain("flex-col");
+  });
+
+  it("keeps two runs of the same group apart", () => {
+    const split = [
+      { value: "a", label: "A", group: "Print" },
+      { value: "b", label: "B" },
+      { value: "c", label: "C", group: "Print" },
+    ] as const;
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<Select label="Medium" value="a" options={split} onChange={() => {}} />);
+    expect(document.querySelectorAll("optgroup")).toHaveLength(2);
+    expect(error).not.toHaveBeenCalled(); // no duplicate React keys
+  });
+});

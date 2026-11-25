@@ -244,7 +244,22 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     reported, codes not moved stay selected) and a folder select on the code's page. Viewers can
     filter but see no folder or move controls. Folder names are rendered as text and long ones are
     cut with the full name in a tooltip.
-18. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
+18. ~~Campaign details~~ Done (backend PLAN item 55, `src/features/codes/campaign`): a "Campaign
+    details" section on the code's page, between Status and Folder: start and end date, print run
+    and medium (12 print and 5 digital media in a grouped select, or "Other" with a label of up to
+    40 characters). They are notes that never change where the code leads. Everyone in the
+    workspace reads them; editors of an unlocked code get "Add details" / "Edit details", which
+    swaps the list for a form (native date pickers, a numeric text field for the print run, the
+    label question only for "Other", "Remove all details" behind a confirmation). The form sends
+    the whole campaign (the API replaces it; `null` when every field is empty), nothing when
+    nothing changed, and checks the same rules as the server first (`campaign/rules.ts`: dates
+    between 2000 and 2100, end not before start, print run 1 to 100,000,000, label without line
+    breaks or invisible characters); the API's `campaign.<field>` refusals land on their field. A
+    code locked meanwhile is reloaded and the section turns read-only. Dates are calendar days:
+    they are formatted in UTC so they never shift with the reader's time zone, and numbers follow
+    the locale. The label is rendered as text. `Select` gained option groups (`<optgroup>`) and a
+    stacked label for forms.
+19. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
     server so the generator is in the prerendered HTML instead of a skeleton (better LCP and first
     input). It needs a server-side API URL (e.g. `API_INTERNAL_URL=http://api:8080` in compose),
     a fallback to today's browser fetch when the API is unreachable at build or render time
