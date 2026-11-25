@@ -633,7 +633,8 @@ describe("CodesList bulk actions", () => {
     expect(screen.getByText(t.errors.verifyFirst)).toBeTruthy();
   });
 
-  it("sends at most 100 codes per bulk request", async () => {
+  // These render a hundred cards and more: a second or so here, near five on a CI runner.
+  it("sends at most 100 codes per bulk request", { timeout: 20_000 }, async () => {
     const many = Array.from({ length: 150 }, (_, i) => code({ id: `id${i}`, name: `Code ${i}` }));
     serve({ [LIST]: { codes: many, next_cursor: null } }, undefined, allOk(many));
     show();
@@ -644,7 +645,8 @@ describe("CodesList bulk actions", () => {
     expect(screen.getByText(plural("en", l.pausedMany, 150))).toBeTruthy();
   });
 
-  it("stops at the bulk limit, says when to retry, and keeps the rest selected", async () => {
+  // These render a hundred cards and more: a second or so here, near five on a CI runner.
+  it("stops at the bulk limit, says when to retry, and keeps the rest selected", { timeout: 20_000 }, async () => {
     const many = Array.from({ length: 150 }, (_, i) => code({ id: `id${i}`, name: `Code ${i}` }));
     let calls = 0;
     serve({ [LIST]: { codes: many, next_cursor: null } }, undefined, (b) => {
