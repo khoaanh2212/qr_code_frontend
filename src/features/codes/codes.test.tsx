@@ -54,6 +54,10 @@ const stats: CodeStats = {
   from: "2026-11-01",
   to: "2026-11-30",
   scans: 3,
+  bucket: "day",
+  unique_scans_kind: "distinct_per_day",
+  series: [],
+  cities: [],
   daily: days,
   countries: [{ value: "VN", scans: 2 }], // the third scan has no known country
   devices: [{ value: "mobile", scans: 3 }],

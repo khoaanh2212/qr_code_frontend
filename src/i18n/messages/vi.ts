@@ -785,6 +785,8 @@ export const vi = {
       periodTip: "{period}: {count} lượt quét, {unique} không trùng",
       os: "Hệ điều hành",
       browsers: "Trình duyệt",
+      cities: "Thành phố",
+      cityCountry: "{city}, {country}",
       other: "Khác",
       emptyTitle: "Chưa có lượt quét trong khoảng này",
       emptyIntro: "Hãy in mã hoặc chia sẻ link: lượt quét sẽ hiện ở đây sau vài phút.",

@@ -9,6 +9,8 @@ import type {
   CodesPage,
   CodeSort,
   CodeStats,
+  StatsBucket,
+  StatsDataset,
   CodeStatus,
   DynamicCode,
 } from "@/lib/api/types";
@@ -94,6 +96,23 @@ export async function deleteCode(workspaceId: string, id: string): Promise<void>
 export async function codeImage(workspaceId: string, id: string, format: QrFormat, size = 1024): Promise<Blob> {
   const q = new URLSearchParams({ format, size: String(size) });
   return sessionApi.requestBlob(`${one(workspaceId, id)}/image?${q}`);
+}
+
+/** What one statistics download holds: a period, the grouping of its series and the table. */
+export interface StatsExport {
+  from: string;
+  to: string;
+  bucket: StatsBucket;
+  dataset: StatsDataset;
+}
+
+/**
+ * One table of a code's statistics as a CSV file (backend PLAN, item 56). The API escapes cells a
+ * spreadsheet would run and limits downloads per account (429 `rate_limited`).
+ */
+export async function exportCodeStats(workspaceId: string, id: string, what: StatsExport): Promise<Blob> {
+  const q = new URLSearchParams({ from: what.from, to: what.to, bucket: what.bucket, dataset: what.dataset });
+  return sessionApi.requestBlob(`${one(workspaceId, id)}/stats/export?${q}`, {}, "text/csv");
 }
 
 /** A code's scans over a period of UTC days, both ends included (at most 366 days). */

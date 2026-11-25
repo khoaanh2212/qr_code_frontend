@@ -64,9 +64,9 @@ export class ApiClient {
     }
   }
 
-  /** For binary responses (rendered images). */
-  async requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
-    const res = await this.send(path, options, "image/*");
+  /** For file responses: rendered images by default, or what `accept` names (a CSV export). */
+  async requestBlob(path: string, options: RequestOptions = {}, accept = "image/*"): Promise<Blob> {
+    const res = await this.send(path, options, accept);
     return res.blob();
   }
 

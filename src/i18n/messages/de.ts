@@ -785,6 +785,8 @@ export const de = {
       periodTip: "{period}: {count} Scans, {unique} eindeutig",
       os: "Betriebssysteme",
       browsers: "Browser",
+      cities: "Städte",
+      cityCountry: "{city}, {country}",
       other: "Sonstige",
       emptyTitle: "Keine Scans in diesem Zeitraum",
       emptyIntro: "Drucke den Code oder teile seinen Link: Scans erscheinen hier innerhalb von Minuten.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreVertical, type LucideIcon } from "lucide-react";
+import { ChevronDown, MoreVertical, type LucideIcon } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 /**
@@ -28,10 +28,18 @@ export interface MenuProps {
   icon?: LucideIcon;
   /** Which edge of the button the list lines up with. */
   align?: "start" | "end";
+  /** `labelled` shows the label next to the icon, as a secondary button (a menu of downloads). */
+  variant?: "icon" | "labelled";
   children: ReactNode;
 }
 
-export function Menu({ label, icon: Icon = MoreVertical, align = "end", children }: MenuProps) {
+const TRIGGER = {
+  icon: "size-11 justify-center text-muted hover:text-foreground aria-expanded:text-foreground",
+  // The secondary button of DESIGN.md: Control Edge outline, 44px tall.
+  labelled: "min-h-11 gap-2 border border-control bg-surface px-3 text-sm font-medium",
+} as const;
+
+export function Menu({ label, icon: Icon = MoreVertical, align = "end", variant = "icon", children }: MenuProps) {
   const [open, setOpen] = useState<false | "first" | "last">(false);
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -107,16 +115,22 @@ export function Menu({ label, icon: Icon = MoreVertical, align = "end", children
       <button
         ref={button}
         type="button"
-        aria-label={label}
-        title={label}
+        aria-label={variant === "icon" ? label : undefined}
+        title={variant === "icon" ? label : undefined}
         aria-haspopup="menu"
         aria-expanded={open !== false}
         aria-controls={open ? id : undefined}
         onClick={() => (open ? close(false) : setOpen("first"))}
         onKeyDown={onButtonKey}
-        className="inline-flex size-11 items-center justify-center rounded-md text-muted transition-colors duration-150 hover:bg-foreground/5 hover:text-foreground aria-expanded:bg-foreground/5 aria-expanded:text-foreground"
+        className={`inline-flex items-center rounded-md transition-colors duration-150 hover:bg-foreground/5 aria-expanded:bg-foreground/5 ${TRIGGER[variant]}`}
       >
-        <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
+        <Icon aria-hidden="true" className={variant === "icon" ? "size-5" : "size-4"} strokeWidth={1.75} />
+        {variant === "labelled" && (
+          <>
+            {label}
+            <ChevronDown aria-hidden="true" className="size-4 text-muted" strokeWidth={1.75} />
+          </>
+        )}
       </button>
       {open && (
         <MenuContext value={{ close }}>

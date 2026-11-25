@@ -306,12 +306,17 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     days, grouped by day, week (from Monday) or month. Grouping happens in the browser from the
     API's days (`insights/range.ts`), so it asks the API for nothing; a group's unique count is
     the sum of its days'. A stacked bar chart (unique in Signal Teal, repeated in its tint, with
-    a legend and a table behind it) and four ranked lists: operating systems, countries, devices,
-    browsers. "Download CSV" exports the periods shown (cells quoted, formula-like cells
-    defused), made in the browser. The code's page keeps destination, design, status, folder and
-    deletion and links to its insights; the list's scan count and statistics icon lead there
-    (the `#scans` anchor is gone). Not built, each needing the backend first: top cities (PLAN
-    item 56) and resetting scans. Campaign details moved here with item 23.
+    a legend and a table behind it) and ranked lists: countries, cities, devices, operating
+    systems, browsers. Cities (backend PLAN item 56) show under their country's name, since
+    names repeat across countries; the list is left out while the API reports none (it needs
+    the backend's `SCAN_CITY_HEADER`), and the other lists then sit two by two. "Download CSV"
+    is a menu of six tables (scans over time in the grouping shown, countries, cities, devices,
+    operating systems, browsers), each downloaded from the API's export
+    (`GET .../stats/export`, `exportCodeStats`): the API escapes formula-like cells and limits
+    downloads per account, and the headings are English in every language. The code's page keeps
+    destination, design, status, folder and deletion and links to its insights; the list's scan
+    count and statistics icon lead there (the `#scans` anchor is gone). Not built, needing the
+    backend first: resetting scans. Campaign details moved here with item 23.
 23. ~~Pages of a code~~ Done (`src/features/codes/pages`, `insights/code-header.tsx`): the single
     page that held everything about a code is split as the established QR generators split it.
     The insights page is the code's home (`/app/codes/{id}` leads there): its header carries the

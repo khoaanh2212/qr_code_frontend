@@ -51,6 +51,21 @@ describe("Checkbox", () => {
 });
 
 describe("Menu", () => {
+  it("can show its label on the button, which then names it without a tooltip", () => {
+    render(
+      <Menu label="Download CSV" variant="labelled">
+        <MenuItem onSelect={() => {}}>Countries</MenuItem>
+      </Menu>,
+    );
+    const button = screen.getByRole("button", { name: "Download CSV" });
+    expect(button.textContent).toBe("Download CSV");
+    expect(button.getAttribute("aria-label")).toBeNull();
+    expect(button.getAttribute("title")).toBeNull();
+    expect(button.getAttribute("aria-haspopup")).toBe("menu");
+    fireEvent.click(button);
+    expect(screen.getByRole("menu", { name: "Download CSV" })).toBeTruthy();
+  });
+
   function Example({ onPause = vi.fn() }: { onPause?: () => void }) {
     return (
       <Menu label="Actions for Menu">
