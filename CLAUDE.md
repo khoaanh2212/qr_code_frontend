@@ -86,27 +86,6 @@ not headless: no `mcp__playwright__*` and no ad-hoc headless scripts.
   and never act on third-party sites while testing.
 - Report what was checked, with the screenshots, before committing.
 
-## Agent progress (mandatory)
-
-User's rule (2026-11-25): while any subagent, agent team or background task runs, every update to
-the user shows a progress bar for each one, for example:
-
-```
-A1 backend – TDD (agent)   [██████████████░░░░░░] ~70%  writing service tests
-Go review (agent)          [████░░░░░░░░░░░░░░░░] ~20%  reading the diff
-CI of PR #21               [████████████████████] 100% ✅ green
-```
-
-- One line per running agent or task: its name, the bar with a percentage, and the current step.
-  A finished one shows 100% with its result (✅ done, ❌ failed); drop it once reported.
-- Estimate from what can be observed: files changed in the working tree, test and command
-  results, task notifications. Say the numbers are estimates. Never read an agent's transcript
-  (output) file to measure progress.
-- Show the bars again when the user asks, when an agent finishes, and in any longer update.
-- Refresh about every 30 seconds while anything runs (user's rule, 2026-11-25): start a
-  30-second background timer (`sleep 30` run in the background); each time it fires, post the
-  updated bars and start the next timer. Stop once nothing is running.
-
 ## ECC skills (mandatory)
 
 Load the matching skill before starting work of that kind.
