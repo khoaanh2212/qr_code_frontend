@@ -117,6 +117,64 @@ const allOk = (codes: ListedCode[]) => (b: Bulk): BulkResult[] =>
     return b.action === "delete" ? { id, result: "ok" } : { id, result: "ok", code: { ...c, status: b.action === "pause" ? "paused" : "active" } };
   });
 
+describe("CodesList card shortcuts", () => {
+  it("links straight to a code's statistics, destination and design, and downloads from the thumbnail", async () => {
+    serve({ [LIST]: { codes: [code({})], next_cursor: null } });
+    show();
+    const first = await screen.findByRole("article", { name: "Menu" });
+    const link = (name: string) => within(first).getByRole("link", { name });
+    expect(link(format(l.editDesignOf, { name: "Menu" })).getAttribute("href")).toBe("/app/codes/c1#design");
+    // Statistics and destination are offered in words (the count, "Change"); their icons repeat
+    // them for the mouse only, like the thumbnail: no second stop for the keyboard or a reader.
+    for (const [name, target] of [
+      [format(l.statsOf, { name: "Menu" }), "/app/codes/c1#scans"],
+      [format(l.editDestinationOf, { name: "Menu" }), "/app/codes/c1#destination"],
+    ]) {
+      const icon = within(first).getByTitle(name); // hidden from the accessibility tree: found by its tooltip
+      expect(icon.getAttribute("href")).toBe(target);
+      expect(icon.getAttribute("aria-hidden")).toBe("true");
+      expect(icon.tabIndex).toBe(-1);
+    }
+    // "Change" beside the destination is the same way in, in words.
+    expect(within(first).getByRole("link", { name: format(l.changeDestinationOf, { name: "Menu" }) }).textContent).toBe(l.changeDestination);
+    const blobs = vi.spyOn(sessionApi, "requestBlob");
+    blobs.mockClear();
+    await act(async () => void fireEvent.click(within(first).getByRole("button", { name: format(l.downloadOf, { name: "Menu" }) })));
+    expect(blobs).toHaveBeenCalledWith(expect.stringContaining("/codes/c1/image?format=png"));
+  });
+
+  it("keeps the shortcuts that change a code away from viewers and locked codes", async () => {
+    serve({ [LIST]: { codes: [code({ status: "locked" })], next_cursor: null } });
+    show();
+    const first = await screen.findByRole("article", { name: "Menu" });
+    expect(within(first).queryByTitle(format(l.editDestinationOf, { name: "Menu" }))).toBeNull();
+    expect(within(first).queryByRole("link", { name: format(l.editDesignOf, { name: "Menu" }) })).toBeNull();
+    expect(within(first).queryByRole("link", { name: format(l.changeDestinationOf, { name: "Menu" }) })).toBeNull();
+    expect(within(first).getByTitle(format(l.statsOf, { name: "Menu" }))).toBeTruthy();
+    expect(within(first).getByRole("link", { name: format(l.scansLink, { scans: plural("en", l.scans, 0) }) })).toBeTruthy();
+  });
+
+  it("keeps New dynamic code named by its text, which phones only hide visually", async () => {
+    serve({ [LIST]: { codes: [code({})], next_cursor: null } });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    const link = screen.getByRole("link", { name: t.newCode });
+    expect(link.getAttribute("href")).toBe("/app/codes/new");
+    expect(link.textContent).toBe(t.newCode);
+  });
+
+  it("shows the list on a phone whatever layout was chosen on a wider screen", async () => {
+    localStorage.setItem("proofqr.codes.view", "grid");
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("max-width: 639px"), addEventListener() {}, removeEventListener() {} }));
+    serve({ [LIST]: { codes: [code({})], next_cursor: null } });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    const list = screen.getAllByRole("list").find((ul) => within(ul).queryByRole("article"));
+    expect(list?.className).toContain("flex-col");
+    expect(list?.className).not.toContain("grid-cols");
+  });
+});
+
 describe("CodesList states", () => {
   it("shows skeleton cards while loading, marked busy", async () => {
     request.mockImplementation(async (path) => (path === "/v1/me" ? me : new Promise(() => {})));
@@ -179,8 +237,11 @@ describe("CodesList cards", () => {
     });
     show();
     const first = await screen.findByRole("article", { name: "Menu" });
-    expect(within(first).getByText(plural("en", l.scans, 1234))).toBeTruthy();
-    expect(within(card("Wi-Fi")).getByText(plural("en", l.scans, 1))).toBeTruthy();
+    // The count is the card's figure, and the way to the code's statistics.
+    const scans = within(first).getByRole("link", { name: format(l.scansLink, { scans: plural("en", l.scans, 1234) }) });
+    expect(scans.getAttribute("href")).toBe("/app/codes/c1#scans");
+    expect(scans.textContent).toBe("1,234 scans");
+    expect(within(card("Wi-Fi")).getByRole("link", { name: format(l.scansLink, { scans: plural("en", l.scans, 1) }) }).textContent).toBe("1 scan");
     // More pages remain: the count says so.
     expect(screen.getByText(plural("en", l.countMore, 2))).toBeTruthy();
     await act(async () => void fireEvent.click(screen.getByRole("button", { name: t.loadMore })));

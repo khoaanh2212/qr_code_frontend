@@ -9,21 +9,25 @@ export function Section({
   title,
   description,
   danger = false,
+  anchor,
   children,
 }: {
   title: string;
   description?: string;
   danger?: boolean;
+  /** The section's id, when links lead straight to it (`/app/codes/{id}#scans`); its heading then takes focus by script. */
+  anchor?: string;
   children: ReactNode;
 }) {
   const id = useId();
   return (
     <section
+      id={anchor}
       aria-labelledby={id}
-      className="grid gap-4 border-t border-border py-8 first:border-t-0 first:pt-4 md:grid-cols-[16rem_minmax(0,1fr)] md:gap-10"
+      className="grid scroll-mt-4 gap-4 border-t border-border py-8 first:border-t-0 first:pt-4 md:grid-cols-[16rem_minmax(0,1fr)] md:gap-10"
     >
       <div className="flex flex-col gap-1.5">
-        <h2 id={id} className={`text-lg font-semibold ${danger ? "text-danger" : ""}`}>
+        <h2 id={id} tabIndex={anchor ? -1 : undefined} className={`text-lg font-semibold ${danger ? "text-danger" : ""}`}>
           {title}
         </h2>
         {description && <p className="text-sm text-pretty text-muted">{description}</p>}

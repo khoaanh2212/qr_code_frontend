@@ -127,6 +127,9 @@ const typeName = (value: string) => fireEvent.change(screen.getByRole("textbox",
 const cards = () => screen.getAllByRole("article").map((a) => a.getAttribute("aria-label"));
 const selectCode = (name: string) => fireEvent.click(screen.getByRole("checkbox", { name: format(l.selectCode, { name }) }));
 const dialog = () => screen.getByRole("dialog");
+/** Narrow screens: the folders live in a panel opened from the toolbar. */
+const openPanel = () => click(screen.getByRole("button", { name: l.filters }));
+const panel = () => within(screen.getByRole("dialog", { name: l.filtersTitle }));
 /** The texts of the alerts that say something (empty live regions stay mounted). */
 const alerts = () =>
   screen
@@ -159,9 +162,12 @@ describe("folder filter", () => {
     expect(names.slice(0, 4)).toEqual([f.all, f.none, "Events0", "Brunch2"]);
     expect(navButton(f.all).getAttribute("aria-current")).toBe("true");
     expect(navButton(f.none).getAttribute("aria-current")).toBeNull();
-    // The narrow-screen picker offers the same choices.
-    const select = screen.getByRole("combobox", { name: f.filter });
-    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([f.all, f.none, "Events (0)", "Brunch (2)"]);
+    // The narrow-screen panel offers the same choices.
+    await openPanel();
+    expect(panel().getByRole("button", { name: /^Events/ })).toBeTruthy();
+    expect(panel().getByRole("button", { name: f.all }).getAttribute("aria-current")).toBe("true");
+    await click(panel().getByRole("button", { name: l.closePanel }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("asks the API for one folder's codes, marks it, and goes back to all codes", async () => {
@@ -172,7 +178,6 @@ describe("folder filter", () => {
     await waitFor(() => expect(cards()).toEqual(["Wi-Fi", "Flyer"]));
     expect(navButton(/^Brunch/).getAttribute("aria-current")).toBe("true");
     expect(navButton(f.all).getAttribute("aria-current")).toBeNull();
-    expect((screen.getByRole("combobox", { name: f.filter }) as HTMLSelectElement).value).toBe("f1");
     await click(navButton(f.all));
     await waitFor(() => expect(cards()).toEqual(["Menu", "Wi-Fi", "Flyer"]));
   });
@@ -186,13 +191,15 @@ describe("folder filter", () => {
     expect(request).toHaveBeenCalledWith(`${LIST}&folder=none`, expect.anything());
   });
 
-  it("filters from the select on narrow screens too, and keeps the order", async () => {
+  it("filters from the panel on narrow screens too, closes it, and keeps the order", async () => {
     standard({ [`GET ${LIST}&sort=name`]: page([menu, wifi, flyer]), [`GET ${LIST}&folder=f1&sort=name`]: page([flyer]) });
     show();
     await screen.findByRole("article", { name: "Menu" });
     fireEvent.change(screen.getByRole("combobox", { name: l.sort }), { target: { value: "name" } });
     await waitFor(() => expect(request).toHaveBeenCalledWith(`${LIST}&sort=name`, expect.anything()));
-    fireEvent.change(screen.getByRole("combobox", { name: f.filter }), { target: { value: "f1" } });
+    await openPanel();
+    await click(panel().getByRole("button", { name: /^Brunch/ }));
+    expect(screen.queryByRole("dialog")).toBeNull(); // a choice closes the panel: the list is the answer
     await waitFor(() => expect(cards()).toEqual(["Flyer"]));
     expect(navButton(/^Brunch/).getAttribute("aria-current")).toBe("true");
   });
@@ -201,7 +208,7 @@ describe("folder filter", () => {
     standard({ [`GET ${LIST}&folder=f1`]: page([wifi, flyer]), [`GET ${LIST}&status=paused&folder=f1`]: page([flyer]) });
     show();
     await screen.findByRole("article", { name: "Menu" });
-    fireEvent.change(screen.getByRole("combobox", { name: f.filter }), { target: { value: "f1" } });
+    await click(navButton(/^Brunch/));
     await waitFor(() => expect(cards()).toEqual(["Wi-Fi", "Flyer"]));
     fireEvent.change(screen.getByRole("combobox", { name: l.statusFilter }), { target: { value: "paused" } });
     await waitFor(() => expect(cards()).toEqual(["Flyer"]));
@@ -499,21 +506,43 @@ describe("managing folders", () => {
     expect(within(nav()).queryByRole("button", { name: /^Events/ })).toBeNull();
   });
 
-  it("manages the selected folder from the narrow-screen menu", async () => {
+  it("manages folders from the narrow-screen panel, which makes way for the form", async () => {
     standard();
     show();
     await screen.findByRole("article", { name: "Menu" });
-    openMenu(f.folderActions);
-    // No folder is selected yet: there is nothing to rename or delete.
-    expect(screen.getByRole("menuitem", { name: f.renameCurrent }).getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByRole("menuitem", { name: f.deleteCurrent }).getAttribute("aria-disabled")).toBe("true");
-    await pick(f.newFolder);
-    expect(screen.getByRole("textbox", { name: f.name })).toBeTruthy();
+    await openPanel();
+    await click(panel().getByRole("button", { name: f.newFolder }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: f.name })); // the form, not the Filters button
     await click(screen.getByRole("button", { name: t.cancel }));
-    fireEvent.change(screen.getByRole("combobox", { name: f.filter }), { target: { value: "f2" } });
-    openMenu(f.folderActions);
-    await pick(f.renameCurrent);
+    await openPanel();
+    fireEvent.click(panel().getByRole("button", { name: format(l.actions, { name: "Events" }) }));
+    await pick(f.rename);
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect((screen.getByRole("textbox", { name: f.name }) as HTMLInputElement).value).toBe("Events");
+  });
+
+  it("says on the Filters button how many of its filters are on, since the panel hides them", async () => {
+    standard({ [`GET ${LIST}&folder=f1`]: page([wifi, flyer]), [`GET ${LIST}&status=paused&folder=f1`]: page([flyer]) });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    const button = screen.getByRole("button", { name: l.filters });
+    expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+    await click(navButton(/^Brunch/));
+    await waitFor(() => expect(cards()).toEqual(["Wi-Fi", "Flyer"]));
+    expect(screen.getByRole("button", { name: format(l.filtersActive, { count: 1 }) })).toBe(button);
+    fireEvent.change(screen.getByRole("combobox", { name: l.statusFilter }), { target: { value: "paused" } });
+    await waitFor(() => expect(cards()).toEqual(["Flyer"]));
+    expect(screen.getByRole("button", { name: format(l.filtersActive, { count: 2 }) })).toBe(button);
+  });
+
+  it("offers the status filter in the panel too, for phones", async () => {
+    standard({ [`GET ${LIST}&status=paused`]: page([flyer]) });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    await openPanel();
+    fireEvent.change(panel().getByRole("combobox", { name: l.statusFilter }), { target: { value: "paused" } });
+    await waitFor(() => expect(cards()).toEqual(["Flyer"]));
   });
 });
 
@@ -523,7 +552,9 @@ describe("viewers", () => {
     show();
     await screen.findByRole("article", { name: "Menu" });
     expect(within(nav()).queryByRole("button", { name: f.newFolder })).toBeNull();
-    expect(screen.queryByRole("button", { name: f.folderActions })).toBeNull();
+    await openPanel();
+    expect(panel().queryByRole("button", { name: f.newFolder })).toBeNull();
+    await click(panel().getByRole("button", { name: l.closePanel }));
     expect(screen.queryByRole("button", { name: format(l.actions, { name: "Brunch" }) })).toBeNull();
     openMenu(format(l.actions, { name: "Menu" }));
     expect(screen.queryByRole("menuitem", { name: f.move })).toBeNull();

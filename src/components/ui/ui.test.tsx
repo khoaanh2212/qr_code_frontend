@@ -11,6 +11,7 @@ import { IconButton } from "./icon-button";
 import { Menu, MenuItem } from "./menu";
 import { SegmentedControl } from "./segmented-control";
 import { SearchField } from "./search-field";
+import { Drawer } from "./drawer";
 import { Select } from "./select";
 
 beforeAll(() => {
@@ -268,6 +269,57 @@ describe("CopyButton", () => {
     render(<CopyButton value="x" label="Copy short link" copiedLabel="Copied." failedLabel="Copy failed." />);
     await act(async () => void fireEvent.click(screen.getByRole("button", { name: "Copy short link" })));
     expect(screen.getByRole("status").textContent).toBe("Copy failed.");
+  });
+});
+
+describe("Drawer", () => {
+  function Example({ onClose = vi.fn() }: { onClose?: () => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <button onClick={() => setOpen(true)}>Filters</button>
+        <Drawer
+          open={open}
+          title="Filters and folders"
+          closeLabel="Close"
+          onClose={() => {
+            onClose();
+            setOpen(false);
+          }}
+        >
+          <button>All codes</button>
+        </Drawer>
+      </>
+    );
+  }
+
+  it("renders its content only while open, named by its title, and closes from its button, Escape and the backdrop", () => {
+    const onClose = vi.fn();
+    render(<Example onClose={onClose} />);
+    expect(screen.queryByRole("button", { name: "All codes" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    expect(screen.getByRole("dialog", { name: "Filters and folders" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All codes" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true })); // Escape
+    expect(onClose).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "All codes" })); // inside: stays open
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    // A drag that begins in the panel and ends on the backdrop is not a click outside.
+    fireEvent.pointerDown(screen.getByRole("button", { name: "All codes" }));
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(onClose).toHaveBeenCalledTimes(2);
+    // Pressed and released on the dialog itself: the backdrop.
+    fireEvent.pointerDown(screen.getByRole("dialog"));
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(onClose).toHaveBeenCalledTimes(3);
   });
 });
 

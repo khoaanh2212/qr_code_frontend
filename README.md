@@ -234,7 +234,7 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     flat folders (at most 100 per workspace, names of 1-60 characters, limits mirrored in
     `folders/rules.ts`). The dashboard filters by folder through `?folder=` (all codes, "No folder"
     or one folder, each with its code count): a column beside the list from the `lg` breakpoint, a
-    select in the toolbar below it. The choice lives in the list's query state like status and
+    panel opened from the toolbar below it (item 20). The choice lives in the list's query state like status and
     order, so it is not remembered across page loads; a folder deleted elsewhere (the API answers
     200 with no codes for it, so an empty first page under a folder filter makes the app check the folder
     list) falls back to all codes with a note instead of an error. Editors create, rename and delete folders (inline name
@@ -267,3 +267,18 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     type may take to appear). Proposed in the 2026-11-24 review, postponed by decision. The production Docker image is ready ("Docker"
    above) and runs locally next to the API with the backend's `make up-web`; where it runs in
    production is still open.
+20. ~~Codes list layout~~ Done (`src/features/codes/list`, `src/features/app-shell`): the list
+    follows the layout the established QR generators share, in ProofQR's own identity. From the
+    `lg` breakpoint the folders are a column pinned to the left edge of the viewport and the codes
+    a centered column beside it (`features/app-shell/app-frame.tsx` chooses the frame: the full
+    width for the list, the centered column for every other page). Below `lg` the column is a panel
+    opened with "Filters" (a native `<dialog>`, `components/ui/drawer.tsx`), which also carries
+    the status filter the toolbar drops on phones; this replaces the folder select of item 17.
+    Each card shows its scan count as its figure (a link to the code's statistics), shortcuts to
+    statistics, destination and design (`/app/codes/{id}#scans|#destination|#design`; the code's
+    page jumps there once it has loaded), "Change" beside the destination and a download button
+    on the thumbnail. On phones the card stacks with the code large in the middle, "New dynamic
+    code" and "Manage templates" shrink to their icons, the search takes a row of its own, an
+    active selection is pinned to the bottom edge, and the layout is always the list. Viewers and
+    locked codes get no shortcuts into the forms. Not built: the workspace overview and weekly
+    scans tiles of the reference layout, which need a backend endpoint first.
