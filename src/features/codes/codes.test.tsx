@@ -6,7 +6,8 @@ import { RequireSession } from "@/features/auth/require-session";
 import { en } from "@/i18n/messages/en";
 import { plural } from "@/i18n/plural";
 import { ApiError, publicApi, sessionApi } from "@/lib/api";
-import type { CodeStats, DynamicCode, Folder } from "@/lib/api/types";
+import type { Campaign, CodeStats, DynamicCode, Folder } from "@/lib/api/types";
+import { EMPTY_CAMPAIGN } from "./campaign/rules";
 import { CodeDetail } from "./code-detail";
 import { CodeForm } from "./code-form";
 import { saveHandoff } from "./handoff";
@@ -39,6 +40,7 @@ const code: DynamicCode = {
   design: { fg: "#000000", bg: "#ffffff" },
   status: "active",
   folder_id: null,
+  campaign: EMPTY_CAMPAIGN,
   created_at: "2026-11-20T10:00:00Z",
   updated_at: "2026-11-20T10:00:00Z",
 };
@@ -257,8 +259,12 @@ describe("CodeDetail", () => {
       if (path === "/v1/workspaces/w1/folders") return { folders };
       if (path === "/v1/workspaces/w1/codes/c1" && !opts?.method) return { code: { ...code, ...overrides } };
       if (path === "/v1/workspaces/w1/codes/c1/stats") return stats;
-      if (path === "/v1/workspaces/w1/codes/c1" && opts?.method === "PATCH")
-        return { code: { ...code, ...overrides, ...(opts.body as object) } };
+      if (path === "/v1/workspaces/w1/codes/c1" && opts?.method === "PATCH") {
+        const body = opts.body as Partial<DynamicCode> & { campaign?: Campaign | null };
+        const before = { ...code, ...overrides };
+        // Like the API: a null campaign clears the details, the object stays.
+        return { code: { ...before, ...body, campaign: body.campaign === null ? EMPTY_CAMPAIGN : (body.campaign ?? before.campaign) } };
+      }
       throw new Error(`unexpected ${path}`);
     });
 
@@ -430,6 +436,304 @@ describe("CodeDetail", () => {
       cleanup();
       await open({}, []);
       expect(screen.queryByRole("combobox", { name: f.detailTitle })).toBeNull();
+    });
+  });
+
+  describe("campaign", () => {
+    const c = t.campaign;
+    const full: Campaign = { start_date: "2026-12-01", end_date: "2026-12-31", print_run: 5000, medium: "poster", medium_other: null };
+    const open = async (overrides: Partial<DynamicCode> = {}, role: "owner" | "viewer" = "owner") => {
+      detailApi(overrides, [], role);
+      withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+      await screen.findByRole("heading", { name: "Menu", level: 1 });
+    };
+    const section = () => within(screen.getByRole("region", { name: c.title }));
+    const input = (label: string) => section().getByLabelText(label) as HTMLInputElement;
+    const set = (label: string, value: string) => fireEvent.change(input(label), { target: { value } });
+    const medium = () => section().getByRole("combobox", { name: c.medium }) as HTMLSelectElement;
+    const patches = () => request.mock.calls.filter(([, o]) => o?.method === "PATCH").map(([, o]) => o?.body);
+    // Scoped to the section: the page has other Save and Cancel buttons.
+    const press = (name: string) => act(async () => void fireEvent.click(section().getByRole("button", { name })));
+    const save = () => press(t.save);
+    // The messages shown: field errors and the form alert (whose live region stays rendered when empty).
+    const alerts = () =>
+      section()
+        .getAllByRole("alert")
+        .map((a) => a.textContent)
+        .filter(Boolean);
+
+    it("says there are no details yet and offers to add them", async () => {
+      await open();
+      expect(section().getByText(c.empty)).toBeTruthy();
+      expect(section().getByRole("button", { name: c.add })).toBeTruthy();
+      expect(section().queryByRole("button", { name: c.edit })).toBeNull();
+    });
+
+    it("shows the details with dates and numbers in the reader's format", async () => {
+      await open({ campaign: { ...full, medium: "other", medium_other: "Trade fair" } });
+      const list = section();
+      expect(list.getByText("Dec 1, 2026")).toBeTruthy();
+      expect(list.getByText("Dec 31, 2026")).toBeTruthy();
+      expect(list.getByText("5,000")).toBeTruthy();
+      expect(list.getByText("Trade fair")).toBeTruthy();
+      expect(list.getByRole("button", { name: c.edit })).toBeTruthy();
+    });
+
+    it("shows what is not set, and a medium by its name", async () => {
+      await open({ campaign: { ...EMPTY_CAMPAIGN, medium: "business_card" } });
+      expect(section().getByText(c.media.business_card)).toBeTruthy();
+      expect(section().getAllByText(c.notSet)).toHaveLength(3);
+    });
+
+    it("groups the media into print and digital, with not set first and other last", async () => {
+      await open();
+      await press(c.add);
+      const select = medium();
+      expect(select.value).toBe("");
+      expect([...select.querySelectorAll("optgroup")].map((g) => g.label)).toEqual([c.groupPrint, c.groupDigital]);
+      const options = within(select).getAllByRole("option").map((o) => o.textContent);
+      expect(options).toHaveLength(19);
+      expect(options[0]).toBe(c.mediumNone);
+      expect(options[1]).toBe(c.media.poster);
+      expect(options[13]).toBe(c.media.website);
+      expect(options[18]).toBe(c.media.other);
+    });
+
+    it("saves the whole campaign, shows it and returns focus to Edit", async () => {
+      await open();
+      await press(c.add);
+      expect(document.activeElement).toBe(input(c.start));
+      set(c.start, "2026-12-01");
+      set(c.end, "2026-12-31");
+      set(c.printRun, "5000");
+      fireEvent.change(medium(), { target: { value: "poster" } });
+      await save();
+      expect(patches()).toEqual([{ campaign: full }]);
+      expect(section().getByText(c.saved)).toBeTruthy();
+      expect(section().getByText(c.media.poster)).toBeTruthy();
+      expect(section().queryByLabelText(c.start)).toBeNull();
+      await waitFor(() => expect(document.activeElement).toBe(section().getByRole("button", { name: c.edit })));
+    });
+
+    it("asks which medium only for other, without moving focus, and requires an answer", async () => {
+      await open();
+      await press(c.add);
+      expect(section().queryByLabelText(c.otherLabel)).toBeNull();
+      medium().focus();
+      await act(async () => void fireEvent.change(medium(), { target: { value: "other" } }));
+      expect(input(c.otherLabel)).toBeTruthy();
+      expect(document.activeElement).toBe(medium()); // arrowing through the list must not throw the reader out of it
+      await save();
+      expect(patches()).toEqual([]);
+      expect(alerts()).toEqual([c.errors.otherRequired]);
+      expect(input(c.otherLabel).getAttribute("aria-invalid")).toBe("true");
+      expect(document.activeElement).toBe(input(c.otherLabel));
+      set(c.otherLabel, "  Trade   fair ");
+      await save();
+      expect(patches()).toEqual([{ campaign: { ...EMPTY_CAMPAIGN, medium: "other", medium_other: "Trade fair" } }]);
+    });
+
+    it("refuses an end before the start without calling the API", async () => {
+      await open({ campaign: full });
+      await press(c.edit);
+      expect(input(c.start).value).toBe("2026-12-01");
+      expect(input(c.end).min).toBe("2026-12-01");
+      set(c.end, "2026-11-30");
+      await save();
+      expect(patches()).toEqual([]);
+      expect(alerts()).toEqual([c.errors.endBeforeStart]);
+      expect(document.activeElement).toBe(input(c.end));
+    });
+
+    it("refuses a print run that is not a whole number in range, naming the range", async () => {
+      await open();
+      await press(c.add);
+      set(c.printRun, "1e5");
+      await save();
+      expect(patches()).toEqual([]);
+      expect(alerts()).toEqual([format(c.errors.printRun, { min: "1", max: "100,000,000" })]);
+    });
+
+    it("closes without a request when nothing changed", async () => {
+      await open({ campaign: full });
+      await press(c.edit);
+      await save();
+      expect(patches()).toEqual([]);
+      expect(section().queryByLabelText(c.start)).toBeNull();
+      expect(section().queryByText(c.saved)).toBeNull();
+    });
+
+    it("cancels with the button and with Escape, keeping the details and returning focus", async () => {
+      await open({ campaign: full });
+      await press(c.edit);
+      set(c.printRun, "9");
+      await press(t.cancel);
+      expect(patches()).toEqual([]);
+      expect(section().getByText("5,000")).toBeTruthy();
+      await waitFor(() => expect(document.activeElement).toBe(section().getByRole("button", { name: c.edit })));
+      await press(c.edit);
+      expect(input(c.printRun).value).toBe("5000"); // the abandoned edit is gone
+      await act(async () => void fireEvent.keyDown(input(c.printRun), { key: "Escape" }));
+      expect(section().queryByLabelText(c.printRun)).toBeNull();
+    });
+
+    it("clears every field to null when the form is emptied", async () => {
+      await open({ campaign: { ...EMPTY_CAMPAIGN, print_run: 12 } });
+      await press(c.edit);
+      set(c.printRun, "");
+      await save();
+      expect(patches()).toEqual([{ campaign: null }]);
+      expect(section().getByText(c.removed)).toBeTruthy();
+      expect(section().getByText(c.empty)).toBeTruthy();
+    });
+
+    it("removes all details only after confirming", async () => {
+      await open({ campaign: full });
+      await press(c.edit);
+      await press(c.remove);
+      expect(patches()).toEqual([]);
+      expect(section().getByText(c.removeConfirm)).toBeTruthy();
+      await waitFor(() => expect(document.activeElement).toBe(section().getByRole("button", { name: t.cancel })));
+      await press(t.cancel); // back to the form, nothing removed
+      expect(input(c.printRun).value).toBe("5000");
+      await press(c.remove);
+      await press(c.removeYes);
+      expect(patches()).toEqual([{ campaign: null }]);
+      expect(section().getByText(c.removed)).toBeTruthy();
+      expect(section().getByRole("button", { name: c.add })).toBeTruthy();
+    });
+
+    it("offers no removal while there is nothing to remove", async () => {
+      await open();
+      await press(c.add);
+      expect(section().queryByRole("button", { name: c.remove })).toBeNull();
+    });
+
+    it("puts the API's refusal on its field", async () => {
+      await open();
+      await press(c.add);
+      set(c.end, "2026-12-31");
+      request.mockRejectedValueOnce(new ApiError(422, "validation_error", "bad", "campaign.end_date"));
+      await save();
+      expect(alerts()).toEqual([c.errors.dateRange]);
+      expect(input(c.end).getAttribute("aria-invalid")).toBe("true");
+      expect(document.activeElement).toBe(input(c.end));
+    });
+
+    it("says so when the code was locked meanwhile, and turns read-only", async () => {
+      await open({ campaign: full });
+      await press(c.edit);
+      set(c.printRun, "6000");
+      request.mockImplementation(async (path, opts) => {
+        if (path === "/v1/workspaces/w1/codes/c1" && opts?.method === "PATCH") throw new ApiError(409, "code_locked", "locked");
+        if (path === "/v1/workspaces/w1/codes/c1") return { code: { ...code, campaign: full, status: "locked" } };
+        if (path === "/v1/workspaces/w1/codes/c1/stats") return stats;
+        if (path === "/v1/workspaces/w1/folders") return { folders: [] };
+        return me;
+      });
+      await save();
+      await waitFor(() => expect(section().queryByLabelText(c.printRun)).toBeNull());
+      expect(alerts()).toEqual([t.errors.locked]);
+      expect(section().getByText("5,000")).toBeTruthy();
+      expect(section().queryByRole("button", { name: c.edit })).toBeNull();
+      const region = screen.getByRole("region", { name: c.title });
+      await waitFor(() => expect(region.contains(document.activeElement)).toBe(true)); // not dropped to <body>
+    });
+
+    it("goes to the login page on 401", async () => {
+      await open();
+      await press(c.add);
+      set(c.printRun, "5");
+      request.mockRejectedValueOnce(new ApiError(401, "unauthorized", "no session"));
+      await save();
+      expect(window.location.replace).toHaveBeenCalledWith(expect.stringContaining("/login"));
+    });
+
+    it("sends one request when saved twice while busy", async () => {
+      await open();
+      await press(c.add);
+      set(c.printRun, "5");
+      let finish: (v: unknown) => void = () => {};
+      request.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+      const button = section().getByRole("button", { name: t.save });
+      await act(async () => {
+        fireEvent.click(button);
+        fireEvent.click(button);
+      });
+      expect(patches()).toHaveLength(1);
+      await act(async () => finish({ code: { ...code, campaign: { ...EMPTY_CAMPAIGN, print_run: 5 } } }));
+      expect(section().getByText(c.saved)).toBeTruthy();
+    });
+
+    it("keeps the form open while a save is running: Cancel, Escape and the medium wait", async () => {
+      await open({ campaign: full });
+      await press(c.edit);
+      set(c.printRun, "6000");
+      let finish: (v: unknown) => void = () => {};
+      let fail: (e: unknown) => void = () => {};
+      request.mockImplementationOnce(() => new Promise((resolve, reject) => ((finish = resolve), (fail = reject))));
+      await save();
+      await press(t.cancel);
+      await act(async () => void fireEvent.keyDown(input(c.printRun), { key: "Escape" }));
+      fireEvent.change(medium(), { target: { value: "flyer" } });
+      expect(input(c.printRun).value).toBe("6000"); // still the form, still what was sent
+      expect(medium().value).toBe("poster");
+      await act(async () => fail(new ApiError(500, "internal_error", "boom")));
+      expect(alerts()).toEqual([t.errors.generic]); // the failure reaches the reader
+      expect(patches()).toHaveLength(1);
+      void finish;
+    });
+
+    it("leaves the form alone on Escape while a text is being composed", async () => {
+      await open({ campaign: { ...EMPTY_CAMPAIGN, medium: "other", medium_other: "Fair" } });
+      await press(c.edit);
+      expect(document.activeElement).toBe(input(c.start)); // "other" already chosen: no focus jump on opening
+      await act(async () => void fireEvent.keyDown(input(c.otherLabel), { key: "Escape", isComposing: true }));
+      expect(input(c.otherLabel).value).toBe("Fair");
+    });
+
+    it("names the confirmation, leaves it on Escape, and returns to the form with focus when removing fails", async () => {
+      await open({ campaign: full });
+      await press(c.edit);
+      await press(c.remove);
+      const step = section().getByRole("group", { name: c.removeConfirm });
+      await act(async () => void fireEvent.keyDown(step, { key: "Escape" }));
+      await waitFor(() => expect(document.activeElement).toBe(section().getByRole("button", { name: c.remove })));
+      expect(patches()).toEqual([]);
+      await press(c.remove);
+      request.mockRejectedValueOnce(new ApiError(500, "internal_error", "boom"));
+      await press(c.removeYes);
+      expect(alerts()).toEqual([t.errors.generic]);
+      expect(input(c.printRun).value).toBe("5000");
+      await waitFor(() => expect(document.activeElement).toBe(section().getByRole("button", { name: c.remove })));
+    });
+
+    it("shows a medium this version does not know by its API name", async () => {
+      await open({ campaign: { ...EMPTY_CAMPAIGN, medium: "podcast" as Campaign["medium"] } });
+      expect(section().getByText("podcast")).toBeTruthy();
+    });
+
+    it("treats a code from an API without campaigns as having none", async () => {
+      await open({ campaign: undefined as unknown as Campaign });
+      expect(section().getByText(c.empty)).toBeTruthy();
+      await press(c.add);
+      set(c.printRun, "7");
+      await save();
+      expect(patches()).toEqual([{ campaign: { ...EMPTY_CAMPAIGN, print_run: 7 } }]);
+    });
+
+    it("is read-only for viewers and on a locked code", async () => {
+      await open({ campaign: full }, "viewer");
+      expect(section().getByText("5,000")).toBeTruthy();
+      expect(section().queryByRole("button", { name: c.edit })).toBeNull();
+      cleanup();
+      await open({}, "viewer");
+      expect(section().getByText(c.empty)).toBeTruthy();
+      expect(section().queryByRole("button", { name: c.add })).toBeNull();
+      cleanup();
+      await open({ campaign: full, status: "locked" });
+      expect(section().getByText(c.media.poster)).toBeTruthy();
+      expect(section().queryByRole("button", { name: c.edit })).toBeNull();
     });
   });
 

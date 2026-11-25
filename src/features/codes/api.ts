@@ -3,6 +3,7 @@ import type {
   BulkAction,
   BulkResponse,
   BulkResult,
+  Campaign,
   CodeDesign,
   CodeEnvelope,
   CodesPage,
@@ -77,6 +78,8 @@ export interface CodeChanges {
   status?: Exclude<CodeStatus, "locked">;
   /** A folder id to move the code into, or null to take it out of its folder. */
   folder_id?: string | null;
+  /** Replaces all campaign details (a null field is cleared); null clears them all. */
+  campaign?: Campaign | null;
 }
 
 export async function updateCode(workspaceId: string, id: string, body: CodeChanges): Promise<DynamicCode> {

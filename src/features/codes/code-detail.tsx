@@ -27,6 +27,7 @@ import { StatusBadge } from "./status-badge";
 import { SlugEditor } from "./slug-editor";
 import { FolderSection } from "./folder-section";
 import { CODE_ANCHORS, codeAnchorOf } from "./anchors";
+import { CampaignSection } from "./campaign/campaign-section";
 
 type T = Messages["codes"];
 type Props = {
@@ -127,6 +128,7 @@ export function CodeDetail({ t, generator, templates, auth, locale }: Props) {
         <DestinationSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <DesignSection t={t} generator={generator} templates={templates} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <StatusSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
+        <CampaignSection t={t} auth={auth} locale={locale} ws={ws} code={code} canEdit={workspace.role !== "viewer"} onSaved={setCode} />
         <FolderSection t={t} locale={locale} ws={ws} code={code} canEdit={workspace.role !== "viewer"} onSaved={setCode} />
         <DeleteSection t={t} auth={auth} ws={ws} code={code} locale={locale} />
       </div>

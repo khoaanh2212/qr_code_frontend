@@ -5,6 +5,7 @@ import { RequireSession } from "@/features/auth/require-session";
 import { en } from "@/i18n/messages/en";
 import { ApiError, sessionApi } from "@/lib/api";
 import type { CodeStats, DynamicCode } from "@/lib/api/types";
+import { EMPTY_CAMPAIGN } from "../campaign/rules";
 import { clearThumbnailCache } from "../list/code-thumbnail";
 import { CodeInsights } from "./code-insights";
 import { presetRange } from "./range";
@@ -26,6 +27,7 @@ const code: DynamicCode = {
   design: {},
   status: "active",
   folder_id: null,
+  campaign: EMPTY_CAMPAIGN,
   created_at: "2026-11-20T10:00:00Z",
   updated_at: "2026-11-20T10:00:00Z",
 };

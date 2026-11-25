@@ -9,6 +9,7 @@ import { ApiError, sessionApi } from "@/lib/api";
 import type { BulkResult, Folder, ListedCode } from "@/lib/api/types";
 import { clearThumbnailCache } from "./code-thumbnail";
 import { CodesList } from "./codes-list";
+import { EMPTY_CAMPAIGN } from "../campaign/rules";
 
 const t = en.codes;
 const l = t.list;
@@ -52,6 +53,7 @@ const code = (over: Partial<ListedCode>): ListedCode => ({
   design: {},
   status: "active",
   folder_id: null,
+  campaign: EMPTY_CAMPAIGN,
   created_at: "2026-11-20T10:00:00Z",
   updated_at: "2026-11-20T10:00:00Z",
   scans_total: 0,
@@ -759,7 +761,8 @@ describe("moving codes in bulk", () => {
     expect(status()).toContain(plural("en", f.movedOutMany, 2));
   });
 
-  it("sends at most 100 codes per request, each with the folder", async () => {
+  // These render a hundred cards and more: a second or so here, near five on a CI runner.
+  it("sends at most 100 codes per request, each with the folder", { timeout: 20_000 }, async () => {
     const many = Array.from({ length: 150 }, (_, i) => code({ id: `id${i}`, name: `Code ${i}` }));
     standard({
       [`GET ${LIST}`]: page(many),
@@ -778,7 +781,8 @@ describe("moving codes in bulk", () => {
     expect(status()).toContain(plural("en", f.movedMany, 150, { folder: "Brunch" }));
   });
 
-  it("stops at the bulk limit with the wait, and keeps the rest selected", async () => {
+  // These render a hundred cards and more: a second or so here, near five on a CI runner.
+  it("stops at the bulk limit with the wait, and keeps the rest selected", { timeout: 20_000 }, async () => {
     const many = Array.from({ length: 150 }, (_, i) => code({ id: `id${i}`, name: `Code ${i}` }));
     let calls = 0;
     standard({
