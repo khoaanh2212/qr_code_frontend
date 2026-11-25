@@ -1,5 +1,5 @@
-/** The sections of a code's page that links lead straight to (`/app/codes/{id}#scans`). */
-export const CODE_ANCHORS = { destination: "destination", design: "design", scans: "scans" } as const;
+/** The sections of a code's page that links lead straight to (`/app/codes/{id}#design`). */
+export const CODE_ANCHORS = { destination: "destination", design: "design" } as const;
 
 export type CodeAnchor = (typeof CODE_ANCHORS)[keyof typeof CODE_ANCHORS];
 

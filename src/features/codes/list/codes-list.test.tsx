@@ -129,7 +129,7 @@ describe("CodesList card shortcuts", () => {
     // Statistics and destination are offered in words (the count, "Change"); their icons repeat
     // them for the mouse only, like the thumbnail: no second stop for the keyboard or a reader.
     for (const [name, target] of [
-      [format(l.statsOf, { name: "Menu" }), "/app/codes/c1#scans"],
+      [format(l.statsOf, { name: "Menu" }), "/app/codes/c1/insights"],
       [format(l.editDestinationOf, { name: "Menu" }), "/app/codes/c1#destination"],
     ]) {
       const icon = within(first).getByTitle(name); // hidden from the accessibility tree: found by its tooltip
@@ -300,7 +300,7 @@ describe("CodesList cards", () => {
     const first = await screen.findByRole("article", { name: "Menu" });
     // The count is the card's figure, and the way to the code's statistics.
     const scans = within(first).getByRole("link", { name: format(l.scansLink, { scans: plural("en", l.scans, 1234) }) });
-    expect(scans.getAttribute("href")).toBe("/app/codes/c1#scans");
+    expect(scans.getAttribute("href")).toBe("/app/codes/c1/insights");
     expect(scans.textContent).toBe("1,234 scans");
     expect(within(card("Wi-Fi")).getByRole("link", { name: format(l.scansLink, { scans: plural("en", l.scans, 1) }) }).textContent).toBe("1 scan");
     // More pages remain: the count says so.

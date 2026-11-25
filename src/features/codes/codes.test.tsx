@@ -262,19 +262,14 @@ describe("CodeDetail", () => {
       throw new Error(`unexpected ${path}`);
     });
 
-  it("shows the short link, scans, top countries and devices", async () => {
+  it("shows the short link and leads to the code's insights, where its scans live", async () => {
     detailApi();
     withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
     expect(await screen.findByRole("heading", { name: "Menu", level: 1 })).toBeTruthy();
     expect(screen.getByText(code.short_url)).toBeTruthy();
-    expect(await screen.findByText("3 scans")).toBeTruthy();
-    expect(screen.getByText("Vietnam")).toBeTruthy();
-    expect(screen.getByText(t.unknown)).toBeTruthy();
-    // Scoped: "Phone" is also the name of a frame in the Design section.
-    expect(within(screen.getByRole("region", { name: t.scansTitle })).getByText(t.deviceNames.mobile)).toBeTruthy();
-    // The numbers behind the bars, as a table.
-    await click(t.tableToggle);
-    expect(screen.getByRole("row", { name: "Nov 30 3 2" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: t.insights.view }).getAttribute("href")).toBe("/app/codes/c1/insights");
+    expect(screen.queryByRole("region", { name: t.scansTitle })).toBeNull();
+    expect(request).not.toHaveBeenCalledWith(expect.stringContaining("/stats"), expect.anything());
   });
 
   it("changes the destination and pauses the code", async () => {
@@ -323,7 +318,7 @@ describe("CodeDetail", () => {
   });
 
   it("opens at the section a link from the list names, with its heading focused", async () => {
-    vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app/codes/c1", search: "", hash: "#scans" });
+    vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app/codes/c1", search: "", hash: "#design" });
     const scrolled: string[] = [];
     Element.prototype.scrollIntoView = function (this: Element) {
       scrolled.push(this.id);
@@ -331,14 +326,14 @@ describe("CodeDetail", () => {
     detailApi();
     withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
     await screen.findByRole("heading", { name: "Menu", level: 1 });
-    await waitFor(() => expect(scrolled).toEqual(["scans"]));
-    expect(document.activeElement).toBe(screen.getByRole("heading", { name: t.scansTitle }));
+    await waitFor(() => expect(scrolled).toEqual(["design"]));
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: t.designTitle }));
     expect(document.getElementById("destination")).toBeTruthy();
-    expect(document.getElementById("design")).toBeTruthy();
+    expect(document.getElementById("scans")).toBeNull(); // the scans moved to the insights page
   });
 
   it("stays at the top for a hash it does not know", async () => {
-    vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app/codes/c1", search: "", hash: "#delete" });
+    vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app/codes/c1", search: "", hash: "#scans" });
     const scroll = vi.fn();
     Element.prototype.scrollIntoView = scroll;
     detailApi();

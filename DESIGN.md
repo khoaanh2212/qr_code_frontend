@@ -244,6 +244,12 @@ keeps room below so nothing ends under it. The design step is the tool-page grid
 proof right in the 22rem column that stays in view; below 1024px the proof comes first and the bar
 shows it as a 44px thumbnail that jumps back to it.
 
+A report page (a code's insights) is built from Surface panels with a Rule outline and 20px
+padding, 16px apart: what the thing is, then its figures, then its charts two abreast from 1024px.
+A figure is the display size with tabular numerals under a muted label. Charts use Signal Teal for
+the main series and its 35% tint for the secondary one, never a second hue; every chart has its
+numbers as a table behind a toggle.
+
 ## Elevation & Depth
 
 Flat by default. Surfaces separate by tone (paper, sheet, masthead) and by a 1px rule, not by
