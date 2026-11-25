@@ -1,4 +1,11 @@
-import { browserSupportsWebAuthn, startAuthentication, type AuthenticationResponseJSON } from "@simplewebauthn/browser";
+import {
+  browserSupportsWebAuthn,
+  startAuthentication,
+  startRegistration,
+  type AuthenticationResponseJSON,
+  type PublicKeyCredentialCreationOptionsJSON,
+  type RegistrationResponseJSON,
+} from "@simplewebauthn/browser";
 import type { WebAuthnOptions } from "@/lib/api/types";
 
 // Browser side of the passkey ceremonies. The backend's options are already in the WebAuthn JSON
@@ -11,6 +18,11 @@ export function passkeysSupported(): boolean {
 /** navigator.credentials.get for a login; resolves to the assertion JSON. */
 export function getPasskeyAssertion(options: WebAuthnOptions): Promise<AuthenticationResponseJSON> {
   return startAuthentication({ optionsJSON: options.publicKey });
+}
+
+/** navigator.credentials.create to add a passkey; resolves to the attestation JSON. */
+export function createPasskey(options: WebAuthnOptions<PublicKeyCredentialCreationOptionsJSON>): Promise<RegistrationResponseJSON> {
+  return startRegistration({ optionsJSON: options.publicKey });
 }
 
 /**

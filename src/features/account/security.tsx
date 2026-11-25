@@ -14,6 +14,7 @@ import { changePassword, unlinkGoogle } from "./api";
 import type { Identity, MeResponse, User } from "@/lib/api/types";
 import { SavedNote, Section } from "./section";
 import { DeleteAccount } from "./delete-account";
+import { TwoStep } from "./two-step";
 
 type T = Messages["account"];
 type AuthT = Messages["auth"];
@@ -55,6 +56,7 @@ export function Security({ t, auth, locale }: { t: T; auth: AuthT; locale: Local
           <TextLink href={localizePath(locale, "/forgot-password")}>{t.setPasswordLink}</TextLink>
         </Section>
       )}
+      <TwoStep t={t} auth={auth} locale={locale} hasPassword={hasPassword} />
       <DeleteAccount t={t} auth={auth} locale={locale} hasPassword={hasPassword} />
     </>
   );
