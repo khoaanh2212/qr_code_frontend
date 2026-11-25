@@ -85,8 +85,43 @@ export interface DynamicCode {
   status: CodeStatus;
   /** The folder the code is in (backend PLAN item 54); null when it is in none. */
   folder_id: string | null;
+  /** Campaign details (backend PLAN item 55); always present, every field null when not set. */
+  campaign: Campaign;
   created_at: string;
   updated_at: string;
+}
+
+/** Where a code is shown: print media, digital media, or "other" with the customer's own label. */
+export type CampaignMedium =
+  | "poster"
+  | "flyer"
+  | "brochure"
+  | "business_card"
+  | "packaging"
+  | "product_label"
+  | "magazine"
+  | "newspaper"
+  | "billboard"
+  | "signage"
+  | "menu"
+  | "sticker"
+  | "website"
+  | "email"
+  | "social_media"
+  | "presentation"
+  | "video"
+  | "other";
+
+/**
+ * Notes on when and where a code is used; they never change where it leads. Dates are calendar
+ * days (`YYYY-MM-DD`, no time zone). `medium_other` is set exactly when `medium` is "other".
+ */
+export interface Campaign {
+  start_date: string | null;
+  end_date: string | null;
+  print_run: number | null;
+  medium: CampaignMedium | null;
+  medium_other: string | null;
 }
 
 /** A folder that groups a workspace's codes; `code_count` is the number of live codes in it. */
