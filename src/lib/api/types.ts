@@ -1,3 +1,5 @@
+import type { AuthenticationResponseJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
+
 /** Response shapes of the Go API (see its README and bruno/ collection). */
 
 export interface User {
@@ -131,3 +133,28 @@ export interface CodeStats {
   os: CountEntry[];
   browsers: CountEntry[];
 }
+
+/** A second login step the account has (backend model.MFAMethod), in the API's order. */
+export type MfaMethod = "totp" | "passkey" | "recovery_code";
+
+/** POST /v1/auth/login: either the session is open, or a second step is needed. */
+export type LoginResponse = { user: User; mfa_required?: undefined } | { mfa_required: true; methods: MfaMethod[] };
+
+/** GET /v1/auth/login/mfa: the login waiting for its second step. */
+export interface PendingLogin {
+  methods: MfaMethod[];
+  expires_at: string;
+}
+
+/**
+ * WebAuthn options as go-webauthn sends them ({publicKey: ...}, already in the JSON form);
+ * `publicKey` goes to the browser API. Request options for a login, creation options to add one.
+ */
+export interface WebAuthnOptions<T = PublicKeyCredentialRequestOptionsJSON> {
+  publicKey: T;
+}
+
+/** POST /v1/auth/login/mfa */
+export type MfaLoginStep =
+  | { method: "totp" | "recovery_code"; code: string }
+  | { method: "passkey"; assertion: AuthenticationResponseJSON };

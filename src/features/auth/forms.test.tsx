@@ -62,6 +62,16 @@ describe("LoginForm", () => {
     expect(assign).toHaveBeenCalledWith("/vi/app/codes");
   });
 
+  it("goes to the second step when the account has two-step verification, keeping return_to", async () => {
+    stubLocation("/vi/login", "?return_to=%2Fvi%2Fapp%2Fcodes");
+    request.mockResolvedValueOnce({ mfa_required: true, methods: ["totp"] });
+    render(<LoginForm t={t} locale="vi" />);
+    type(/^Email/, "a@example.com");
+    type(/^Password/, "correct-horse");
+    await submit(t.loginSubmit);
+    expect(assign).toHaveBeenCalledWith("/vi/login/verify?return_to=%2Fvi%2Fapp%2Fcodes");
+  });
+
   it("ignores an unsafe return_to", async () => {
     stubLocation("/login", "?return_to=%2F%2Fevil.com");
     render(<LoginForm t={t} locale="en" />);

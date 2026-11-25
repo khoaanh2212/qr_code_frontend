@@ -209,7 +209,15 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     code's result is applied, the codes not changed stay selected, and the bulk limit (3
     requests a minute) is reported with the wait. Reusable parts live in `src/components/ui`
     (see its README).
-14. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
+15. Two-step verification (backend PLAN items 29-33). Login step done (`src/features/auth/verify-login.tsx`,
+    `/login/verify`): after a right password (or the Google callback) on an account with two-step
+    verification, the page reads the pending login (`GET /v1/auth/login/mfa`, so it also works
+    after the Google redirect and a reload) and offers the methods the account has: authenticator
+    app code (first when present), passkey (`@simplewebauthn/browser`) and recovery code, with the
+    others under "Other ways to verify". An expired or used-up login sends the person back to log
+    in, keeping `return_to`. Next: the two-step section of `/app/account/security` (authenticator
+    setup with QR code and secret, passkeys, recovery codes shown once, regenerate, turn off).
+16. Deployment (with backend work item 11). Planned with it: render the QR type catalog on the
     server so the generator is in the prerendered HTML instead of a skeleton (better LCP and first
     input). It needs a server-side API URL (e.g. `API_INTERNAL_URL=http://api:8080` in compose),
     a fallback to today's browser fetch when the API is unreachable at build or render time
