@@ -165,7 +165,8 @@ describe("CodeInsights", () => {
     const text = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
-      reader.readAsText(blobs.at(-1)!);
+      // The code's image is a blob too, and may arrive after the click: take the CSV one.
+      reader.readAsText(blobs.find((b) => b.type.startsWith("text/csv"))!);
     });
     expect(text).toBe(
       `"${i.from}","${i.to}","${t.scansColumn}","${t.uniqueColumn}"\r\n"2026-10-30","2026-10-31","3","2"\r\n"2026-11-01","2026-11-03","7","6"\r\n`,
