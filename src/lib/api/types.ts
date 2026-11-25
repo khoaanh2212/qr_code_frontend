@@ -1,4 +1,9 @@
-import type { AuthenticationResponseJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
+import type {
+  AuthenticationResponseJSON,
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON,
+} from "@simplewebauthn/browser";
 
 /** Response shapes of the Go API (see its README and bruno/ collection). */
 
@@ -158,3 +163,45 @@ export interface WebAuthnOptions<T = PublicKeyCredentialRequestOptionsJSON> {
 export type MfaLoginStep =
   | { method: "totp" | "recovery_code"; code: string }
   | { method: "passkey"; assertion: AuthenticationResponseJSON };
+
+/** A passkey of the account (GET /v1/me/mfa). */
+export interface AccountPasskey {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+/** GET /v1/me/mfa and every change: the account's second steps. */
+export interface MfaStatus {
+  enabled: boolean;
+  totp: boolean;
+  passkeys: AccountPasskey[];
+  recovery_codes_left: number;
+}
+
+/** A change to the second steps; `recovery_codes` only when it turned two-step verification on. */
+export interface MfaChange {
+  mfa: MfaStatus;
+  recovery_codes?: string[];
+}
+
+/** POST /v1/me/mfa/totp: a pending authenticator-app setup (shown once). */
+export interface TotpSetup {
+  secret: string;
+  uri: string;
+  expires_at: string;
+}
+
+/** POST /v1/me/mfa/passkeys/options */
+export interface PasskeyCreation {
+  token: string;
+  passkey: WebAuthnOptions<PublicKeyCredentialCreationOptionsJSON>;
+}
+
+/** POST /v1/me/mfa/passkeys */
+export interface NewPasskey {
+  token: string;
+  attestation: RegistrationResponseJSON;
+  name: string;
+}
