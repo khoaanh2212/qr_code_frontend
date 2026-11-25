@@ -792,6 +792,28 @@ export const en = {
       matchesMore: { one: "{count}+ match", other: "{count}+ matches" } as PluralForms,
       bulkRateLimited: "Too many changes at once. Try the rest again in {seconds} seconds.",
     },
+    /** The two steps of creating a dynamic code: destination, then design with a preview. */
+    wizard: {
+      steps: "Steps",
+      stepDestination: "Destination",
+      stepDesign: "Design",
+      destinationTitle: "Where should the code lead?",
+      next: "Next: design",
+      back: "Back",
+      skipDesign: "Create with the default design",
+      previewTitle: "Preview",
+      previewNote: "This shows the design. The code gets its own short link when you create it.",
+      previewFailed: "The preview could not be drawn. You can still create the code.",
+      showPreview: "Show the preview",
+      resetDesign: "Reset the design",
+    },
+    /** The dialog that greets a new code on the list. */
+    ready: {
+      title: "Your code is ready",
+      intro: "Scan it to test it, then download it for print.",
+      customize: "Customize the design",
+      close: "Close",
+    },
     folders: {
       nav: "Folders",
       all: "All codes",

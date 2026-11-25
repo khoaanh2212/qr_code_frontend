@@ -10,6 +10,10 @@ import type { BulkResult, ListedCode } from "@/lib/api/types";
 import { clearThumbnailCache } from "./code-thumbnail";
 import { CodesList } from "./codes-list";
 
+// The list reads `?ready=` through the router; each test sets what the address holds.
+let search = "";
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(search) }));
+
 const t = en.codes;
 const l = t.list;
 const me = {
@@ -54,7 +58,7 @@ type Bulk = { action: string; ids: string[] };
 
 /** Serves /v1/me, the listed pages, PATCHes that echo the change and bulk requests. */
 function serve(
-  pages: Record<string, { codes: ListedCode[]; next_cursor: string | null }>,
+  pages: Record<string, { codes: ListedCode[]; next_cursor: string | null } | { code: ListedCode }>,
   patch?: (id: string, body: unknown) => ListedCode,
   bulk?: (body: Bulk) => BulkResult[],
 ) {
@@ -170,6 +174,65 @@ describe("CodesList card shortcuts", () => {
     const list = screen.getAllByRole("list").find((ul) => within(ul).queryByRole("article"));
     expect(list?.className).toContain("flex-col");
     expect(list?.className).not.toContain("grid-cols");
+  });
+});
+
+describe("CodesList greeting a new code", () => {
+  const r = t.ready;
+  const NEW = "11111111-2222-4333-8444-555555555555";
+  const GONE = "99999999-2222-4333-8444-555555555555";
+  const arrive = (id = NEW) => {
+    search = `?ready=${id}`;
+  };
+  afterEach(() => {
+    search = "";
+  });
+  const fresh = code({ id: NEW, name: "Flyer", short_code: "Nn9wCode", short_url: "http://localhost:8180/Nn9wCode" });
+
+  it("opens with the new code's download dialog, and drops the parameter from the address", async () => {
+    arrive();
+    const replaceState = vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
+    serve({ [LIST]: { codes: [fresh, code({})], next_cursor: null }, [`/v1/workspaces/w1/codes/${NEW}`]: { code: fresh } });
+    show();
+    const dialog = await screen.findByRole("dialog", { name: r.title });
+    expect(await within(dialog).findByText("localhost:8180/Nn9wCode")).toBeTruthy();
+    expect(replaceState).toHaveBeenCalledWith(window.history.state, "", "/vi/app"); // only `ready` goes
+    expect(within(dialog).getByRole("link", { name: r.customize }).getAttribute("href")).toBe(`/app/codes/${NEW}#design`);
+    const blobs = vi.spyOn(sessionApi, "requestBlob");
+    blobs.mockClear();
+    await act(async () => void fireEvent.click(within(dialog).getByRole("button", { name: l.downloadSvg })));
+    expect(blobs).toHaveBeenCalledWith(expect.stringContaining(`/codes/${NEW}/image?format=svg`));
+    await act(async () => void fireEvent.click(within(dialog).getByRole("button", { name: r.close })));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("says so and still closes when the new code cannot be loaded", async () => {
+    arrive(GONE);
+    vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
+    serve({ [LIST]: { codes: [code({})], next_cursor: null } });
+    show();
+    // Not announced as ready: the dialog is named by what went wrong.
+    const dialog = await screen.findByRole("dialog", { name: t.loadFailed });
+    expect(within(dialog).queryByText(r.intro)).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: l.downloadPng })).toBeNull();
+    await act(async () => void fireEvent.click(within(dialog).getByRole("button", { name: r.close })));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it.each(["..", ".", "c9", "../../me", "x".repeat(5000)])("ignores a value that is not a code id (%s): no dialog and no request for it", async (value) => {
+    arrive(value);
+    serve({ [LIST]: { codes: [code({})], next_cursor: null } });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(request.mock.calls.map(([path]) => path).filter((path) => path !== "/v1/me" && path !== FOLDERS && path !== LIST)).toEqual([]);
+  });
+
+  it("shows no dialog on an ordinary visit", async () => {
+    serve({ [LIST]: { codes: [code({})], next_cursor: null } });
+    show();
+    await screen.findByRole("article", { name: "Menu" });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 

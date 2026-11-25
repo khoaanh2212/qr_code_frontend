@@ -5,7 +5,7 @@ import { format } from "@/i18n/config";
 import { RequireSession } from "@/features/auth/require-session";
 import { en } from "@/i18n/messages/en";
 import { plural } from "@/i18n/plural";
-import { ApiError, sessionApi } from "@/lib/api";
+import { ApiError, publicApi, sessionApi } from "@/lib/api";
 import type { CodeStats, DynamicCode, Folder } from "@/lib/api/types";
 import { CodeDetail } from "./code-detail";
 import { CodeForm } from "./code-form";
@@ -70,6 +70,7 @@ beforeEach(() => {
   });
   requestVoid = vi.spyOn(sessionApi, "requestVoid").mockResolvedValue();
   vi.spyOn(sessionApi, "requestBlob").mockResolvedValue(new Blob(["png"], { type: "image/png" }));
+  vi.spyOn(publicApi, "requestBlob").mockResolvedValue(new Blob(["png"], { type: "image/png" })); // the wizard's preview
   assign = vi.fn();
   vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app", search: "" });
   URL.createObjectURL = vi.fn(() => "blob:qr");
@@ -90,59 +91,162 @@ const field = (name: string | RegExp) => screen.getByRole("textbox", { name }) a
 const type = (name: string | RegExp, value: string) => fireEvent.change(field(name), { target: { value } });
 
 describe("CodeForm", () => {
+  const w = t.wizard;
+  /** A creating button ignores clicks for a moment after a step change (double clicks): let it pass. */
+  const settle = () => void vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60_000);
   const renderForm = () =>
     withSession(<CodeForm t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" captcha={captcha} />);
-
-  it("creates a code with the handed-over destination and opens it", async () => {
-    saveHandoff({ url: "https://example.com/promo", fg: "#112233", bg: "#ffffff" });
+  const created = () => request.mock.calls.filter(([p, o]) => p === "/v1/workspaces/w1/codes" && o?.method === "POST").map(([, o]) => o?.body);
+  const serveCreate = () =>
     request.mockImplementation(async (path, opts) => {
       if (path === "/v1/me") return me;
       if (path === "/v1/workspaces/w1/codes" && opts?.method === "POST") return { code };
+      if (path === "/v1/workspaces/w1/templates") return { templates: [] };
       throw new Error(`unexpected ${path}`);
     });
+  const targetField = () => screen.findByRole("textbox", { name: new RegExp(t.target) }) as Promise<HTMLInputElement>;
+  const step = () => screen.getByRole("list", { name: w.steps }).querySelector('[aria-current="step"]')?.textContent;
+
+  it("starts at the destination with the handed-over address, and names both steps", async () => {
+    saveHandoff({ url: "https://example.com/promo", fg: "#112233", bg: "#ffffff" });
+    serveCreate();
     renderForm();
-    const target = (await screen.findByRole("textbox", { name: new RegExp(t.target) })) as HTMLInputElement;
+    const target = await targetField();
     await waitFor(() => expect(target.value).toBe("https://example.com/promo"));
     expect(sessionStorage.length).toBe(0); // read once
-    type(t.name, "  Promo  ");
-    await click(t.create);
-    expect(request).toHaveBeenCalledWith("/v1/workspaces/w1/codes", {
-      method: "POST",
-      body: {
-        name: "Promo",
-        target_url: "https://example.com/promo",
-        design: { fg: "#112233", bg: "#ffffff" },
-        captcha_token: "dev-token",
-      },
-    });
-    expect(push).toHaveBeenCalledWith("/app/codes/c1");
+    expect(step()).toContain(w.stepDestination);
+    expect(within(screen.getByRole("list", { name: w.steps })).getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: t.create })).toBeNull(); // creating is the last step
   });
 
-  it("adds https:// and refuses what is not a web address without calling the API", async () => {
+  it("goes on to the design with its preview, creates the code there and returns to the list to greet it", async () => {
+    saveHandoff({ url: "https://example.com/promo", fg: "#112233", bg: "#ffffff" });
+    serveCreate();
     renderForm();
-    const target = (await screen.findByRole("textbox", { name: new RegExp(t.target) })) as HTMLInputElement;
-    type(new RegExp(t.target), "mailto:a@example.com");
+    await targetField();
+    type(t.name, "  Promo  ");
+    await click(w.next);
+    expect(step()).toContain(w.stepDesign);
+    expect(screen.getByRole("region", { name: w.previewTitle })).toBeTruthy();
+    expect(screen.getByText(w.previewNote)).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: new RegExp(t.target) })).toBeNull();
+    expect(created()).toEqual([]); // nothing exists until the last button
+    settle();
     await click(t.create);
+    expect(created()).toEqual([
+      { name: "Promo", target_url: "https://example.com/promo", design: { fg: "#112233", bg: "#ffffff" }, captcha_token: "dev-token" },
+    ]);
+    expect(push).toHaveBeenCalledWith("/app?ready=c1");
+  });
+
+  it("takes the second click of a double click on Next for what it is: nothing is created", async () => {
+    serveCreate();
+    renderForm();
+    await targetField();
+    type(new RegExp(t.target), "https://example.com/menu");
+    await click(w.next);
+    await click(t.create); // lands where "Next" was, a moment later
+    expect(created()).toEqual([]);
+    expect(step()).toContain(w.stepDesign);
+    // And the same for Back, which "Create with the default design" replaces.
+    await click(w.back);
+    await click(w.skipDesign);
+    expect(created()).toEqual([]);
+  });
+
+  it("does not create the code on Enter in a design field", async () => {
+    serveCreate();
+    renderForm();
+    await targetField();
+    type(new RegExp(t.target), "https://example.com/menu");
+    await click(w.next);
+    const color = screen.getByRole("textbox", { name: new RegExp(t.foreground) });
+    expect(fireEvent.keyDown(color, { key: "Enter" })).toBe(false); // default prevented
+    expect(created()).toEqual([]);
+  });
+
+  it("creates with the default design straight from the first step", async () => {
+    serveCreate();
+    renderForm();
+    await targetField();
+    type(new RegExp(t.target), "https://example.com/menu");
+    await click(w.skipDesign);
+    expect(created()).toEqual([{ name: "", target_url: "https://example.com/menu", design: { fg: "#000000", bg: "#ffffff" }, captcha_token: "dev-token" }]);
+    expect(push).toHaveBeenCalledWith("/app?ready=c1");
+  });
+
+  it("adds https:// and keeps what is not a web address on the first step, without calling the API", async () => {
+    serveCreate();
+    renderForm();
+    const target = await targetField();
+    type(new RegExp(t.target), "mailto:a@example.com");
+    await click(w.next);
     expect(screen.getByText(t.errors.targetUrl)).toBeTruthy();
-    expect(request).not.toHaveBeenCalledWith("/v1/workspaces/w1/codes", expect.anything());
+    expect(step()).toContain(w.stepDestination);
+    expect(document.activeElement).toBe(target);
+    await click(w.skipDesign);
+    expect(created()).toEqual([]);
 
     type(new RegExp(t.target), "example.com");
     fireEvent.blur(target);
     expect(target.value).toBe("https://example.com");
   });
 
-  it("shows the API's reason for refusing, such as an unverified address", async () => {
-    request.mockImplementation(async (path) => {
+  it("keeps what was entered when going back, and resets the design on request", async () => {
+    serveCreate();
+    renderForm();
+    await targetField();
+    type(new RegExp(t.target), "https://example.com/menu");
+    type(t.name, "Menu");
+    await click(w.next);
+    const color = screen.getByRole("textbox", { name: new RegExp(t.foreground) }) as HTMLInputElement;
+    fireEvent.change(color, { target: { value: "#0f766e" } });
+    fireEvent.blur(color);
+    await click(w.back);
+    expect((await targetField()).value).toBe("https://example.com/menu");
+    expect(field(t.name).value).toBe("Menu");
+    await click(w.next);
+    expect((screen.getByRole("textbox", { name: new RegExp(t.foreground) }) as HTMLInputElement).value.toLowerCase()).toBe("#0f766e");
+    await click(w.resetDesign);
+    expect((screen.getByRole("textbox", { name: new RegExp(t.foreground) }) as HTMLInputElement).value.toLowerCase()).toBe("#000000");
+  });
+
+  it("shows the API's reason for refusing on the step it concerns", async () => {
+    request.mockImplementation(async (path, opts) => {
       if (path === "/v1/me") return me;
-      throw new ApiError(403, "email_not_verified", "verify");
+      if (path === "/v1/workspaces/w1/templates") return { templates: [] };
+      if (opts?.method === "POST") throw new ApiError(403, "email_not_verified", "verify");
+      throw new Error(`unexpected ${path}`);
     });
     renderForm();
-    await screen.findByRole("textbox", { name: new RegExp(t.target) });
+    await targetField();
     type(new RegExp(t.target), "https://example.com");
+    await click(w.next);
+    settle();
     await click(t.create);
     // Among the alerts (the templates bar has its own), the form's says why.
     expect(screen.getAllByRole("alert").some((a) => a.textContent === t.errors.verifyFirst)).toBe(true);
+    expect(step()).toContain(w.stepDesign);
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("returns to the destination when the API refuses the address", async () => {
+    request.mockImplementation(async (path, opts) => {
+      if (path === "/v1/me") return me;
+      if (path === "/v1/workspaces/w1/templates") return { templates: [] };
+      if (opts?.method === "POST") throw new ApiError(422, "validation_error", "bad", "target_url");
+      throw new Error(`unexpected ${path}`);
+    });
+    renderForm();
+    await targetField();
+    type(new RegExp(t.target), "https://example.com");
+    await click(w.next);
+    settle();
+    await click(t.create);
+    const target = await targetField();
+    expect(step()).toContain(w.stepDestination);
+    expect(screen.getByText(t.errors.targetUrl)).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(target));
   });
 });
 
