@@ -14,6 +14,7 @@ import type { CodeStats, DynamicCode } from "@/lib/api/types";
 import { codeStats } from "./api";
 
 import { ScanChart, TopList } from "./scan-chart";
+import { CODE_ANCHORS } from "./anchors";
 
 type T = Messages["codes"];
 
@@ -57,7 +58,7 @@ export function ScansSection({ t, locale, ws, code }: { t: T; locale: Locale; ws
   const nf = new Intl.NumberFormat(locale);
   const devices: Record<string, string> = t.deviceNames;
   return (
-    <Section title={t.scansTitle} description={t.scansIntro}>
+    <Section title={t.scansTitle} description={t.scansIntro} anchor={CODE_ANCHORS.scans}>
       {failed && <FormAlert message={t.loadFailed} />}
       {!stats && !failed && (
         <p role="status" className="text-sm text-muted">

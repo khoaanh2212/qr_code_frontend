@@ -26,6 +26,7 @@ import { StatusBadge } from "./status-badge";
 import { ScansSection } from "./code-scans";
 import { SlugEditor } from "./slug-editor";
 import { FolderSection } from "./folder-section";
+import { CODE_ANCHORS, codeAnchorOf } from "./anchors";
 
 type T = Messages["codes"];
 type Props = {
@@ -57,6 +58,19 @@ export function CodeDetail({ t, generator, templates, auth, locale }: Props) {
       });
     return () => abort.abort();
   }, [workspace, id, attempt]);
+
+  // A link from the list leads to one section (`#scans`, `#destination`, `#design`): the page
+  // only has it once the code is loaded, so the browser's own jump came too early.
+  const ready = load.kind === "ready";
+  useEffect(() => {
+    if (!ready) return;
+    // `hash` is missing where a test stubs `location`.
+    const anchor = codeAnchorOf(window.location.hash ?? "");
+    if (!anchor) return;
+    const section = document.getElementById(anchor);
+    section?.scrollIntoView?.({ block: "start" });
+    section?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+  }, [ready, id]);
 
   // Every account has a personal workspace; without one there is nothing to load.
   const back = <TextLink href={localizePath(locale, "/app")}>← {t.back}</TextLink>;
@@ -293,7 +307,7 @@ function DestinationSection({ t, auth, ws, code, onSaved }: EditProps) {
   }
 
   return (
-    <Section title={t.destinationTitle} description={t.destinationIntro}>
+    <Section title={t.destinationTitle} description={t.destinationIntro} anchor={CODE_ANCHORS.destination}>
       <form noValidate onSubmit={submit}>
         <fieldset disabled={locked} className="flex flex-col gap-4">
           <TextField
@@ -376,7 +390,7 @@ function DesignSection({
   }
 
   return (
-    <Section title={t.designTitle} description={t.designIntro}>
+    <Section title={t.designTitle} description={t.designIntro} anchor={CODE_ANCHORS.design}>
       <form noValidate onSubmit={submit}>
         <fieldset disabled={locked} className="flex flex-col gap-4">
           <LookFields

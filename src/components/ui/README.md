@@ -37,6 +37,7 @@ Feature code lives in `src/features/<feature>` and composes these; see
 | `EmptyState` | "Nothing yet" / "nothing matches", with the next step | `icon`, `title`, `action`, `as` |
 | `Skeleton` | Loading placeholder (hidden from assistive tech) | `className` |
 | `ConfirmDialog` | Modal confirmation for irreversible actions | `open`, `title`, `busy`, `error`, `onConfirm`, `onCancel` |
+| `Drawer` | Side panel for navigation and filters on narrow screens (modal `<dialog>`, slides in from the left) | `open`, `title`, `closeLabel`, `onClose` |
 | `CopyButton` | Copy to clipboard with announced result | `value`, `label`, `copiedLabel`, `failedLabel` |
 | `TextField` | Labelled text input with help and error | see `text-field.tsx` |
 

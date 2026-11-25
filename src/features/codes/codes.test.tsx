@@ -218,6 +218,31 @@ describe("CodeDetail", () => {
     expect(push).toHaveBeenCalledWith("/app");
   });
 
+  it("opens at the section a link from the list names, with its heading focused", async () => {
+    vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app/codes/c1", search: "", hash: "#scans" });
+    const scrolled: string[] = [];
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this.id);
+    };
+    detailApi();
+    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+    await screen.findByRole("heading", { name: "Menu", level: 1 });
+    await waitFor(() => expect(scrolled).toEqual(["scans"]));
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: t.scansTitle }));
+    expect(document.getElementById("destination")).toBeTruthy();
+    expect(document.getElementById("design")).toBeTruthy();
+  });
+
+  it("stays at the top for a hash it does not know", async () => {
+    vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app/codes/c1", search: "", hash: "#delete" });
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    detailApi();
+    withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+    await screen.findByRole("heading", { name: "Menu", level: 1 });
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
   it("leaves a locked code read-only", async () => {
     detailApi({ status: "locked" });
     withSession(<CodeDetail t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);

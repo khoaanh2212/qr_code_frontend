@@ -224,6 +224,19 @@ the proof and its download into reach when it is off screen. Breakpoints: 640px 
 columns. Known drift: auth and account pages still use a 64rem container (`max-w-5xl`); move them
 to 72rem when they are designed.
 
+The codes list is the one page that spans the viewport (an app shell): from 1024px a 15rem column
+pinned to the left edge holds the folders, separated by a Rule line, and stays in view while the
+codes scroll; the codes sit in a centered 56rem column (`max-w-4xl`) in the remaining width, and
+the masthead spans the viewport with them. Below 1024px the column becomes a panel that slides in
+from the left over a dimmed page (a modal `<dialog>`, 20rem wide at most, never the full width, so
+the page stays visible behind it); it opens from "Filters" in the toolbar and closes on a choice,
+Escape, its close button or a tap outside. Every other app page keeps the centered column.
+
+A code's card in the list reads left to right: selection, the code on white with a download disc
+on its corner, name and facts, then shortcuts above the scan count. The count is the card's one
+large figure (the title size, tabular numerals), set in Ink with its unit in muted text beside it.
+Below 640px the same parts stack and the code grows to 9rem on a tinted panel in the middle.
+
 ## Elevation & Depth
 
 Flat by default. Surfaces separate by tone (paper, sheet, masthead) and by a 1px rule, not by

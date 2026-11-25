@@ -1,10 +1,9 @@
 "use client";
 
-import { Folder as FolderIcon, FolderCog, FolderMinus, FolderPlus, Layers, Pencil, Trash2 } from "lucide-react";
+import { Folder as FolderIcon, FolderMinus, FolderPlus, Layers, Pencil, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
-import { Select, type SelectOption } from "@/components/ui/select";
 import { format } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import type { Folder } from "@/lib/api/types";
@@ -62,16 +61,16 @@ function ChoiceButton({
 }
 
 /**
- * The folder filter as a column (wide screens): "All codes", "No folder", then each folder with
+ * The folder filter as a list (a column on wide screens, in the filter panel on narrow ones): "All codes", "No folder", then each folder with
  * its number of codes, the current one marked with `aria-current`. Editors also get a menu per
  * folder (rename, delete) and "New folder". Folder names are user content: plain text only.
  */
-export function FolderNav({ t, folders, selected, onSelect, actions }: FolderChoiceProps) {
+export function FolderNav({ t, folders, selected, onSelect, actions, className = "" }: FolderChoiceProps & { className?: string }) {
   const f = t.folders;
   const headingId = useId();
   const icon = (Icon: typeof FolderIcon) => <Icon aria-hidden="true" className="size-4 shrink-0 text-muted" />;
   return (
-    <nav aria-labelledby={headingId} className="hidden min-w-0 flex-col gap-2 lg:flex">
+    <nav aria-labelledby={headingId} className={`min-w-0 flex-col gap-2 ${className || "flex"}`}>
       <h2 id={headingId} className="px-3 text-sm font-semibold text-muted">
         {f.nav}
       </h2>
@@ -116,45 +115,5 @@ export function FolderNav({ t, folders, selected, onSelect, actions }: FolderCho
         </button>
       )}
     </nav>
-  );
-}
-
-/**
- * The same choice as a select (narrow screens), in the toolbar. Editors get a "Folder actions"
- * menu next to it: new folder, and rename or delete the folder that is selected.
- */
-export function FolderPicker({ t, folders, selected, onSelect, actions }: FolderChoiceProps) {
-  const f = t.folders;
-  const options: SelectOption<string>[] = [
-    { value: ALL_FOLDERS, label: f.all },
-    { value: NO_FOLDER, label: f.none },
-    ...folders.map((folder) => ({ value: folder.id, label: `${folder.name} (${folder.code_count})` })),
-  ];
-  const current = folders.find((folder) => folder.id === selected);
-  return (
-    <div className="flex min-w-0 max-w-full items-center gap-1 lg:hidden">
-      <Select
-        label={f.filter}
-        hideLabel
-        value={options.some((o) => o.value === selected) ? selected : ALL_FOLDERS}
-        options={options}
-        onChange={onSelect}
-        className="min-w-0"
-      />
-      {actions && (
-        <Menu label={f.folderActions} icon={FolderCog}>
-          <MenuItem icon={FolderPlus} onSelect={actions.onCreate}>
-            {f.newFolder}
-          </MenuItem>
-          <MenuItem icon={Pencil} disabled={!current} onSelect={() => current && actions.onRename(current)}>
-            {f.renameCurrent}
-          </MenuItem>
-          <MenuSeparator />
-          <MenuItem icon={Trash2} tone="danger" disabled={!current} onSelect={() => current && actions.onDelete(current)}>
-            {f.deleteCurrent}
-          </MenuItem>
-        </Menu>
-      )}
-    </div>
   );
 }
