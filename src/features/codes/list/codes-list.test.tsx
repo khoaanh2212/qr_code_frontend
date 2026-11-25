@@ -9,6 +9,7 @@ import { ApiError, sessionApi } from "@/lib/api";
 import type { BulkResult, ListedCode } from "@/lib/api/types";
 import { clearThumbnailCache } from "./code-thumbnail";
 import { CodesList } from "./codes-list";
+import { EMPTY_CAMPAIGN } from "../campaign/rules";
 
 const t = en.codes;
 const l = t.list;
@@ -33,6 +34,7 @@ const code = (over: Partial<ListedCode>): ListedCode => ({
   design: {},
   status: "active",
   folder_id: null,
+  campaign: EMPTY_CAMPAIGN,
   created_at: "2026-11-20T10:00:00Z",
   updated_at: "2026-11-20T10:00:00Z",
   scans_total: 0,
