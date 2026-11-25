@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_QUERY, isDefaultQuery, listParams } from "./query";
+import { ALL_FOLDERS, DEFAULT_QUERY, isDefaultQuery, listParams, NO_FOLDER } from "./query";
 
 describe("listParams", () => {
   it("sends nothing for the default list", () => {
@@ -7,7 +7,7 @@ describe("listParams", () => {
   });
 
   it("sends the trimmed search, the status and a non-default order", () => {
-    expect(listParams({ search: "  thực đơn ", status: "paused", sort: "scans" })).toEqual({ q: "thực đơn", status: "paused", sort: "scans" });
+    expect(listParams({ ...DEFAULT_QUERY, search: "  thực đơn ", status: "paused", sort: "scans" })).toEqual({ q: "thực đơn", status: "paused", sort: "scans" });
     expect(listParams({ ...DEFAULT_QUERY, sort: "newest" })).toEqual({});
   });
 
@@ -30,5 +30,27 @@ describe("isDefaultQuery", () => {
     expect(isDefaultQuery({ ...DEFAULT_QUERY, search: " " })).toBe(true);
     expect(isDefaultQuery({ ...DEFAULT_QUERY, status: "active" })).toBe(false);
     expect(isDefaultQuery({ ...DEFAULT_QUERY, search: "menu" })).toBe(false);
+  });
+});
+
+describe("listParams with a folder", () => {
+  it("sends the folder id, or none for codes without a folder, and nothing for all codes", () => {
+    expect(listParams({ ...DEFAULT_QUERY, folder: "f1" })).toEqual({ folder: "f1" });
+    expect(listParams({ ...DEFAULT_QUERY, folder: NO_FOLDER })).toEqual({ folder: "none" });
+    expect(listParams({ ...DEFAULT_QUERY, folder: ALL_FOLDERS })).toEqual({});
+  });
+
+  it("combines the folder with search, status and order", () => {
+    expect(listParams({ search: "menu", status: "paused", folder: "f1", sort: "name" })).toEqual({
+      q: "menu",
+      status: "paused",
+      folder: "f1",
+      sort: "name",
+    });
+  });
+
+  it("counts a folder as a filter that narrows the list", () => {
+    expect(isDefaultQuery({ ...DEFAULT_QUERY, folder: "f1" })).toBe(false);
+    expect(isDefaultQuery({ ...DEFAULT_QUERY, folder: NO_FOLDER })).toBe(false);
   });
 });

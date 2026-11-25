@@ -25,6 +25,7 @@ import { codeFailure, type CodeField } from "./errors";
 import { StatusBadge } from "./status-badge";
 import { ScansSection } from "./code-scans";
 import { SlugEditor } from "./slug-editor";
+import { FolderSection } from "./folder-section";
 
 type T = Messages["codes"];
 type Props = {
@@ -104,6 +105,7 @@ export function CodeDetail({ t, generator, templates, auth, locale }: Props) {
         <DestinationSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <DesignSection t={t} generator={generator} templates={templates} auth={auth} ws={ws} code={code} onSaved={setCode} />
         <StatusSection t={t} auth={auth} ws={ws} code={code} onSaved={setCode} />
+        <FolderSection t={t} locale={locale} ws={ws} code={code} canEdit={workspace.role !== "viewer"} onSaved={setCode} />
         <ScansSection t={t} locale={locale} ws={ws} code={code} />
         <DeleteSection t={t} auth={auth} ws={ws} code={code} locale={locale} />
       </div>

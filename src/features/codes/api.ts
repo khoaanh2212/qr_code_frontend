@@ -18,10 +18,12 @@ import type { QrFormat } from "@/lib/qr/types";
 const base = (workspaceId: string) => `/v1/workspaces/${encodeURIComponent(workspaceId)}/codes`;
 const one = (workspaceId: string, id: string) => `${base(workspaceId)}/${encodeURIComponent(id)}`;
 
-/** Search, status filter and order of the list; omitted means "any" / newest first. */
+/** Search, status and folder filters and order of the list; omitted means "any" / newest first. */
 export interface CodeListParams {
   q?: string;
   status?: CodeStatus;
+  /** A folder id, or "none" for the codes in no folder. */
+  folder?: string;
   sort?: Exclude<CodeSort, "newest">;
 }
 
@@ -30,6 +32,7 @@ export async function listCodes(workspaceId: string, params: CodeListParams = {}
   const q = new URLSearchParams({ limit: "50" });
   if (params.q) q.set("q", params.q);
   if (params.status) q.set("status", params.status);
+  if (params.folder) q.set("folder", params.folder);
   if (params.sort) q.set("sort", params.sort);
   if (cursor) q.set("cursor", cursor);
   return sessionApi.request<CodesPage>(`${base(workspaceId)}?${q}`, { signal });
@@ -39,8 +42,14 @@ export async function listCodes(workspaceId: string, params: CodeListParams = {}
 export const BULK_MAX_CODES = 100;
 
 /** Pauses, resumes or deletes up to BULK_MAX_CODES codes; a result per id, in order. */
-export async function bulkCodes(workspaceId: string, action: BulkAction, ids: readonly string[]): Promise<BulkResult[]> {
+export async function bulkCodes(workspaceId: string, action: Exclude<BulkAction, "move">, ids: readonly string[]): Promise<BulkResult[]> {
   return (await sessionApi.request<BulkResponse>(`${base(workspaceId)}/bulk`, { method: "POST", body: { action, ids } })).results;
+}
+
+/** Moves up to BULK_MAX_CODES codes into a folder, or out of any folder (null); a result per id. */
+export async function bulkMove(workspaceId: string, ids: readonly string[], folderId: string | null): Promise<BulkResult[]> {
+  const body = { action: "move", ids, folder_id: folderId };
+  return (await sessionApi.request<BulkResponse>(`${base(workspaceId)}/bulk`, { method: "POST", body })).results;
 }
 
 export async function getCode(workspaceId: string, id: string, signal?: AbortSignal): Promise<DynamicCode> {
@@ -66,6 +75,8 @@ export interface CodeChanges {
   /** Replaces the whole design. */
   design?: CodeDesign;
   status?: Exclude<CodeStatus, "locked">;
+  /** A folder id to move the code into, or null to take it out of its folder. */
+  folder_id?: string | null;
 }
 
 export async function updateCode(workspaceId: string, id: string, body: CodeChanges): Promise<DynamicCode> {

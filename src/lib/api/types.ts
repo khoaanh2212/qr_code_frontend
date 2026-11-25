@@ -83,6 +83,17 @@ export interface DynamicCode {
   target_url: string;
   design: CodeDesign;
   status: CodeStatus;
+  /** The folder the code is in (backend PLAN item 54); null when it is in none. */
+  folder_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A folder that groups a workspace's codes; `code_count` is the number of live codes in it. */
+export interface Folder {
+  id: string;
+  name: string;
+  code_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -100,7 +111,7 @@ export interface ListedCode extends DynamicCode {
 export type CodeSort = "newest" | "oldest" | "name" | "scans";
 
 /**
- * A page of codes. `next_cursor` continues the same query only (same `q`, `status`, `sort`);
+ * A page of codes. `next_cursor` continues the same query only (same `q`, `status`, `folder`, `sort`);
  * null on the last page.
  */
 export interface CodesPage {
@@ -108,13 +119,13 @@ export interface CodesPage {
   next_cursor: string | null;
 }
 
-/** POST /v1/workspaces/{wid}/codes/bulk (backend PLAN item 51): up to 100 ids. */
-export type BulkAction = "pause" | "resume" | "delete";
+/** POST /v1/workspaces/{wid}/codes/bulk (backend PLAN items 51, 54): up to 100 ids; `move` also takes `folder_id`. */
+export type BulkAction = "pause" | "resume" | "delete" | "move";
 
-/** What a bulk request did to one code; `code` is the changed code after a pause or resume. */
+/** What a bulk request did to one code; `code` is the changed code after a pause, resume or move. */
 export interface BulkResult {
   id: string;
-  result: "ok" | "not_found" | "locked" | "email_not_verified" | "failed";
+  result: "ok" | "not_found" | "locked" | "email_not_verified" | "failed" | "folder_not_found";
   code?: DynamicCode;
 }
 

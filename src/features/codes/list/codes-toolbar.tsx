@@ -1,7 +1,7 @@
 "use client";
 
-import { LayoutGrid, List, Pause, Play, Trash2, X } from "lucide-react";
-import type { Ref } from "react";
+import { FolderInput, LayoutGrid, List, Pause, Play, Trash2, X } from "lucide-react";
+import type { ReactNode, Ref } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SearchField } from "@/components/ui/search-field";
@@ -21,10 +21,12 @@ export interface CodesToolbarProps {
   onViewChange: (view: CodesView) => void;
   /** The search box, for moving focus back to it. */
   searchRef?: Ref<HTMLInputElement>;
+  /** The folder picker for narrow screens (the list shows a column of folders on wide ones). */
+  folderPicker?: ReactNode;
 }
 
 /** Search, status filter, order and layout of the codes list. Controlled: the list owns the query. */
-export function CodesToolbar({ t, query, onQueryChange, view, onViewChange, searchRef }: CodesToolbarProps) {
+export function CodesToolbar({ t, query, onQueryChange, view, onViewChange, searchRef, folderPicker }: CodesToolbarProps) {
   const l = t.list;
   const statuses: { value: StatusFilter; label: string }[] = [
     { value: "all", label: l.statusAll },
@@ -49,6 +51,7 @@ export function CodesToolbar({ t, query, onQueryChange, view, onViewChange, sear
         maxLength={MAX_SEARCH_CHARS}
         className="min-w-0 basis-full sm:basis-72 sm:grow"
       />
+      {folderPicker}
       <Select label={l.statusFilter} hideLabel value={query.status} options={statuses} onChange={(status) => onQueryChange({ ...query, status })} />
       <Select label={l.sort} hideLabel value={query.sort} options={sorts} onChange={(sort) => onQueryChange({ ...query, sort })} />
       <div className="ml-auto">
@@ -78,12 +81,14 @@ export interface SelectionBarProps {
   /** Absent when no selected code can take that action (all paused, all locked…). */
   onPause?: () => void;
   onResume?: () => void;
+  /** Absent for viewers, and while there are no folders to move into. */
+  onMove?: () => void;
   onDelete: () => void;
   busy: boolean;
 }
 
 /** The row above the codes: select all, the count, and what can be done to the selection. */
-export function SelectionBar({ t, state, count, summary, onToggleAll, onClear, onPause, onResume, onDelete, busy }: SelectionBarProps) {
+export function SelectionBar({ t, state, count, summary, onToggleAll, onClear, onPause, onResume, onMove, onDelete, busy }: SelectionBarProps) {
   const l = t.list;
   return (
     <div className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border pb-2">
@@ -102,6 +107,12 @@ export function SelectionBar({ t, state, count, summary, onToggleAll, onClear, o
               <Play aria-hidden="true" className="size-4" />
               {l.resume}
             </Button>
+            {onMove && (
+              <Button variant="secondary" onClick={onMove} busy={busy}>
+                <FolderInput aria-hidden="true" className="size-4" />
+                {t.folders.moveAction}
+              </Button>
+            )}
             <Button variant="secondary" onClick={onDelete} busy={busy} className="text-danger">
               <Trash2 aria-hidden="true" className="size-4" />
               {l.delete}

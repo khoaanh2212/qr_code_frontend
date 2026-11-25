@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheck, CircleX, Plus, QrCode, SearchX, Shapes } from "lucide-react";
+import { CircleCheck, CircleX, FolderOpen, Info, Plus, QrCode, SearchX, Shapes } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ButtonLink, FormAlert } from "@/components/form/form-bits";
@@ -9,13 +9,18 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersonalWorkspace } from "@/features/auth/require-session";
-import { localizePath, type Locale } from "@/i18n/config";
+import { format, localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { plural } from "@/i18n/plural";
 import type { DynamicCode, ListedCode } from "@/lib/api/types";
+import { FolderForm } from "../folders/folder-form";
+import { FolderNav, FolderPicker, type FolderActions } from "../folders/folder-nav";
+import { MoveDialog, type PendingMove } from "../folders/move-dialog";
+import { useFolderEditing } from "../folders/use-folder-editing";
+import { useFolders } from "../folders/use-folders";
 import { CodeCard } from "./code-card";
 import { CodesToolbar, SelectionBar } from "./codes-toolbar";
-import { DEFAULT_QUERY, isDefaultQuery, listParams, type CodeQuery } from "./query";
+import { ALL_FOLDERS, DEFAULT_QUERY, isDefaultQuery, listParams, NO_FOLDER, type CodeQuery } from "./query";
 import { useCodeActions } from "./use-code-actions";
 import { useCodes } from "./use-codes";
 import { useCodesView, type CodesView } from "./use-codes-view";
@@ -30,25 +35,45 @@ const NO_CODES: readonly ListedCode[] = [];
 const SEARCH_DELAY_MS = 300;
 
 /**
- * The dashboard: the personal workspace's dynamic codes, with search, status filter, order,
- * list/grid layout, per-code actions and bulk pause, resume and delete.
+ * The dashboard: the personal workspace's dynamic codes, with search, status and folder filters,
+ * order, list/grid layout, per-code actions and bulk pause, resume, move and delete.
  *
  * Composition only. The API searches, filters and orders (`useCodes` with `listParams`, backend
- * PLAN item 50); selection (`useSelection`), actions (`useCodeActions`, bulk through the API's
- * bulk endpoint) and the layout preference (`useCodesView`) are separate hooks; `CodesToolbar`,
- * `SelectionBar` and `CodeCard` render props.
+ * PLAN items 50 and 54); selection (`useSelection`), actions (`useCodeActions`, bulk through the
+ * API's bulk endpoint), folders (`useFolders`, `useFolderEditing`) and the layout preference
+ * (`useCodesView`) are separate hooks; `CodesToolbar`, `SelectionBar`, `FolderNav` and `CodeCard`
+ * render props. The folder choice lives in the query state like status and order (it is not
+ * remembered across page loads). Folders show as a column from the `lg` breakpoint, as a select
+ * in the toolbar below it.
  */
 export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel: string; locale: Locale }) {
   const l = t.list;
+  const f = t.folders;
   const workspace = usePersonalWorkspace();
   const ws = workspace?.id;
+  const folders = useFolders(ws);
   const [query, setQuery] = useState<CodeQuery>(DEFAULT_QUERY);
+  // The selected folder turned out to be gone (the list falls back to all codes).
+  const [folderGone, setFolderGone] = useState(false);
+  // A folder that the refreshed folder list no longer has (deleted in another tab) counts as gone
+  // too: back to all codes. Adjusting state while rendering, as `useSelection` does.
+  const missing =
+    folders.state.kind === "ready" &&
+    query.folder !== ALL_FOLDERS &&
+    query.folder !== NO_FOLDER &&
+    !folders.folders.some((x) => x.id === query.folder);
+  if (missing) {
+    setQuery({ ...query, folder: ALL_FOLDERS });
+    setFolderGone(true);
+  }
   const typed = useDebouncedValue(query.search, SEARCH_DELAY_MS);
   // A cleared search applies at once (no request for the old text with the new filters).
   const search = query.search.trim() === "" ? "" : typed;
   // The query the list answers: status and order at once, search once typing pauses.
   const applied = useMemo<CodeQuery>(() => ({ ...query, search }), [query, search]);
-  const { state, retry, loadMore, update, remove } = useCodes(ws, listParams(applied));
+  const reloadFolders = folders.reload;
+  const refreshFolders = useCallback(() => reloadFolders(true), [reloadFolders]);
+  const { state, retry, loadMore, update, remove } = useCodes(ws, listParams(applied), { onEmptyFolder: refreshFolders });
   const [view, setView] = useCodesView();
 
   const codes = state.kind === "ready" ? state.codes : NO_CODES;
@@ -57,7 +82,35 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
   const shownIds = useMemo(() => shown.map((c) => c.id), [shown]);
   const selection = useSelection(shownIds);
   const selected = shown.filter((c) => selection.ids.has(c.id));
-  const actions = useCodeActions({ workspaceId: ws, locale, t, update, remove, select: selection.set });
+  const actions = useCodeActions({ workspaceId: ws, locale, t, update, remove, select: selection.set, onCodesChanged: refreshFolders });
+  const { announce, move } = actions;
+
+  // Folders: viewers only filter; editors manage them and move codes (only when there is a folder
+  // to move into).
+  const canEdit = workspace?.role !== "viewer";
+  const canMove = canEdit && folders.folders.length > 0;
+  const changeQuery = useCallback((next: CodeQuery) => {
+    setFolderGone(false); // the note was about the previous choice
+    setQuery(next);
+  }, []);
+  const chooseFolder = useCallback((choice: string) => changeQuery({ ...query, folder: choice }), [changeQuery, query]);
+  const editing = useFolderEditing({
+    t,
+    folders,
+    isSelected: (id) => query.folder === id,
+    onDeselect: () => setQuery((q) => ({ ...q, folder: ALL_FOLDERS })),
+    announce,
+    // The codes of a deleted folder are in no folder now: that view is out of date.
+    onDeleted: () => {
+      setFolderDeletions((n) => n + 1);
+      if (query.folder === NO_FOLDER) retry();
+    },
+  });
+  const folderActions: FolderActions | undefined = canEdit
+    ? { onCreate: editing.startCreate, onRename: editing.startRename, onDelete: editing.askDelete }
+    : undefined;
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  const folderNames = useMemo(() => new Map(folders.folders.map((x) => [x.id, x.name])), [folders.folders]);
 
   // After a delete the cards (and the button that opened the dialog) are gone: continue from
   // the list's heading rather than from the top of the page.
@@ -66,10 +119,16 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
   useEffect(() => {
     if (actions.deletions > 0) heading.current?.focus();
   }, [actions.deletions]);
+  // The menu button that opened a deleted folder's dialog is gone too.
+  const [folderDeletions, setFolderDeletions] = useState(0);
+  useEffect(() => {
+    if (folderDeletions > 0) heading.current?.focus();
+  }, [folderDeletions]);
 
   const { setStatus, askDelete } = actions;
   const toggleStatus = useCallback((c: DynamicCode) => setStatus([c], c.status === "paused" ? "active" : "paused", false), [setStatus]);
   const deleteOne = useCallback((c: DynamicCode) => askDelete([c], false), [askDelete]);
+  const moveOne = useCallback((c: DynamicCode) => setPendingMove({ codes: [c], bulk: false }), [setPendingMove]);
 
   const newHref = localizePath(locale, "/app/codes/new");
   const filtered = !isDefaultQuery(applied);
@@ -85,11 +144,15 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
     ? l.loading
     : plural(locale, filtered ? (next ? l.matchesMore : l.matches) : next ? l.countMore : l.count, codes.length);
   const noResults = state.kind === "ready" && shown.length === 0 && next === null && !stale;
+  // Only a folder narrows the list: say the folder is empty rather than "no codes match".
+  const emptyFolder = applied.folder !== ALL_FOLDERS && applied.search.trim() === "" && applied.status === "all";
+  const noResultsTitle = !emptyFolder ? l.noResults : applied.folder === NO_FOLDER ? f.emptyNoFolder : f.emptyFolder;
   // Search results are announced: typing in the box gives no other cue to screen readers.
   const announcement =
-    (state.kind === "loading" && workspace) || refreshing ? l.loading : filtered && !refreshFailed ? (noResults ? l.noResults : summary) : "";
+    (state.kind === "loading" && workspace) || refreshing ? l.loading : filtered && !refreshFailed ? (noResults ? noResultsTitle : summary) : "";
   const activeSelected = selected.filter((c) => c.status === "active");
   const pausedSelected = selected.filter((c) => c.status === "paused");
+  const folderLoadFailed = folders.state.kind === "error";
 
   return (
     <div className="flex flex-col gap-6">
@@ -129,6 +192,12 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
             {actions.notice.done}
           </p>
         )}
+        {folderGone && (
+          <p className="flex items-center gap-2">
+            <Info aria-hidden="true" className="size-4 shrink-0 text-muted" />
+            {f.gone}
+          </p>
+        )}
         {actions.notice.problems?.map((problem) => (
           <p key={problem} className="flex items-center gap-2 text-danger">
             <CircleX aria-hidden="true" className="size-4 shrink-0" />
@@ -154,11 +223,40 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
       )}
 
       {hasCodes && ws && (
-        <section aria-labelledby="codes-heading" className="flex flex-col gap-3">
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start">
+          <FolderNav t={t} folders={folders.folders} selected={query.folder} onSelect={chooseFolder} actions={folderActions} />
+        <section aria-labelledby="codes-heading" className="flex min-w-0 flex-col gap-3">
           <h2 ref={heading} id="codes-heading" tabIndex={-1} className="sr-only">
             {t.title}
           </h2>
-          <CodesToolbar t={t} query={query} onQueryChange={setQuery} view={view} onViewChange={setView} searchRef={searchBox} />
+          <CodesToolbar
+            t={t}
+            query={query}
+            onQueryChange={changeQuery}
+            view={view}
+            onViewChange={setView}
+            searchRef={searchBox}
+            folderPicker={<FolderPicker t={t} folders={folders.folders} selected={query.folder} onSelect={chooseFolder} actions={folderActions} />}
+          />
+          {folderLoadFailed && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <FormAlert message={f.loadFailed} />
+              <Button variant="secondary" onClick={() => folders.reload()}>
+                {f.reload}
+              </Button>
+            </div>
+          )}
+          {editing.form && (
+            <FolderForm
+              key={editing.form.kind === "rename" ? editing.form.folder.id : "new"}
+              t={t}
+              label={editing.form.kind === "rename" ? f.rename : f.newFolder}
+              submitLabel={editing.form.kind === "rename" ? f.save : f.create}
+              initialName={editing.form.kind === "rename" ? editing.form.folder.name : ""}
+              onSubmit={editing.submit}
+              onClose={editing.closeForm}
+            />
+          )}
           {refreshFailed && (
             <div className="flex flex-col items-start gap-2">
               <FormAlert message={t.loadFailed} />
@@ -176,28 +274,30 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
             onClear={selection.clear}
             onPause={activeSelected.length > 0 ? () => setStatus(activeSelected, "paused", true) : undefined}
             onResume={pausedSelected.length > 0 ? () => setStatus(pausedSelected, "active", true) : undefined}
+            onMove={canMove ? () => setPendingMove({ codes: selected, bulk: true }) : undefined}
             onDelete={() => askDelete(selected, true)}
             busy={actions.busy || stale}
           />
 
           {noResults ? (
             <EmptyState
-              icon={SearchX}
-              title={l.noResults}
+              icon={emptyFolder ? FolderOpen : SearchX}
+              title={noResultsTitle}
               action={
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    setQuery({ ...DEFAULT_QUERY, sort: query.sort });
+                    if (emptyFolder) return chooseFolder(ALL_FOLDERS);
+                    changeQuery({ ...DEFAULT_QUERY, sort: query.sort });
                     // The button goes away with the empty state: continue from the search box.
                     searchBox.current?.focus();
                   }}
                 >
-                  {l.clearFilters}
+                  {emptyFolder ? f.showAll : l.clearFilters}
                 </Button>
               }
             >
-              {l.noResultsIntro}
+              {emptyFolder ? (applied.folder === NO_FOLDER ? undefined : f.emptyFolderIntro) : l.noResultsIntro}
             </EmptyState>
           ) : (
             <ul
@@ -219,6 +319,8 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
                     onDownload={actions.download}
                     onToggleStatus={toggleStatus}
                     onDelete={deleteOne}
+                    folderName={code.folder_id ? folderNames.get(code.folder_id) : undefined}
+                    onMove={canMove ? moveOne : undefined}
                   />
                 </li>
               ))}
@@ -239,8 +341,32 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
             </Button>
           )}
         </section>
+        </div>
       )}
 
+      <MoveDialog
+        t={t}
+        pending={pendingMove}
+        folders={folders.folders}
+        locale={locale}
+        onConfirm={(codes, target, bulk) => {
+          setPendingMove(null);
+          move(codes, target, bulk);
+        }}
+        onCancel={() => setPendingMove(null)}
+      />
+      <ConfirmDialog
+        open={editing.pendingDelete !== null}
+        title={editing.pendingDelete ? format(f.deleteTitle, { name: editing.pendingDelete.folder.name }) : ""}
+        confirmLabel={f.deleteConfirm}
+        cancelLabel={t.cancel}
+        busy={editing.deleting}
+        error={editing.pendingDelete?.error}
+        onConfirm={editing.confirmDelete}
+        onCancel={editing.cancelDelete}
+      >
+        {f.deleteBody}
+      </ConfirmDialog>
       <ConfirmDialog
         open={actions.pendingDelete !== null}
         title={actions.pendingDelete?.title ?? ""}
@@ -258,7 +384,7 @@ export function CodesList({ t, templatesLabel, locale }: { t: T; templatesLabel:
 }
 
 function listClass(view: CodesView): string {
-  return view === "grid" ? "grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "flex flex-col gap-2";
+  return view === "grid" ? "grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4" : "flex flex-col gap-2";
 }
 
 /** Skeleton cards in the chosen layout; the page's status region says "loading" in words. */

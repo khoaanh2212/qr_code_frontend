@@ -10,7 +10,8 @@ import { DEFAULT_RETRY_AFTER_SECONDS } from "@/lib/api/common-errors";
 import type { BulkAction, DynamicCode } from "@/lib/api/types";
 import { saveBlob } from "@/lib/browser/download";
 import type { QrFormat } from "@/lib/qr/types";
-import { BULK_MAX_CODES, bulkCodes, codeImage, deleteCode, updateCode } from "../api";
+import { BULK_MAX_CODES, bulkCodes, bulkMove, codeImage, deleteCode, updateCode } from "../api";
+import { isFolderGone } from "../folders/errors";
 
 /** The outcome of the last action, announced politely: what was done, and what was not and why. */
 export interface ActionNotice {
@@ -34,13 +35,23 @@ export interface CodeActions {
   pendingDelete: PendingDelete | null;
   /** Counts finished deletions, so the list can move focus off the removed cards. */
   deletions: number;
+  /** Says something in the list's status area (or clears it). */
+  announce: (message?: string) => void;
   download: (code: DynamicCode, format: QrFormat) => void;
   /** `bulk`: started from the selection, which then keeps only the codes that were not changed. */
   setStatus: (codes: readonly DynamicCode[], status: "active" | "paused", bulk: boolean) => void;
   /** `bulk`: started from the selection (bulk requests, selection kept for what is left). */
   askDelete: (codes: readonly DynamicCode[], bulk: boolean) => void;
+  /** Moves codes into a folder (`id` null: out of any folder). `bulk`: as `setStatus`. */
+  move: (codes: readonly DynamicCode[], target: FolderTarget, bulk: boolean) => void;
   confirmDelete: () => void;
   cancelDelete: () => void;
+}
+
+/** Where a move puts codes: a folder id (with its name, for the message) or no folder. */
+export interface FolderTarget {
+  id: string | null;
+  name: string;
 }
 
 interface Options {
@@ -51,6 +62,8 @@ interface Options {
   remove: (ids: ReadonlySet<string>) => void;
   /** Replaces the selection (with the codes an action did not change). */
   select: (ids: Iterable<string>) => void;
+  /** Codes were moved or deleted, so folder counts may have changed. */
+  onCodesChanged?: () => void;
 }
 
 const onAuthError = (err: unknown) => {
@@ -67,7 +80,11 @@ interface BulkRun {
   changed: DynamicCode[];
   /** Refused because the email is not verified (resuming). */
   unverified: string[];
-  /** Locked, unknown or failed codes. */
+  /** Moving only: locked codes. (Pausing and resuming count them as failed.) */
+  locked: string[];
+  /** Moving only: the target folder was deleted. */
+  folderGone: string[];
+  /** Unknown or failed codes. */
   failed: string[];
   /** Not sent: the bulk limit was reached (seconds to wait), or a request failed. */
   skipped: string[];
@@ -79,12 +96,16 @@ interface BulkRun {
  * requests per account). Stops at the first request that fails as a whole; the ids not sent are
  * `skipped`, with the wait when it was the rate limit.
  */
-async function runBulk(workspaceId: string, action: BulkAction, ids: readonly string[]): Promise<BulkRun> {
-  const run: BulkRun = { done: [], gone: [], changed: [], unverified: [], failed: [], skipped: [] };
+type BulkOp = { action: Exclude<BulkAction, "move"> } | { action: "move"; folderId: string | null };
+
+async function runBulk(workspaceId: string, op: BulkOp, ids: readonly string[]): Promise<BulkRun> {
+  const { action } = op;
+  const run: BulkRun = { done: [], gone: [], changed: [], unverified: [], locked: [], folderGone: [], failed: [], skipped: [] };
   for (let i = 0; i < ids.length; i += BULK_MAX_CODES) {
     const chunk = ids.slice(i, i + BULK_MAX_CODES);
     try {
-      const answered = new Map((await bulkCodes(workspaceId, action, chunk)).map((r) => [r.id, r]));
+      const sent = op.action === "move" ? await bulkMove(workspaceId, chunk, op.folderId) : await bulkCodes(workspaceId, op.action, chunk);
+      const answered = new Map(sent.map((r) => [r.id, r]));
       // Classify what was sent, not what came back: an id without an answer was not changed,
       // and an answer for an id not sent is ignored.
       for (const id of chunk) {
@@ -96,12 +117,21 @@ async function runBulk(workspaceId: string, action: BulkAction, ids: readonly st
           run.gone.push(id);
         } else if (r?.result === "email_not_verified") {
           run.unverified.push(id);
+        } else if (action === "move" && r?.result === "locked") {
+          run.locked.push(id);
+        } else if (action === "move" && r?.result === "folder_not_found") {
+          run.folderGone.push(id);
         } else {
           run.failed.push(id);
         }
       }
     } catch (err) {
       onAuthError(err);
+      if (action === "move" && isFolderGone(err)) {
+        // The folder was deleted before this request: it and the rest were not moved.
+        run.folderGone.push(...ids.slice(i));
+        break;
+      }
       run.skipped = ids.slice(i);
       if (err instanceof ApiError && err.status === 429) {
         // Trust the wait within reason: 1 second to 1 hour.
@@ -128,8 +158,9 @@ async function deleteIfPresent(workspaceId: string, id: string): Promise<void> {
  * endpoint (backend PLAN item 51) and reports partial results per reason instead of
  * all-or-nothing. One action at a time; callbacks are stable, so memoized cards do not re-render.
  */
-export function useCodeActions({ workspaceId: ws, locale, t, update, remove, select }: Options): CodeActions {
+export function useCodeActions({ workspaceId: ws, locale, t, update, remove, select, onCodesChanged }: Options): CodeActions {
   const l = t.list;
+  const f = t.folders;
   const [busy, setBusy] = useState(false);
   const running = useRef(false); // read synchronously: two clicks in one frame must not both start
   const [notice, setNotice] = useState<ActionNotice>({});
@@ -147,6 +178,8 @@ export function useCodeActions({ workspaceId: ws, locale, t, update, remove, sel
     (run: BulkRun): string[] => {
       const out: string[] = [];
       if (run.unverified.length > 0) out.push(t.errors.verifyFirst);
+      if (run.locked.length > 0) out.push(plural(locale, f.moveLocked, run.locked.length));
+      if (run.folderGone.length > 0) out.push(plural(locale, f.moveFolderGone, run.folderGone.length));
       // Codes not sent because of the rate limit get their own message; any other way a code was
       // not changed counts once, in one message.
       const limited = run.retryAfter !== undefined;
@@ -155,7 +188,7 @@ export function useCodeActions({ workspaceId: ws, locale, t, update, remove, sel
       if (limited) out.push(format(l.bulkRateLimited, { seconds: run.retryAfter! }));
       return out;
     },
-    [t.errors.verifyFirst, l, locale],
+    [t.errors.verifyFirst, l, f, locale],
   );
 
   const start = useCallback(() => {
@@ -188,7 +221,7 @@ export function useCodeActions({ workspaceId: ws, locale, t, update, remove, sel
       }
       const run = await runBulk(
         ws,
-        status === "paused" ? "pause" : "resume",
+        { action: status === "paused" ? "pause" : "resume" },
         codes.map((c) => c.id),
       );
       finish();
@@ -200,6 +233,57 @@ export function useCodeActions({ workspaceId: ws, locale, t, update, remove, sel
     },
     [ws, locale, l, t.errors.verifyFirst, update, remove, select, start, finish, problemsOf],
   );
+
+  const move = useCallback(
+    async (codes: readonly DynamicCode[], target: FolderTarget, bulk: boolean) => {
+      if (!ws || codes.length === 0 || !start()) return;
+      setNotice({});
+      if (!bulk) {
+        const [code] = codes;
+        if (code!.folder_id === target.id) return finish(); // already there: nothing to write
+        try {
+          update(await updateCode(ws, code!.id, { folder_id: target.id }));
+          setNotice({ done: target.id === null ? f.movedOut : format(f.movedOne, { folder: target.name }) });
+        } catch (err) {
+          onAuthError(err);
+          if (err instanceof ApiError && err.status === 404) {
+            // Deleted elsewhere: it leaves the list, as a bulk "not found" does.
+            remove(new Set([code!.id]));
+            setNotice({});
+            finish();
+            onCodesChanged?.();
+            return;
+          }
+          const problem =
+            err instanceof ApiError && err.code === "code_locked"
+              ? t.errors.locked
+              : isFolderGone(err)
+                ? plural(locale, f.moveFolderGone, 1)
+                : plural(locale, l.failed, 1);
+          setNotice({ problems: [problem] });
+        }
+        finish();
+        onCodesChanged?.();
+        return;
+      }
+      const run = await runBulk(
+        ws,
+        { action: "move", folderId: target.id },
+        codes.map((c) => c.id),
+      );
+      finish();
+      run.changed.forEach(update);
+      if (run.gone.length > 0) remove(new Set(run.gone));
+      const moved = run.done.length;
+      const done = target.id === null ? plural(locale, f.movedOutMany, moved) : plural(locale, f.movedMany, moved, { folder: target.name });
+      setNotice({ done: moved > 0 ? done : undefined, problems: problemsOf(run) });
+      select([...run.failed, ...run.locked, ...run.folderGone, ...run.skipped]);
+      onCodesChanged?.();
+    },
+    [ws, locale, l, f, t.errors.locked, update, remove, select, start, finish, problemsOf, onCodesChanged],
+  );
+
+  const announce = useCallback((message?: string) => setNotice(message ? { done: message } : {}), []);
 
   const download = useCallback(
     async (code: DynamicCode, fmt: QrFormat) => {
@@ -232,7 +316,7 @@ export function useCodeActions({ workspaceId: ws, locale, t, update, remove, sel
     if (bulk) {
       const run = await runBulk(
         ws,
-        "delete",
+        { action: "delete" },
         codes.map((c) => c.id),
       );
       gone = run.done;
@@ -249,6 +333,7 @@ export function useCodeActions({ workspaceId: ws, locale, t, update, remove, sel
     }
     finish();
     remove(new Set(gone));
+    if (gone.length > 0) onCodesChanged?.();
     const left = codes.filter((c) => !gone.includes(c.id));
     if (left.length === 0) {
       setPendingDelete(null);
@@ -260,7 +345,7 @@ export function useCodeActions({ workspaceId: ws, locale, t, update, remove, sel
     // Keep the dialog on what is left, titled for it, so the person can retry or cancel.
     if (bulk) select(left.map((c) => c.id));
     setPendingDelete({ codes: left, bulk, title: deleteTitle(left), error: error ?? t.errors.generic });
-  }, [ws, pendingDelete, remove, select, l, locale, t.errors.generic, deleteTitle, start, finish, problemsOf]);
+  }, [ws, pendingDelete, remove, select, l, locale, t.errors.generic, deleteTitle, start, finish, problemsOf, onCodesChanged]);
 
   const cancelDelete = useCallback(() => {
     if (!running.current) setPendingDelete(null);
@@ -271,6 +356,8 @@ export function useCodeActions({ workspaceId: ws, locale, t, update, remove, sel
     notice,
     pendingDelete,
     deletions,
+    announce,
+    move,
     // Async callbacks report their outcome through `notice`; nothing awaits them.
     download,
     setStatus,
