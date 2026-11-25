@@ -2,10 +2,11 @@
 
 import { Download } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { FormAlert, TextLink } from "@/components/form/form-bits";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { Menu, MenuItem } from "@/components/ui/menu";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { TextField } from "@/components/ui/text-field";
 import type { AuthMessages } from "@/features/auth/form-rules";
@@ -13,8 +14,9 @@ import { redirectToLogin } from "@/features/auth/require-session";
 import { format, localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
-import type { CodeStats } from "@/lib/api/types";
-import { codeStats } from "../api";
+import { commonErrorMessage, toApiError } from "@/lib/api/common-errors";
+import type { CodeStats, StatsDataset } from "@/lib/api/types";
+import { codeStats, exportCodeStats } from "../api";
 import { CampaignSection } from "../campaign/campaign-section";
 import { CodePageState } from "../pages/code-page-state";
 import { useCode } from "../use-code";
@@ -24,7 +26,7 @@ import { CodeThumbnail } from "../list/code-thumbnail";
 import { TopList, dayLabel } from "../scan-chart";
 import { BROWSER_NAMES, OS_NAMES, countryName, familyName, rankByLabel } from "./breakdown";
 import { PeriodChart } from "./period-chart";
-import { MAX_RANGE_DAYS, PRESET_DAYS, bucketize, csvOf, presetRange, totalsOf, utcToday, validRange, type Bucket, type PresetDays, type Range } from "./range";
+import { MAX_RANGE_DAYS, PRESET_DAYS, bucketize, presetRange, totalsOf, utcToday, validRange, type Bucket, type PresetDays, type Range } from "./range";
 
 type T = Messages["codes"];
 type Choice = `${PresetDays}` | "custom";
@@ -39,7 +41,8 @@ const keyOf = (r: Range) => `${r.from}:${r.to}`;
  * over a chosen period: totals, a chart by day, week or month, and where the scans came from.
  * It is the code's home: its header carries the ways to change it (content and design pages, a
  * menu of dialogs), and its campaign details sit under it. The stats API answers a
- * period of days, so grouping and the CSV export are made here from what it sent.
+ * period of days, so grouping is made here from what it sent; the CSV files come from the API,
+ * one table per download.
  */
 export function CodeInsights({ t, auth, locale }: { t: T; auth: AuthMessages; locale: Locale }) {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +64,9 @@ function Insights({ id, t, auth, locale }: { id: string; t: T; auth: AuthMessage
   const [bucket, setBucket] = useState<Bucket>("day");
   const [result, setResult] = useState<StatsLoad | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // `n` counts the failures: the alert is mounted anew each time, so the same message is said again.
+  const [exportError, setExportError] = useState<{ message: string; n: number } | null>(null);
+  const exporting = useRef(false);
 
   const key = keyOf(range);
   useEffect(() => {
@@ -102,11 +108,29 @@ function Insights({ id, t, auth, locale }: { id: string; t: T; auth: AuthMessage
     setRange(next);
     if (bucket === "day" && spanDays(next) > WEEKLY_FROM_DAYS) setBucket("week");
   }
-  function downloadCsv() {
-    const csv = csvOf(periods, { start: i.from, end: i.to, scans: t.scansColumn, unique: t.uniqueColumn });
-    // The byte order mark tells Excel the file is UTF-8 (the headings are translated).
-    const name = `${code.short_code.replace(/[^A-Za-z0-9_-]/g, "_")}-${range.from}-${range.to}.csv`;
-    save(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }), name);
+  /** Downloads one table of the period shown; the series comes in the grouping shown. */
+  const workspaceId = ws;
+  async function download(dataset: StatsDataset) {
+    // One download at a time: the menu can be reopened while the file is on its way, and the API
+    // counts every request against the account's limit.
+    if (exporting.current) return;
+    exporting.current = true;
+    setExportError(null);
+    const what = { ...range, bucket, dataset };
+    try {
+      const file = await exportCodeStats(workspaceId, id, what);
+      // The API's own name for the file (its Content-Disposition is not readable across origins).
+      // Always saved as CSV, whatever type the answer claimed.
+      save(new Blob([file], { type: "text/csv;charset=utf-8" }), `scans-${code.short_code.replace(/[^A-Za-z0-9-]/g, "_")}-${dataset}-${range.from}_${range.to}.csv`);
+    } catch (err) {
+      const e = toApiError(err);
+      if (e.status === 401) return redirectToLogin();
+      // The limit, busy and network texts are the codes area's common ones (kept with the folders).
+      const message = commonErrorMessage(e, t.folders.errors) ?? t.list.downloadFailed;
+      setExportError((last) => ({ message, n: (last?.n ?? 0) + 1 }));
+    } finally {
+      exporting.current = false;
+    }
   }
 
   const nf = new Intl.NumberFormat(locale);
@@ -120,6 +144,25 @@ function Insights({ id, t, auth, locale }: { id: string; t: T; auth: AuthMessage
     { value: "month", label: i.bucketMonth },
   ];
   const devices: Record<string, string> = t.deviceNames;
+  const tables: { dataset: StatsDataset; label: string }[] = [
+    { dataset: "series", label: i.overTime },
+    { dataset: "countries", label: t.countries },
+    { dataset: "cities", label: i.cities },
+    { dataset: "devices", label: t.devices },
+    { dataset: "os", label: i.os },
+    { dataset: "browsers", label: i.browsers },
+  ];
+  // A city under its country's name ("Paris" is in France and in Texas); rows that read the same
+  // are added up, like the other lists.
+  const cities = rankSame(
+    (stats?.cities ?? []).map((c) => ({
+      value: /^[A-Z]{2}$/.test(c.country) && c.country !== "XX" ? format(i.cityCountry, { city: c.value, country: countryName(c.country, locale, t.unknown) }) : c.value,
+      scans: c.scans,
+    })),
+  );
+  // With cities there are five lists: two wide ones over three; without, two rows of two.
+  const wide = "lg:col-span-3";
+  const narrow = cities.length > 0 ? "lg:col-span-2" : wide;
   // A date still being typed (an empty field) is not an error yet; the data shown stays as it was.
   const typedInvalid = choice === "custom" && typed.from !== "" && typed.to !== "" && !validRange(typed);
   const shown = `${dayLabel(range.from, locale)} – ${dayLabel(range.to, locale)}`;
@@ -158,12 +201,19 @@ function Insights({ id, t, auth, locale }: { id: string; t: T; auth: AuthMessage
             <Select label={i.bucket} hideLabel value={bucket} options={buckets} onChange={setBucket} />
           </div>
           {stats && scans > 0 && (
-            <Button variant="secondary" onClick={downloadCsv}>
-              <Download aria-hidden="true" className="size-4" />
-              {i.downloadCsv}
-            </Button>
+            // Pushed to the right edge even when it wraps under the selects: its list opens leftwards.
+            <div className="ml-auto">
+              <Menu label={i.downloadCsv} icon={Download} variant="labelled">
+                {tables.map(({ dataset, label }) => (
+                  <MenuItem key={dataset} onSelect={() => void download(dataset)}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </div>
           )}
         </div>
+        {exportError && <FormAlert key={exportError.n} message={exportError.message} />}
         {choice === "custom" && (
           <div className="flex flex-col gap-2">
             <div className="grid max-w-md gap-3 sm:grid-cols-2">
@@ -219,20 +269,25 @@ function Insights({ id, t, auth, locale }: { id: string; t: T; auth: AuthMessage
           </div>
         )}
         {stats && scans > 0 && (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Panel title={i.overTime} className="lg:col-span-2">
+          <div className="grid gap-4 lg:grid-cols-6">
+            <Panel title={i.overTime} className="lg:col-span-6">
               <PeriodChart t={t} locale={locale} periods={periods} />
             </Panel>
-            <Panel>
-              <TopList title={i.os} limit={8} entries={rankByLabel(stats.os, scans, (v) => familyName(OS_NAMES, v, i.other, t.unknown))} locale={locale} label={(name) => name} />
-            </Panel>
-            <Panel>
+            <Panel className={wide}>
               <TopList title={t.countries} limit={8} entries={rankByLabel(stats.countries, scans, (v) => countryName(v, locale, t.unknown))} locale={locale} label={(name) => name} />
             </Panel>
-            <Panel>
+            {cities.length > 0 && (
+              <Panel className={wide}>
+                <TopList title={i.cities} limit={8} entries={cities} locale={locale} label={(name) => name} />
+              </Panel>
+            )}
+            <Panel className={narrow}>
               <TopList title={t.devices} limit={8} entries={rankByLabel(stats.devices, scans, (v) => (Object.hasOwn(devices, v) ? devices[v] : t.unknown))} locale={locale} label={(name) => name} />
             </Panel>
-            <Panel>
+            <Panel className={narrow}>
+              <TopList title={i.os} limit={8} entries={rankByLabel(stats.os, scans, (v) => familyName(OS_NAMES, v, i.other, t.unknown))} locale={locale} label={(name) => name} />
+            </Panel>
+            <Panel className={narrow}>
               <TopList title={i.browsers} limit={8} entries={rankByLabel(stats.browsers, scans, (v) => familyName(BROWSER_NAMES, v, i.other, t.unknown))} locale={locale} label={(name) => name} />
             </Panel>
           </div>
@@ -241,6 +296,13 @@ function Insights({ id, t, auth, locale }: { id: string; t: T; auth: AuthMessage
       </section>
     </div>
   );
+}
+
+/** Entries with the same label added up into one, most scans first. */
+function rankSame(entries: { value: string; scans: number }[]): { value: string; scans: number }[] {
+  const sums = new Map<string, number>();
+  for (const e of entries) sums.set(e.value, (sums.get(e.value) ?? 0) + e.scans);
+  return [...sums].map(([value, scans]) => ({ value, scans })).sort((a, b) => b.scans - a.scans);
 }
 
 /** One figure with its name; `help` explains how it is counted. */

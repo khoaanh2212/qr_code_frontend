@@ -838,6 +838,8 @@ export const en = {
       periodTip: "{period}: {count} scans, {unique} unique",
       os: "Operating systems",
       browsers: "Browsers",
+      cities: "Cities",
+      cityCountry: "{city}, {country}",
       other: "Other",
       emptyTitle: "No scans in this period",
       emptyIntro: "Print the code or share its link: scans show up here within minutes.",

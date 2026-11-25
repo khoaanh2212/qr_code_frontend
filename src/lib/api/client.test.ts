@@ -117,6 +117,15 @@ describe("ApiClient", () => {
     expect(new Headers(f.mock.calls[0][1]?.headers).get("Accept")).toBe("image/*");
   });
 
+  it("asks for another kind of file when told to (a CSV export)", async () => {
+    const f = fakeFetch(new Response("a,b\n", { status: 200, headers: { "Content-Type": "text/csv; charset=utf-8" } }));
+    const client = new ApiClient({ baseUrl: "https://api.example.com", credentials: "include", fetch: f });
+    const blob = await client.requestBlob("/v1/x/stats/export", {}, "text/csv");
+    expect(blob.type).toContain("text/csv");
+    expect(new Headers(f.mock.calls[0][1]?.headers).get("Accept")).toBe("text/csv");
+    expect(f.mock.calls[0][1]?.credentials).toBe("include");
+  });
+
   it("maps errors of image requests like JSON ones", async () => {
     const f = fakeFetch(json(503, { error: { code: "busy", message: "busy" } }));
     const client = new ApiClient({ baseUrl: "https://api.example.com", credentials: "omit", fetch: f });

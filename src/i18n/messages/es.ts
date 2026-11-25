@@ -785,6 +785,8 @@ export const es = {
       periodTip: "{period}: {count} escaneos, {unique} únicos",
       os: "Sistemas operativos",
       browsers: "Navegadores",
+      cities: "Ciudades",
+      cityCountry: "{city}, {country}",
       other: "Otro",
       emptyTitle: "No hay escaneos en este periodo",
       emptyIntro: "Imprime el código o comparte su enlace: los escaneos aparecen aquí en minutos.",

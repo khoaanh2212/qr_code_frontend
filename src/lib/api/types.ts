@@ -173,13 +173,35 @@ export interface CountEntry {
   scans: number;
 }
 
-/** A code's scans over a range of UTC days, every day listed. */
+/** How the series of a stats answer is grouped (backend PLAN, item 56). */
+export type StatsBucket = "day" | "week" | "month";
+
+/** One table of a statistics export (GET .../stats/export?dataset=). */
+export type StatsDataset = "series" | "countries" | "cities" | "devices" | "os" | "browsers";
+
+/** A city scans came from; `country` is ISO 3166 alpha-2, "" when unknown (names repeat across countries). */
+export interface CityEntry {
+  value: string;
+  country: string;
+  scans: number;
+}
+
+/**
+ * A code's scans over a range of UTC days. `daily` lists every day whatever the bucket; `series`
+ * lists every bucket asked for (weeks from Monday, calendar months, cut to the range).
+ */
 export interface CodeStats {
   from: string;
   to: string;
   scans: number;
+  bucket: StatsBucket;
+  /** What `unique_scans` of a point of `series` counts: weeks and months add up the days. */
+  unique_scans_kind: "distinct_per_day" | "sum_of_daily";
+  series: { from: string; to: string; scans: number; unique_scans: number }[];
   daily: { day: string; scans: number; unique_scans: number }[];
   countries: CountEntry[];
+  /** The most scanned cities; empty unless the edge reports cities (backend SCAN_CITY_HEADER). */
+  cities: CityEntry[];
   devices: CountEntry[];
   os: CountEntry[];
   browsers: CountEntry[];

@@ -38,6 +38,10 @@ const stats = (over: Partial<CodeStats> = {}): CodeStats => ({
   from: "2026-10-30",
   to: "2026-11-03",
   scans: 10,
+  bucket: "day",
+  unique_scans_kind: "distinct_per_day",
+  series: [],
+  cities: [],
   daily: [
     { day: "2026-10-30", scans: 1, unique_scans: 1 },
     { day: "2026-10-31", scans: 2, unique_scans: 1 },
@@ -156,29 +160,151 @@ describe("CodeInsights", () => {
     expect(statsCalls()).toHaveLength(1); // grouping asks the API for nothing
   });
 
-  it("downloads the periods shown as a CSV file named after the code and the period", async () => {
+  it("lists the cities with their country, since names repeat across countries", async () => {
+    serve(() =>
+      stats({
+        cities: [
+          { value: "Hanoi", country: "VN", scans: 6 },
+          { value: "Paris", country: "FR", scans: 2 },
+          { value: "Paris", country: "US", scans: 1 },
+          { value: "Somewhere", country: "", scans: 1 },
+        ],
+      }),
+    );
+    show();
+    const region = await screen.findByRole("region", { name: i.cities });
+    expect(within(region).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Hanoi, Vietnam6", "Paris, France2", "Paris, United States1", "Somewhere1"]);
+  });
+
+  it("adds up cities that read the same, so no row appears twice", async () => {
+    serve(() =>
+      stats({
+        cities: [
+          { value: "Springfield", country: "", scans: 3 },
+          { value: "Hanoi", country: "VN", scans: 2 },
+          { value: "Springfield", country: "XX", scans: 1 }, // an unknown country reads like none
+        ],
+      }),
+    );
+    show();
+    const region = await screen.findByRole("region", { name: i.cities });
+    expect(within(region).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Springfield4", "Hanoi, Vietnam2"]);
+  });
+
+  it("shows no cities panel when the API knows none (the edge does not send them)", async () => {
+    serve();
+    show();
+    await screen.findByRole("region", { name: t.countries });
+    expect(screen.queryByRole("region", { name: i.cities })).toBeNull();
+  });
+
+  /** Opens the export menu and chooses a table; resolves with what was handed to the browser. */
+  async function exportTable(name: string) {
+    const saved: { name: string; href: string }[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push({ name: this.download, href: this.href });
+    });
+    fireEvent.click(screen.getByRole("button", { name: i.downloadCsv }));
+    await act(async () => void fireEvent.click(screen.getByRole("menuitem", { name })));
+    return saved;
+  }
+  const exportCalls = () =>
+    (sessionApi.requestBlob as unknown as MockInstance<typeof sessionApi.requestBlob>).mock.calls.filter(([path]) => path.includes("/stats/export"));
+
+  it("downloads a table of the period from the API, in the grouping shown", async () => {
     serve();
     show();
     await screen.findByRole("group", { name: i.totalScans });
-    const saved: { name: string; text: string }[] = [];
-    const blobs: Blob[] = [];
-    (URL.createObjectURL as ReturnType<typeof vi.fn>).mockImplementation((b: Blob) => (blobs.push(b), "blob:csv"));
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
-      saved.push({ name: this.download, text: this.href });
-    });
+    const csv = new Blob(["from,to,scans"], { type: "text/html" });
+    vi.spyOn(sessionApi, "requestBlob").mockImplementation(async (path) => (path.includes("/stats/export") ? csv : new Blob(["png"], { type: "image/png" })));
+    // Whatever type the answer claims, what is saved is a CSV file.
+    (URL.createObjectURL as ReturnType<typeof vi.fn>).mockImplementation((b: Blob) => (b.type === "text/csv;charset=utf-8" ? "blob:csv" : "blob:x"));
     fireEvent.change(select(i.bucket), { target: { value: "month" } });
-    await act(async () => void fireEvent.click(screen.getByRole("button", { name: i.downloadCsv })));
-    expect(saved).toEqual([{ name: `Ab3dE5gH-${presetRange(30).from}-${presetRange(30).to}.csv`, text: "blob:csv" }]);
-    // jsdom's Blob has no text(): read it the old way.
-    const text = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      // The code's image is a blob too, and may arrive after the click: take the CSV one.
-      reader.readAsText(blobs.find((b) => b.type.startsWith("text/csv"))!);
+    const { from, to } = presetRange(30);
+
+    const saved = await exportTable(i.overTime);
+    expect(exportCalls()).toEqual([[`${CODE}/stats/export?from=${from}&to=${to}&bucket=month&dataset=series`, {}, "text/csv"]]);
+    expect(saved).toEqual([{ name: `scans-Ab3dE5gH-series-${from}_${to}.csv`, href: "blob:csv" }]);
+
+    await exportTable(i.cities);
+    expect(exportCalls().at(-1)?.[0]).toBe(`${CODE}/stats/export?from=${from}&to=${to}&bucket=month&dataset=cities`);
+    expect(saved).toHaveLength(1); // each call collects its own
+  });
+
+  it("offers every table of the export", async () => {
+    serve();
+    show();
+    await screen.findByRole("group", { name: i.totalScans });
+    fireEvent.click(screen.getByRole("button", { name: i.downloadCsv }));
+    expect(screen.getAllByRole("menuitem").map((el) => el.textContent)).toEqual([i.overTime, t.countries, i.cities, t.devices, i.os, i.browsers]);
+  });
+
+  it("says why a download did not happen, and saves nothing", async () => {
+    serve();
+    show();
+    await screen.findByRole("group", { name: i.totalScans });
+    const blob = vi.spyOn(sessionApi, "requestBlob");
+    blob.mockImplementation(async (path) => {
+      if (path.includes("/stats/export")) throw new ApiError(429, "rate_limited", "slow down", undefined, 30);
+      return new Blob(["png"], { type: "image/png" });
     });
-    expect(text).toBe(
-      `"${i.from}","${i.to}","${t.scansColumn}","${t.uniqueColumn}"\r\n"2026-10-30","2026-10-31","3","2"\r\n"2026-11-01","2026-11-03","7","6"\r\n`,
+    let saved = await exportTable(t.countries);
+    expect(saved).toEqual([]);
+    expect(alerts()).toEqual([t.folders.errors.rateLimited.replace("{seconds}", "30")]);
+
+    blob.mockImplementation(async (path) => {
+      if (path.includes("/stats/export")) throw new ApiError(500, "internal_error", "boom");
+      return new Blob(["png"], { type: "image/png" });
+    });
+    saved = await exportTable(t.countries);
+    expect(saved).toEqual([]);
+    expect(alerts()).toEqual([t.list.downloadFailed]);
+
+    // The next download that works takes the message away.
+    blob.mockImplementation(async () => new Blob(["x"], { type: "text/csv" }));
+    await exportTable(t.countries);
+    expect(alerts()).toEqual([]);
+  });
+
+  it("asks once while a download is on its way, and drops an old message when the next one starts", async () => {
+    serve();
+    show();
+    await screen.findByRole("group", { name: i.totalScans });
+    const blob = vi.spyOn(sessionApi, "requestBlob");
+    blob.mockImplementation(async (path) => {
+      if (path.includes("/stats/export")) throw new ApiError(500, "internal_error", "boom");
+      return new Blob(["png"], { type: "image/png" });
+    });
+    await exportTable(t.countries);
+    expect(alerts()).toEqual([t.list.downloadFailed]);
+
+    let release: (b: Blob) => void = () => {};
+    blob.mockImplementation((path) =>
+      path.includes("/stats/export") ? new Promise<Blob>((resolve) => (release = resolve)) : Promise.resolve(new Blob(["png"], { type: "image/png" })),
     );
+    const before = exportCalls().length;
+    const saved = await exportTable(t.countries);
+    expect(alerts()).toEqual([]); // the retry has begun: the old failure is gone
+    const again = await exportTable(t.devices); // chosen while the first is still loading
+    expect(exportCalls()).toHaveLength(before + 1);
+    await act(async () => release(new Blob(["x"], { type: "text/csv" })));
+    expect([...saved, ...again]).toHaveLength(1); // one file, whichever spy saw it
+    // Free again afterwards.
+    await exportTable(t.devices);
+    expect(exportCalls()).toHaveLength(before + 2);
+  });
+
+  it("sends an expired session to the login page instead of saving an error", async () => {
+    serve();
+    show();
+    await screen.findByRole("group", { name: i.totalScans });
+    vi.spyOn(sessionApi, "requestBlob").mockImplementation(async (path) => {
+      if (path.includes("/stats/export")) throw new ApiError(401, "unauthorized", "no");
+      return new Blob(["png"], { type: "image/png" });
+    });
+    await exportTable(t.devices);
+    expect(location.replace).toHaveBeenCalled();
+    expect(alerts()).toEqual([]);
   });
 
   it("opens a long custom period grouped by week, and keeps the last figures on screen while the next load", async () => {

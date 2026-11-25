@@ -1,4 +1,4 @@
-import type { CodeStats } from "@/lib/api/types";
+import type { CodeStats, StatsBucket } from "@/lib/api/types";
 
 /** The API's days are UTC days, and so is everything here. */
 type Day = CodeStats["daily"][number];
@@ -14,9 +14,10 @@ export interface Range {
   to: string;
 }
 
-export type Bucket = "day" | "week" | "month";
+/** The API's own grouping names: the chart groups the days here, the export asks the API by name. */
+export type Bucket = StatsBucket;
 
-/** One bar of the chart and one row of the export: a day, or the days of a week or month in the period. */
+/** One bar of the chart: a day, or the days of a week or month in the period. */
 export interface Period {
   start: string;
   end: string;
@@ -86,23 +87,4 @@ export function bucketize(daily: readonly Day[], bucket: Bucket): Period[] {
 
 export function totalsOf(daily: readonly Day[]): { scans: number; unique: number } {
   return daily.reduce((sum, d) => ({ scans: sum.scans + d.scans, unique: sum.unique + d.unique_scans }), { scans: 0, unique: 0 });
-}
-
-/**
- * A cell for a spreadsheet: quoted, quotes doubled, and one that begins like a formula (`=`, `+`,
- * `-`, `@`, tab, carriage return) defused with a leading apostrophe, as the backend's exports do.
- */
-function cell(value: string | number): string {
-  const text = String(value);
-  const safe = typeof value === "string" && /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
-
-/** The periods as CSV (RFC 4180: CRLF line ends, every cell quoted), under the given headings. */
-export function csvOf(rows: readonly Period[], headings: Record<keyof Period, string>): string {
-  const lines = [
-    [headings.start, headings.end, headings.scans, headings.unique],
-    ...rows.map((r) => [r.start, r.end, r.scans, r.unique]),
-  ];
-  return lines.map((line) => line.map(cell).join(",")).join("\r\n") + "\r\n";
 }

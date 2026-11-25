@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_RANGE_DAYS, bucketize, csvOf, presetRange, totalsOf, validRange } from "./range";
+import { MAX_RANGE_DAYS, bucketize, presetRange, totalsOf, validRange } from "./range";
 
 const day = (d: string, scans: number, unique = scans) => ({ day: d, scans, unique_scans: unique });
 
@@ -80,19 +80,5 @@ describe("totalsOf", () => {
   it("adds up scans and the daily unique counts", () => {
     expect(totalsOf([day("2026-11-01", 3, 2), day("2026-11-02", 4, 4)])).toEqual({ scans: 7, unique: 6 });
     expect(totalsOf([])).toEqual({ scans: 0, unique: 0 });
-  });
-});
-
-describe("csvOf", () => {
-  it("writes a header and a row per period, quoted, with CRLF line ends", () => {
-    const rows = bucketize([day("2026-10-31", 2, 1), day("2026-11-01", 3, 2)], "month");
-    expect(csvOf(rows, { start: "From", end: "To", scans: "Scans", unique: "Unique" })).toBe(
-      '"From","To","Scans","Unique"\r\n"2026-10-31","2026-10-31","2","1"\r\n"2026-11-01","2026-11-01","3","2"\r\n',
-    );
-  });
-
-  it("doubles quotes and defuses cells a spreadsheet would run as a formula", () => {
-    const csv = csvOf([], { start: 'a "b"', end: "=1+1", scans: "+x", unique: "@y" });
-    expect(csv).toBe('"a ""b""","\'=1+1","\'+x","\'@y"\r\n');
   });
 });

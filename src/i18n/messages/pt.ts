@@ -785,6 +785,8 @@ export const pt = {
       periodTip: "{period}: {count} leituras, {unique} únicas",
       os: "Sistemas operacionais",
       browsers: "Navegadores",
+      cities: "Cidades",
+      cityCountry: "{city}, {country}",
       other: "Outro",
       emptyTitle: "Nenhuma leitura neste período",
       emptyIntro: "Imprima o código ou compartilhe o link: as leituras aparecem aqui em minutos.",
