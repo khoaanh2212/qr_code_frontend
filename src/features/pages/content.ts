@@ -38,9 +38,9 @@ export interface PageTypeInfo {
   fields: PageField[];
 }
 
-/** What the editor holds: strings, and lists of items of strings. */
+/** What the editor holds: strings, and lists of items that hold the same (a menu's dishes). */
 export type DraftValue = string | DraftItem[];
-export type DraftItem = Record<string, string>;
+export type DraftItem = { [name: string]: DraftValue };
 export type PageDraft = Record<string, DraftValue>;
 
 /** The page as the API takes it (`page` on POST .../codes and .../pages/preview). */
@@ -63,31 +63,27 @@ export function defaultValue(field: PageField): string {
   return "";
 }
 
-const emptyItem = (items: PageField[]): DraftItem =>
-  Object.fromEntries(editableFields(items).map((f) => [f.name, defaultValue(f)]));
+/** A field's starting value; a required list starts with one item to fill in. */
+function startValue(field: PageField): DraftValue {
+  if (field.kind !== "list") return defaultValue(field);
+  return field.required ? [emptyItem(field.items ?? [])] : [];
+}
 
-/** A type's fields, empty; a required list starts with one item to fill in. */
+const emptyItem = (items: PageField[]): DraftItem =>
+  Object.fromEntries(editableFields(items).map((f) => [f.name, startValue(f)]));
+
+/** A type's fields, empty. */
 export function initialContent(type: PageTypeInfo): PageDraft {
-  return Object.fromEntries(
-    editableFields(type.fields).map((f) => [
-      f.name,
-      f.kind === "list" ? (f.required ? [emptyItem(f.items ?? [])] : []) : defaultValue(f),
-    ]),
-  );
+  return emptyItem(type.fields);
 }
 
 export function newItem(field: PageField): DraftItem {
   return emptyItem(field.items ?? []);
 }
 
-/**
- * A type can be made here when none of its lists holds another list (the menu's sections of
- * dishes come with item 27c).
- */
+/** The types this editor makes: all of them (lists inside lists included, item 27c). */
 export function editableTypes(types: PageTypeInfo[]): PageTypeInfo[] {
-  const nestsLists = (fields: PageField[]) =>
-    fields.some((f) => f.kind === "list" && (f.items ?? []).some((i) => i.kind === "list"));
-  return types.filter((t) => !nestsLists(t.fields));
+  return types;
 }
 
 /** Choice fields hold a value from the start, so they alone never make an item worth sending. */
@@ -100,8 +96,9 @@ function clean(field: PageField, raw: string): string {
 }
 
 /**
- * Where each sent list item sits in the editor, by list: blank items are not sent, so the API's
- * `links[0]` may be the editor's `links[1]`.
+ * Where each sent list item sits in the editor, by the list's editor path: blank items are not
+ * sent, so the API's `links[0]` may be the editor's `links[1]`, and `sections[0].items[0]` may be
+ * the editor's `sections[1].items[2]` (keyed `sections` and `sections[1].items`).
  */
 export type ItemPlaces = Record<string, number[]>;
 
@@ -109,43 +106,69 @@ export type BuiltContent =
   | { ok: true; content: Record<string, unknown>; places: ItemPlaces }
   | { ok: false; missing: string[] };
 
-/**
- * The content to send: trimmed, without empty optional fields or list items left blank. Missing
- * required fields are named by the path the API uses in its refusals (`links[0].url`).
- */
-export function buildContent(type: PageTypeInfo, draft: Partial<PageDraft>): BuiltContent {
+interface Built {
+  content: Record<string, unknown>;
+  /** Something worth sending besides preset choices (an item that has it is not blank). */
+  filled: boolean;
+}
+
+/** Builds the fields of one level; `at` is the level's editor path prefix ("" or "sections[1]."). */
+function buildLevel(fields: PageField[], draft: Partial<DraftItem>, at: string, missing: string[], places: ItemPlaces): Built {
   const content: Record<string, unknown> = {};
-  const missing: string[] = [];
-  const places: ItemPlaces = {};
-  for (const field of editableFields(type.fields)) {
+  let filled = false;
+  for (const field of editableFields(fields)) {
     const value = draft[field.name];
+    const path = `${at}${field.name}`;
     if (field.kind === "list") {
-      const itemFields = editableFields(field.items ?? []);
-      const kept = (Array.isArray(value) ? value : [])
-        .map((item, place) => ({ place, item: Object.fromEntries(itemFields.map((f) => [f.name, clean(f, item[f.name] ?? "")])) }))
-        .filter(({ item }) => itemFields.some((f) => !isChoice(f) && item[f.name] !== ""));
-      for (const { place, item } of kept) {
-        for (const f of itemFields) if (f.required && item[f.name] === "") missing.push(`${field.name}[${place}].${f.name}`);
-        for (const key of Object.keys(item)) if (item[key] === "") delete item[key];
-      }
+      const itemFields = field.items ?? [];
+      const kept: { place: number; content: Record<string, unknown> }[] = [];
+      (Array.isArray(value) ? value : []).forEach((item, place) => {
+        // Missing fields of a blank item are not missing: the item is left out.
+        const inner: string[] = [];
+        const built = buildLevel(itemFields, item, `${path}[${place}].`, inner, places);
+        if (!built.filled) return;
+        missing.push(...inner);
+        kept.push({ place, content: built.content });
+      });
       if (kept.length > 0) {
-        content[field.name] = kept.map(({ item }) => item);
-        places[field.name] = kept.map(({ place }) => place);
-      } else if (field.required) missing.push(field.name);
+        content[field.name] = kept.map((k) => k.content);
+        places[path] = kept.map((k) => k.place);
+        filled = true;
+      } else if (field.required) missing.push(path);
       continue;
     }
     const text = clean(field, typeof value === "string" ? value : "");
-    if (text !== "") content[field.name] = text;
-    else if (field.required) missing.push(field.name);
+    if (text !== "") {
+      content[field.name] = text;
+      if (!isChoice(field)) filled = true;
+    } else if (field.required) missing.push(path);
   }
+  return { content, filled };
+}
+
+/**
+ * The content to send: trimmed, without empty optional fields or list items left blank (at any
+ * depth). Missing required fields are named by their editor path (`links[0].url`).
+ */
+export function buildContent(type: PageTypeInfo, draft: Partial<PageDraft>): BuiltContent {
+  const missing: string[] = [];
+  const places: ItemPlaces = {};
+  const { content } = buildLevel(type.fields, draft, "", missing, places);
   return missing.length > 0 ? { ok: false, missing } : { ok: true, content, places };
 }
 
-/** An API path of sent content (`links[0].url`) as the editor's path (`links[1].url`). */
+/** An API path of sent content (`sections[0].items[0].name`) as the editor's path, level by level. */
 export function editorPath(path: string, places: ItemPlaces | undefined): string {
-  const m = /^([a-z_]+)\[(\d+)\](.*)$/.exec(path);
-  const place = m && places?.[m[1]]?.[Number(m[2])];
-  return m && place !== undefined ? `${m[1]}[${place}]${m[3]}` : path;
+  let out = "";
+  let rest = path;
+  for (;;) {
+    const m = /^([a-z_]+)\[(\d+)\](\.?)(.*)$/.exec(rest);
+    if (!m) return out + rest;
+    const list = `${out}${m[1]}`;
+    const place = places?.[list]?.[Number(m[2])] ?? Number(m[2]);
+    out = `${list}[${place}]${m[3]}`;
+    rest = m[4];
+  }
 }
 
 /** The editor's path of a field the API refused (`page.content.links[0].url` → `links[0].url`). */
