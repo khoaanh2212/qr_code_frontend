@@ -5,6 +5,7 @@ import { LogoIconPicker } from "@/features/qr-editor/logo-icons";
 import { StylePicker } from "@/features/qr-editor/style-picker";
 import type { Messages } from "@/i18n/messages";
 import { TemplateBar } from "@/features/templates/template-bar";
+import { LogoUpload } from "@/features/uploads/logo-upload";
 import { designFromLook, lookFromDesign, lookScannable, type CodeLook } from "./design";
 import type { CodeField } from "./errors";
 
@@ -16,6 +17,7 @@ export function LookFields({
   onChange,
   error,
   templates,
+  uploads,
 }: {
   t: Messages["codes"];
   generator: Messages["generator"];
@@ -24,6 +26,8 @@ export function LookFields({
   error?: { field?: CodeField; message: string } | null;
   /** Offers the workspace's design templates above the fields. */
   templates?: { t: Messages["templates"]; workspaceId: string };
+  /** Offers a logo uploaded to the workspace (backend item 22b). */
+  uploads?: { t: Messages["uploads"]; workspaceId: string };
 }) {
   const contrastOk = lookScannable(look);
   return (
@@ -56,7 +60,21 @@ export function LookFields({
         onChange={onChange}
         error={error?.field === "frame_text" ? { field: "frame_text", message: generator.design.frameTextInvalid } : undefined}
       />
-      <LogoIconPicker t={generator} value={look.logoIcon} onPick={(logoIcon) => onChange((l) => ({ ...l, logoIcon }))} />
+      {uploads && (
+        <LogoUpload
+          t={uploads.t}
+          workspaceId={uploads.workspaceId}
+          value={{ logoUploadId: look.logoUploadId, logo: look.logo }}
+          // An uploaded logo replaces a built-in icon.
+          onChange={(v) => onChange((l) => ({ ...l, ...v, logoIcon: v.logoUploadId ? "" : l.logoIcon }))}
+        />
+      )}
+      {/* An icon replaces an uploaded logo. */}
+      <LogoIconPicker
+        t={generator}
+        value={look.logoIcon}
+        onPick={(logoIcon) => onChange((l) => ({ ...l, logoIcon, ...(logoIcon ? { logoUploadId: "", logo: undefined } : {}) }))}
+      />
     </div>
   );
 }

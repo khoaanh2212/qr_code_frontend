@@ -112,7 +112,7 @@ describe("CodeForm", () => {
   /** A creating button ignores clicks for a moment after a step change (double clicks): let it pass. */
   const settle = () => void vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60_000);
   const renderForm = () =>
-    withSession(<CodeForm t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" captcha={captcha} />);
+    withSession(<CodeForm t={t} generator={en.generator} templates={en.templates} uploads={en.uploads} auth={auth} locale="en" captcha={captcha} />);
   const created = () => request.mock.calls.filter(([p, o]) => p === "/v1/workspaces/w1/codes" && o?.method === "POST").map(([, o]) => o?.body);
   const serveCreate = () =>
     request.mockImplementation(async (path, opts) => {
@@ -564,7 +564,7 @@ describe("code pages", () => {
 
   describe("design page", () => {
     const showDesign = async () => {
-      withSession(<CodeDesign t={t} generator={en.generator} templates={en.templates} auth={auth} locale="en" />);
+      withSession(<CodeDesign t={t} generator={en.generator} templates={en.templates} uploads={en.uploads} auth={auth} locale="en" />);
       await screen.findByRole("heading", { name: t.designTitle, level: 1 });
     };
     const color = () => screen.getByRole("textbox", { name: new RegExp(t.foreground) }) as HTMLInputElement;

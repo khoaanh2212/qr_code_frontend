@@ -35,6 +35,8 @@ export const config = {
   apiBaseUrl: origin("NEXT_PUBLIC_API_BASE_URL", process.env.NEXT_PUBLIC_API_BASE_URL, "http://localhost:8080"),
   /** Public origin of this site, for canonical URLs, the sitemap and robots.txt. */
   siteUrl: origin("NEXT_PUBLIC_SITE_URL", process.env.NEXT_PUBLIC_SITE_URL, "http://localhost:3000"),
+  /** Origin of the files host (uploads, backend FILES_BASE_URL), e.g. https://files.qr.example.com. */
+  filesBaseUrl: origin("NEXT_PUBLIC_FILES_URL", process.env.NEXT_PUBLIC_FILES_URL, "http://localhost:8181"),
   /** Turnstile site key; null in development without one. */
   turnstileSiteKey: turnstileSiteKey(),
   /**

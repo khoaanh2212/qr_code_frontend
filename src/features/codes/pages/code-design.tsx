@@ -32,12 +32,14 @@ export function CodeDesign({
   t,
   generator,
   templates,
+  uploads,
   auth,
   locale,
 }: {
   t: T;
   generator: Messages["generator"];
   templates: Messages["templates"];
+  uploads: Messages["uploads"];
   auth: AuthMessages;
   locale: Locale;
 }) {
@@ -50,6 +52,7 @@ export function CodeDesign({
       t={t}
       generator={generator}
       templates={templates}
+      uploads={uploads}
       auth={auth}
       locale={locale}
       ws={workspaceId}
@@ -64,6 +67,7 @@ function DesignForm({
   t,
   generator,
   templates,
+  uploads,
   auth,
   locale,
   ws,
@@ -74,6 +78,7 @@ function DesignForm({
   t: T;
   generator: Messages["generator"];
   templates: Messages["templates"];
+  uploads: Messages["uploads"];
   auth: AuthMessages;
   locale: Locale;
   ws: string;
@@ -155,6 +160,7 @@ function DesignForm({
               }}
               error={error}
               templates={readOnly ? undefined : { t: templates, workspaceId: ws }}
+              uploads={{ t: uploads, workspaceId: ws }}
             />
           </fieldset>
           <FormAlert message={error && !error.field ? error.message : undefined} />

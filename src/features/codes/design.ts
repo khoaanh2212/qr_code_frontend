@@ -22,10 +22,18 @@ import {
   type EyeTriple,
   type GradientStop,
   type QrDesign,
+  type QrLogo,
 } from "@/lib/qr/types";
 
 /** What the code pages edit of a design: colors and style (the API keeps its own margin). */
-export type CodeLook = Pick<
+export type CodeLook = CodeLookStyle & {
+  /** An image the workspace uploaded, by id; "" for none. */
+  logoUploadId: string;
+  /** Its pixels, for previews only (never saved: the design keeps the id). */
+  logo?: QrLogo;
+};
+
+type CodeLookStyle = Pick<
   QrDesign,
   | "fg"
   | "bg"
@@ -67,6 +75,7 @@ export const DEFAULT_LOOK: CodeLook = {
   gradientAngle: 0,
   gradientStops: null,
   transparent: false,
+  logoUploadId: "",
 };
 
 /** "a" or "a,b,c" (the API's form) as three values, each one allowed, else the fallback. */
@@ -133,13 +142,21 @@ export function lookFromDesign(d: CodeDesign): CodeLook {
     gradientAngle: angle(d.gradient_angle) ?? 0,
     gradientStops,
     transparent,
+    logoUploadId: typeof d.logo_upload_id === "string" && UUID.test(d.logo_upload_id) ? d.logo_upload_id : "",
   };
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The design the API stores; the stored ecc and margin are kept as they were. */
 export function designFromLook(look: CodeLook, keep: CodeDesign = {}): CodeDesign {
   const design = { ...DEFAULT_DESIGN, ...look };
   const out: CodeDesign = { fg: look.fg, bg: bgParam(look), ...styleParams(design), ...gradientParams(design) };
+  // An uploaded logo replaces the icon unless an icon was chosen after it.
+  if (look.logoUploadId && !look.logoIcon) {
+    out.logo_upload_id = look.logoUploadId;
+    delete out.logo_icon;
+  }
   if (keep.ecc) out.ecc = keep.ecc;
   if (keep.margin !== undefined) out.margin = look.frame === "none" ? keep.margin : Math.max(keep.margin, FRAME_MARGIN_MIN);
   return out;

@@ -14,6 +14,7 @@ jobs:
     env:
       NEXT_PUBLIC_API_BASE_URL: https://api.example.com
       NEXT_PUBLIC_SITE_URL: https://www.example.com
+      NEXT_PUBLIC_FILES_URL: https://files.example.com
       # Cloudflare's public always-pass test key.
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
     steps:
@@ -36,6 +37,7 @@ jobs:
           docker build -t proofqr-web:ci
           --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.com
           --build-arg NEXT_PUBLIC_SITE_URL=https://www.example.com
+          --build-arg NEXT_PUBLIC_FILES_URL=https://files.example.com
           --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
           .
       - name: Start the image and check it serves pages

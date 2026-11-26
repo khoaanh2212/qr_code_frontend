@@ -30,6 +30,17 @@ describe("ApiClient", () => {
     expect(new Headers(init?.headers).get("Content-Type")).toBe("application/json");
   });
 
+  it("sends form data as it is, with the browser's multipart type", async () => {
+    const f = fakeFetch(json(201, { upload: { id: "u1" } }));
+    const client = new ApiClient({ baseUrl: "https://api.example.com", credentials: "include", fetch: f });
+    const form = new FormData();
+    form.append("file", new Blob(["x"]), "a.png");
+    await client.request("/v1/workspaces/w/uploads", { method: "POST", body: form });
+    const [, init] = f.mock.calls[0];
+    expect(init?.body).toBe(form);
+    expect(new Headers(init?.headers).get("Content-Type")).toBeNull();
+  });
+
   it("public clients never send cookies", async () => {
     const f = fakeFetch(json(200, {}));
     await new ApiClient({ baseUrl: "https://api.example.com", credentials: "omit", fetch: f }).request("/v1/qr/types");

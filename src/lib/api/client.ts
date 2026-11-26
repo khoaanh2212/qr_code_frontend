@@ -74,14 +74,16 @@ export class ApiClient {
   private async send(path: string, { method = "GET", body, signal }: RequestOptions, accept: string): Promise<Response> {
     const url = this.url(path);
     const headers = new Headers({ Accept: accept });
-    if (body !== undefined) headers.set("Content-Type", "application/json");
+    // Form data goes as it is: the browser sets the multipart type and boundary.
+    const form = typeof FormData !== "undefined" && body instanceof FormData;
+    if (body !== undefined && !form) headers.set("Content-Type", "application/json");
 
     let res: Response;
     try {
       res = await this.doFetch(url, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined ? undefined : form ? (body as FormData) : JSON.stringify(body),
         credentials: this.credentials,
         signal,
       });

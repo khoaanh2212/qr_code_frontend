@@ -8,6 +8,7 @@
 #   docker build -t proofqr-web \
 #     --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.com \
 #     --build-arg NEXT_PUBLIC_SITE_URL=https://www.example.com \
+#     --build-arg NEXT_PUBLIC_FILES_URL=https://files.qr.example.com \
 #     --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY=<site key> \
 #     --build-arg NEXT_PUBLIC_GOOGLE_LOGIN=true .   # only when the API has Google configured
 
@@ -33,10 +34,12 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 FROM base AS build
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_FILES_URL
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_GOOGLE_LOGIN=false
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} \
     NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
+    NEXT_PUBLIC_FILES_URL=${NEXT_PUBLIC_FILES_URL} \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY} \
     NEXT_PUBLIC_GOOGLE_LOGIN=${NEXT_PUBLIC_GOOGLE_LOGIN} \
     NEXT_TELEMETRY_DISABLED=1

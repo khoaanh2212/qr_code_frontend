@@ -32,6 +32,7 @@ export function proxy(request: NextRequest) {
     captcha: hostsCaptcha(pathname),
     nonce,
     apiOrigin: appConfig.apiBaseUrl,
+    filesOrigin: appConfig.filesBaseUrl,
     dev: process.env.NODE_ENV === "development",
   });
 

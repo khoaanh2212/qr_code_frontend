@@ -55,6 +55,11 @@ export interface CspOptions {
   nonce?: string;
   /** Origin of the API (scheme://host[:port]), allowed for fetch and QR preview images. */
   apiOrigin: string;
+  /**
+   * Origin of the files host (uploads): the logged-in app shows and reads those files. Never on
+   * the marketing surface, which shows no customer content.
+   */
+  filesOrigin?: string;
   /** Development needs 'unsafe-eval' (React debugging). */
   dev: boolean;
 }
@@ -77,8 +82,9 @@ function checkOrigin(value: string): string {
   return url.origin;
 }
 
-export function buildCsp({ surface, captcha = false, nonce, apiOrigin, dev }: CspOptions): string {
+export function buildCsp({ surface, captcha = false, nonce, apiOrigin, filesOrigin, dev }: CspOptions): string {
   const api = checkOrigin(apiOrigin);
+  const files = surface === "private" && filesOrigin ? [checkOrigin(filesOrigin)] : [];
 
   let scripts: string[];
   if (surface === "private") {
@@ -95,9 +101,9 @@ export function buildCsp({ surface, captcha = false, nonce, apiOrigin, dev }: Cs
     // Inline styles stay allowed: React and Next.js emit style attributes, and CSS injection is
     // a far smaller risk than script injection.
     ["style-src", "'self'", "'unsafe-inline'"],
-    ["img-src", "'self'", "blob:", "data:", api],
+    ["img-src", "'self'", "blob:", "data:", api, ...files],
     ["font-src", "'self'"],
-    ["connect-src", "'self'", api],
+    ["connect-src", "'self'", api, ...files],
     // Only the pages with the Cloudflare Turnstile check frame anything (its iframe).
     surface === "private" && captcha ? ["frame-src", TURNSTILE_ORIGIN] : ["frame-src", "'none'"],
     ["object-src", "'none'"],
