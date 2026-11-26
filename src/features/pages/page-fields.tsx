@@ -7,7 +7,8 @@ import { TextField } from "@/components/ui/text-field";
 import type { Messages } from "@/i18n/messages";
 import { SOCIAL_NETWORKS } from "@/lib/qr/social";
 import { normalizeUrlInput } from "@/lib/qr/validate";
-import { editableFields, newItem, type DraftItem, type PageDraft, type PageField, type PageTypeInfo } from "./content";
+import { PageUpload } from "./page-upload";
+import { editableFields, isUpload, newItem, type DraftItem, type PageDraft, type PageField, type PageTypeInfo } from "./content";
 
 type T = Messages["pages"];
 
@@ -33,6 +34,7 @@ function labelOf(t: T, name: string): string {
  * are not drawn here yet. A refusal shows at its field by the API's path (`links[0].url`).
  */
 export function PageFields({
+  workspaceId,
   t,
   generator,
   type,
@@ -40,6 +42,8 @@ export function PageFields({
   onChange,
   errors = {},
 }: {
+  /** Where uploaded files go. */
+  workspaceId: string;
   t: T;
   generator: Messages["generator"];
   type: PageTypeInfo;
@@ -53,6 +57,7 @@ export function PageFields({
         field.kind === "list" ? (
           <ListField
             key={field.name}
+            workspaceId={workspaceId}
             t={t}
             generator={generator}
             field={field}
@@ -65,6 +70,7 @@ export function PageFields({
         ) : (
           <Field
             key={field.name}
+            workspaceId={workspaceId}
             t={t}
             generator={generator}
             field={field}
@@ -83,6 +89,7 @@ let nextKey = 0;
 const newKey = () => `item-${++nextKey}`;
 
 function ListField({
+  workspaceId,
   t,
   generator,
   field,
@@ -90,6 +97,7 @@ function ListField({
   errors,
   onChange,
 }: {
+  workspaceId: string;
   t: T;
   generator: Messages["generator"];
   field: PageField;
@@ -140,6 +148,7 @@ function ListField({
             {subFields.map((sub) => (
               <Field
                 key={sub.name}
+                workspaceId={workspaceId}
                 t={t}
                 generator={generator}
                 field={sub}
@@ -190,6 +199,7 @@ function ListField({
 }
 
 function Field({
+  workspaceId,
   t,
   generator,
   field,
@@ -198,6 +208,7 @@ function Field({
   error,
   onChange,
 }: {
+  workspaceId: string;
   t: T;
   generator: Messages["generator"];
   field: PageField;
@@ -215,6 +226,21 @@ function Field({
     return value && !known.includes(value) ? [value, ...known] : known;
   }, [field.kind, value]);
 
+  if (isUpload(field)) {
+    return (
+      <PageUpload
+        t={t}
+        workspaceId={workspaceId}
+        label={label}
+        fieldKind={field.kind}
+        path={path}
+        required={field.required}
+        value={value}
+        error={error}
+        onChange={onChange}
+      />
+    );
+  }
   if (field.kind === "weekday") {
     return (
       <Select

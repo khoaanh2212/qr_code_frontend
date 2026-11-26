@@ -149,6 +149,8 @@ describe("captcha frames", () => {
     const csp = buildCsp({ surface: "private", nonce: "bm9uY2UtMTIz", apiOrigin: api, filesOrigin: "https://files.qr.example.com", dev: false });
     expect(csp).toContain("img-src 'self' blob: data: " + api + " https://files.qr.example.com");
     expect(csp).toContain("connect-src 'self' " + api + " https://files.qr.example.com");
+    // A page preview's sound plays from the files host (the page editor, item 27c).
+    expect(csp).toContain("media-src https://files.qr.example.com");
     const marketing = buildCsp({ surface: "marketing", apiOrigin: api, filesOrigin: "https://files.qr.example.com", dev: false });
     expect(marketing).not.toContain("files.qr.example.com");
     expect(() => buildCsp({ surface: "private", nonce: "bm9uY2UtMTIz", apiOrigin: api, filesOrigin: "https://x.com/a", dev: false })).toThrow();

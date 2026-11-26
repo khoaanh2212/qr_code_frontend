@@ -394,7 +394,12 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     the API's refusals (`page.content.links[0].url`) show at their field, and the form returns to
     it. The code is created with `page` instead of `target_url`. The private CSP frames the API
     and the two video players previews embed (`frame-src`); public pages still frame nothing.
-    Not built yet: uploads in the editor, the menu's sections of dishes (a list inside a list) and
-    editing a page code (27c), page-type tabs in the public generator (27d). A video page's player
+    Uploads (item 27c): a page's image, PDF or MP3 field is a file picker. The file is checked
+    against its kind's limit (10 MB, 20 MB, 20 MB), uploaded to the workspace's files (the API
+    decides the type from the bytes), kept as its upload id, and shown as a thumbnail from the
+    files host or by kind and size; the private CSP's `media-src` lets previews play a page's
+    sound. A file replaced or removed before the code is saved stays unused in the workspace's
+    files until the API's janitor deletes it (7 days). Not built yet: the menu's sections of dishes (a list inside a list) and editing a
+    page code (27c), page-type tabs in the public generator (27d). A video page's player
     stays blank in the live preview (the sandboxed frame runs no script, nor do frames inside it);
     the type's sample and the page itself play it.

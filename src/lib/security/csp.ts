@@ -107,6 +107,8 @@ export function buildCsp({ surface, captcha = false, nonce, apiOrigin, filesOrig
     ["img-src", "'self'", "blob:", "data:", api, ...files],
     ["font-src", "'self'"],
     ["connect-src", "'self'", api, ...files],
+    // The page editor's previews play a page's sound from the files host; nothing else plays media.
+    ["media-src", ...(files.length > 0 ? files : ["'none'"])],
     // Public pages frame nothing. Private pages frame the page editor's samples (served by the
     // API) and the video players its previews embed, and Cloudflare Turnstile where it checks.
     surface === "private"
