@@ -50,10 +50,10 @@ export interface PageBody {
   content: Record<string, unknown>;
 }
 
-const isUpload = (f: PageField) => f.kind === "upload" || f.kind === "upload_pdf" || f.kind === "upload_audio";
+export const isUpload = (f: PageField) => f.kind === "upload" || f.kind === "upload_pdf" || f.kind === "upload_audio";
 
-/** The fields this editor draws (uploads come with the upload step of the editor). */
-export const editableFields = (fields: PageField[]) => fields.filter((f) => !isUpload(f));
+/** The fields this editor draws: all of them (a field of a kind it does not know shows as text). */
+export const editableFields = (fields: PageField[]) => fields;
 
 /** A choice field starts on a sensible value; everything else starts empty. */
 export function defaultValue(field: PageField): string {
@@ -81,16 +81,13 @@ export function newItem(field: PageField): DraftItem {
 }
 
 /**
- * A type can be made here when none of its required fields (or required list items) is an
- * upload, and none of its lists holds another list (the menu's sections of dishes): uploads and
- * nested lists come with item 27c.
+ * A type can be made here when none of its lists holds another list (the menu's sections of
+ * dishes come with item 27c).
  */
 export function editableTypes(types: PageTypeInfo[]): PageTypeInfo[] {
-  const needsUpload = (fields: PageField[]): boolean =>
-    fields.some((f) => f.required && (isUpload(f) || (f.kind === "list" && needsUpload(f.items ?? []))));
   const nestsLists = (fields: PageField[]) =>
     fields.some((f) => f.kind === "list" && (f.items ?? []).some((i) => i.kind === "list"));
-  return types.filter((t) => !needsUpload(t.fields) && !nestsLists(t.fields));
+  return types.filter((t) => !nestsLists(t.fields));
 }
 
 /** Choice fields hold a value from the start, so they alone never make an item worth sending. */

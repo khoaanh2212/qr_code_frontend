@@ -79,7 +79,7 @@ beforeAll(() => {
   };
 });
 
-/** Two hosted page types: one the editor makes, one that needs an upload first (item 27c). */
+/** Hosted page types: a links page, a PDF (an upload) and a menu (a list in a list, item 27c). */
 const PAGE_TYPES = [
   {
     name: "links",
@@ -90,6 +90,10 @@ const PAGE_TYPES = [
     ],
   },
   { name: "pdf", fields: [{ name: "pdf_upload_id", kind: "upload_pdf", required: true }, { name: "title", kind: "text", required: true }] },
+  {
+    name: "menu",
+    fields: [{ name: "sections", kind: "list", items: [{ name: "name", kind: "text", required: true }, { name: "items", kind: "list", items: [{ name: "name", kind: "text" }] }] }],
+  },
 ];
 
 beforeEach(() => {
@@ -303,14 +307,15 @@ describe("CodeForm", () => {
       fireEvent.click(await screen.findByRole("radio", { name: p.types.links.name }));
     };
 
-    it("offers the hosted pages next to a website and a social profile, leaving out those that need an upload", async () => {
+    it("offers the hosted pages next to a website and a social profile, leaving out the menu for now", async () => {
       serveCreate();
       renderForm();
       await targetField();
       const group = screen.getByRole("radiogroup", { name: p.kindLegend });
       expect(within(group).getByRole("radio", { name: en.generator.social.kindUrl })).toBeTruthy();
       expect(await within(group).findByRole("radio", { name: p.types.links.name })).toBeTruthy();
-      expect(within(group).queryByRole("radio", { name: p.types.pdf.name })).toBeNull();
+      expect(within(group).getByRole("radio", { name: p.types.pdf.name })).toBeTruthy();
+      expect(within(group).queryByRole("radio", { name: p.types.menu.name })).toBeNull();
     });
 
     it("shows the type's sample, then the page itself, and creates the code with the page", async () => {
@@ -338,6 +343,28 @@ describe("CodeForm", () => {
         theme: { primary: "#0f766e", button: "#0f766e" },
         content: { title: "Café Lan", links: [{ label: "Menu", url: "https://example.com/menu" }] },
       });
+    });
+
+    it("creates a PDF page from an uploaded file", async () => {
+      serveCreate();
+      request.mockImplementation(async (path, opts) => {
+        if (path === "/v1/me") return me;
+        if (path === "/v1/workspaces/w1/uploads" && opts?.method === "POST")
+          return { upload: { id: "pdf1", kind: "pdf", content_type: "application/pdf", size_bytes: 1200, url: "", created_at: "" } };
+        if (path === "/v1/workspaces/w1/codes" && opts?.method === "POST") return { code };
+        if (path === "/v1/workspaces/w1/templates") return { templates: [] };
+        throw new Error(`unexpected ${path}`);
+      });
+      renderForm();
+      await targetField();
+      fireEvent.click(await screen.findByRole("radio", { name: p.types.pdf.name }));
+      const file = new File(["%PDF-1.7"], "menu.pdf", { type: "application/pdf" });
+      await act(async () => void fireEvent.change(screen.getByLabelText(`${p.upload.choose.pdf}: ${p.fields.pdf_upload_id}`), { target: { files: [file] } }));
+      type(new RegExp(p.fields.title), "Autumn menu");
+      await waitFor(() => expect(screen.getByText("PDF · 1 KB")).toBeTruthy());
+      await click(w.skipDesign);
+      const [body] = created() as Record<string, unknown>[];
+      expect(body.page).toEqual({ type: "pdf", theme: { primary: "#0f766e", button: "#0f766e" }, content: { pdf_upload_id: "pdf1", title: "Autumn menu" } });
     });
 
     it("names the missing fields of the page before going on, without calling the API", async () => {

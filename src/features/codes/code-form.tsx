@@ -349,6 +349,7 @@ export function CodeForm({
             <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_16rem] md:items-start lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-12">
               <div className="flex min-w-0 flex-col gap-6">
                 <PageFields
+                  workspaceId={workspace.id}
                   t={pages}
                   generator={generator}
                   type={pageType}

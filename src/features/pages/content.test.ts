@@ -29,7 +29,7 @@ const business: PageTypeInfo = {
 
 describe("page content", () => {
   it("starts with empty fields and one item in a required list", () => {
-    expect(initialContent(links)).toEqual({ title: "", description: "", links: [{ label: "", url: "" }] });
+    expect(initialContent(links)).toEqual({ title: "", description: "", avatar_upload_id: "", links: [{ label: "", url: "" }] });
     expect(initialContent(business)).toEqual({ name: "", hours: [] });
   });
 
@@ -53,13 +53,13 @@ describe("page content", () => {
     });
   });
 
-  it("offers the types whose required fields need no upload (uploads come later)", () => {
+  it("offers every type whose lists hold no list, uploads included (menu comes later)", () => {
     const pdf: PageTypeInfo = { name: "pdf", fields: [{ name: "pdf_upload_id", kind: "upload_pdf", required: true }, { name: "title", kind: "text", required: true }] };
     const images: PageTypeInfo = {
       name: "images",
       fields: [{ name: "images", kind: "list", required: true, items: [{ name: "upload_id", kind: "upload", required: true }] }],
     };
-    expect(editableTypes([links, pdf, images, business]).map((t) => t.name)).toEqual(["links", "business"]);
+    expect(editableTypes([links, pdf, images, business]).map((t) => t.name)).toEqual(["links", "pdf", "images", "business"]);
   });
 
   it("leaves out types with a list inside a list item until the editor draws them (menu)", () => {
@@ -98,5 +98,11 @@ describe("page content", () => {
     expect(built.ok && built.places).toEqual({ links: [1] });
     expect(editorPath("links[0].url", built.ok ? built.places : undefined)).toBe("links[1].url");
     expect(editorPath("title", undefined)).toBe("title");
+  });
+
+  it("sends an upload's id like any field, and names a missing required upload", () => {
+    const pdf: PageTypeInfo = { name: "pdf", fields: [{ name: "pdf_upload_id", kind: "upload_pdf", required: true }, { name: "title", kind: "text", required: true }] };
+    expect(buildContent(pdf, { pdf_upload_id: "", title: "Menu" })).toEqual({ ok: false, missing: ["pdf_upload_id"] });
+    expect(buildContent(pdf, { pdf_upload_id: "u1", title: "Menu" })).toEqual({ ok: true, content: { pdf_upload_id: "u1", title: "Menu" }, places: {} });
   });
 });

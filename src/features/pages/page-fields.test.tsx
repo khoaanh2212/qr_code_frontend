@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as uploads from "@/features/uploads/api";
+import { ApiError } from "@/lib/api";
 import { en } from "@/i18n/messages/en";
 import { initialContent, type PageDraft, type PageTypeInfo } from "./content";
 import { PageFields } from "./page-fields";
@@ -26,6 +28,7 @@ function Harness({ type, errors = {} }: { type: PageTypeInfo; errors?: Record<st
   const [draft, setDraft] = useState(() => initialContent(type));
   return (
     <PageFields
+      workspaceId="w1"
       t={t}
       generator={en.generator}
       type={type}
@@ -42,16 +45,20 @@ function Harness({ type, errors = {} }: { type: PageTypeInfo; errors?: Record<st
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("PageFields", () => {
-  it("draws a field per schema entry, required ones marked, uploads left out", () => {
+  it("draws a field per schema entry, required ones marked, an upload as a file picker", () => {
     render(<Harness type={links} />);
     const title = screen.getByRole("textbox", { name: /Title/ }) as HTMLInputElement;
     expect(title.required).toBe(true);
     expect(title.maxLength).toBe(80);
     expect(screen.getByRole("textbox", { name: /Description/ }).tagName).toBe("TEXTAREA");
-    expect(screen.queryByText(/avatar/i)).toBeNull();
+    expect(screen.getByLabelText(`${t.upload.choose.image}: ${t.fields.avatar_upload_id}`)).toBeTruthy();
+    expect(screen.getByText(t.fields.avatar_upload_id)).toBeTruthy();
     fireEvent.change(title, { target: { value: "Café Lan" } });
     expect(seen.draft.title).toBe("Café Lan");
   });
@@ -111,9 +118,57 @@ describe("PageFields", () => {
     const event: PageTypeInfo = { name: "event", fields: [{ name: "timezone", kind: "timezone", required: true }] };
     function Zone() {
       const [draft, setDraft] = useState<PageDraft>({ timezone: "UTC" });
-      return <PageFields t={t} generator={en.generator} type={event} value={draft} onChange={setDraft} />;
+      return <PageFields workspaceId="w1" t={t} generator={en.generator} type={event} value={draft} onChange={setDraft} />;
     }
     render(<Zone />);
     expect((screen.getByRole("combobox", { name: t.fields.timezone }) as HTMLSelectElement).value).toBe("UTC");
+  });
+
+  const pdfType: PageTypeInfo = { name: "pdf", fields: [{ name: "pdf_upload_id", kind: "upload_pdf", required: true }] };
+  /** The file input, named by what its button shows and the field it fills. */
+  const fileInput = () => screen.getByLabelText(new RegExp(`: ${t.fields.pdf_upload_id}$`), { selector: "input" }) as HTMLInputElement;
+  const pick = (_: string, file: File) => act(async () => void fireEvent.change(fileInput(), { target: { files: [file] } }));
+
+  it("uploads a chosen file to the workspace and keeps its id, shown by kind and size", async () => {
+    const up = vi.spyOn(uploads, "uploadFile").mockResolvedValue({
+      id: "u9", kind: "pdf", content_type: "application/pdf", size_bytes: 2_400_000, url: "", created_at: "",
+    });
+    render(<Harness type={pdfType} />);
+    const input = fileInput();
+    expect(input.accept).toBe("application/pdf");
+    expect(input.getAttribute("aria-label")).toBe(`${t.upload.choose.pdf}: ${t.fields.pdf_upload_id}`);
+    const file = new File(["%PDF-1.7"], "menu.pdf", { type: "application/pdf" });
+    await pick(t.upload.choose.pdf, file);
+    expect(up).toHaveBeenCalledWith("w1", file);
+    await waitFor(() => expect(seen.draft.pdf_upload_id).toBe("u9"));
+    expect(screen.getByText("PDF · 2.4 MB")).toBeTruthy();
+    // The name follows what the button now says; focus stayed on the picker throughout.
+    expect(fileInput().getAttribute("aria-label")).toBe(`${t.upload.replace}: ${t.fields.pdf_upload_id}`);
+    expect(fileInput().disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: `${t.upload.remove}: ${t.fields.pdf_upload_id}` }));
+    expect(seen.draft.pdf_upload_id).toBe("");
+  });
+
+  it("refuses a file over the kind's limit before sending it, and says the API's refusals", async () => {
+    const up = vi.spyOn(uploads, "uploadFile").mockRejectedValue(new ApiError(507, "storage_quota_exceeded", "full"));
+    render(<Harness type={pdfType} />);
+    const big = new File(["x"], "big.pdf", { type: "application/pdf" });
+    Object.defineProperty(big, "size", { value: 21 * 1024 * 1024 });
+    await pick(t.upload.choose.pdf, big);
+    expect(up).not.toHaveBeenCalled();
+    expect(screen.getByText(t.upload.errors.size.pdf)).toBeTruthy();
+    await pick(t.upload.choose.pdf, new File(["%PDF"], "a.pdf", { type: "application/pdf" }));
+    await waitFor(() => expect(screen.getByText(t.upload.errors.quota)).toBeTruthy());
+    expect(seen.draft.pdf_upload_id).toBe("");
+  });
+
+  it("drops an upload that finishes after its file was removed", async () => {
+    let finish: (u: Awaited<ReturnType<typeof uploads.uploadFile>>) => void = () => undefined;
+    vi.spyOn(uploads, "uploadFile").mockImplementation(() => new Promise((r) => (finish = r)));
+    const { unmount } = render(<Harness type={pdfType} />);
+    await pick("", new File(["%PDF"], "a.pdf", { type: "application/pdf" }));
+    unmount();
+    await act(async () => finish({ id: "late", kind: "pdf", content_type: "application/pdf", size_bytes: 1, url: "", created_at: "" }));
+    expect(seen.draft.pdf_upload_id).toBe("");
   });
 });
