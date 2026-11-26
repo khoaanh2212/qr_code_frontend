@@ -63,12 +63,9 @@ describe("native selects", () => {
     expect(body("select:disabled")).toMatch(/cursor:\s*not-allowed/);
   });
 
-  it("draw the chevron in the muted ink of each theme, with the picker in the same theme", () => {
+  it("draw the chevron in the muted ink, with a light picker", () => {
     expect(select).toContain(muted(body(":root")));
     expect(select).toMatch(/color-scheme:\s*light/);
-    const dark = nested("@media (prefers-color-scheme: dark)", "select");
-    expect(dark).toContain(muted(nested("@media (prefers-color-scheme: dark)", ":root")));
-    expect(dark).toMatch(/color-scheme:\s*dark/);
   });
 
   it("give the arrow back to the system in forced colors, where a drawn chevron is not recolored", () => {
@@ -136,5 +133,35 @@ describe("styled select pickers", () => {
     // Outside it, nothing moves.
     const outside = blocks(block).filter((b) => !b.prelude.startsWith("@media")).map((b) => b.body).join("\n");
     expect(outside).not.toMatch(/transition/);
+  });
+});
+
+describe("theme", () => {
+  // The app is light only (decided 2026-11-27): following the system's dark mode made it too dark.
+  it("has no dark theme and tells the browser so", () => {
+    expect(css).not.toMatch(/prefers-color-scheme:\s*dark/);
+    expect(body(":root")).toMatch(/color-scheme:\s*light/);
+  });
+
+  it("keeps a light background, dark ink and readable muted ink", () => {
+    const root = body(":root");
+    const hex = (name: string) => {
+      const m = new RegExp(`--${name}:\\s*#([0-9a-f]{6})`, "i").exec(root);
+      if (!m) throw new Error(`token --${name} is missing from :root`);
+      return m[1]!;
+    };
+    const lum = (h: string) => {
+      const c = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+    };
+    const contrast = (a: string, b: string) => {
+      const [hi, lo] = [lum(hex(a)), lum(hex(b))].sort((x, y) => y - x);
+      return (hi! + 0.05) / (lo! + 0.05);
+    };
+    expect(lum(hex("background"))).toBeGreaterThan(0.9);
+    expect(lum(hex("surface"))).toBeGreaterThan(0.9);
+    expect(contrast("foreground", "background")).toBeGreaterThan(12);
+    expect(contrast("muted", "background")).toBeGreaterThan(4.5);
+    expect(contrast("accent", "surface")).toBeGreaterThan(4.5);
   });
 });
