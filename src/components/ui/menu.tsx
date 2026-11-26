@@ -141,7 +141,7 @@ export function Menu({ label, icon: Icon = MoreVertical, align = "end", variant 
             aria-label={label}
             onKeyDown={onListKey}
             // DESIGN.md Float: the one shadow a menu earns.
-            className={`absolute top-full z-30 mt-1 flex min-w-52 flex-col rounded-lg border border-border bg-surface py-1 shadow-[0_8px_24px_rgb(0_0_0/0.12)] ${align === "end" ? "right-0" : "left-0"}`}
+            className={`absolute top-full z-40 mt-1 flex min-w-52 flex-col rounded-lg border border-border bg-surface py-1 shadow-[0_8px_24px_rgb(0_0_0/0.12)] ${align === "end" ? "right-0" : "left-0"}`}
           >
             {children}
           </div>

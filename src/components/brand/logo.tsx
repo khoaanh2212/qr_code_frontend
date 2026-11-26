@@ -22,12 +22,15 @@ export function LogoMark({ className = "size-6" }: { className?: string }) {
   );
 }
 
-/** Mark + name, as used in the headers. */
+/**
+ * Mark + name, as used in the headers. Below the sm breakpoint (640px) the name is visually hidden (still read out)
+ * so the one-line sticky header keeps its height without scrolling sideways.
+ */
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 font-semibold tracking-tight ${className}`}>
       <LogoMark />
-      {SITE_NAME}
+      <span className="max-sm:sr-only">{SITE_NAME}</span>
     </span>
   );
 }

@@ -13,7 +13,7 @@ export function AppFrame({ masthead, children }: { masthead: ReactNode; children
   const wide = useSelectedLayoutSegment() === null;
   return (
     <>
-      <header className="border-b border-border bg-header">
+      <header className="sticky top-0 z-30 border-b border-border bg-header shadow-sm">
         <nav className={`flex items-center justify-between gap-2 px-4 py-3 ${wide ? "lg:px-6" : "mx-auto max-w-6xl"}`}>{masthead}</nav>
       </header>
       <main className={wide ? "flex w-full flex-1" : "mx-auto w-full max-w-6xl flex-1 px-4 py-6"}>{children}</main>

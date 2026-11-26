@@ -421,7 +421,7 @@ export function CodesList({ t, auth, templatesLabel, locale }: { t: T; auth: Aut
       {withColumn && (
         <aside className="hidden border-r border-border px-3 lg:col-start-1 lg:row-start-1 lg:block">
           {/* The column runs the height of the page; its content stays in view and scrolls on its own. */}
-          <div className="sticky top-0 max-h-dvh overflow-y-auto py-6">{folderNav()}</div>
+          <div className="sticky top-[var(--header-h)] max-h-[calc(100dvh-var(--header-h))] overflow-y-auto py-6">{folderNav()}</div>
         </aside>
       )}
 
