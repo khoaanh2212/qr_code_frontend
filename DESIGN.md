@@ -158,6 +158,10 @@ and both are tokens.
 - **Signal Wash** (`signal-wash`, dark `signal-wash-dark`): the quiet fill of a selected tile; the
   only tinted surface.
 
+**Light only.** Since 2026-11-27 the app has one theme, light: following the system's dark mode made
+it look too dark (user decision). The `*-dark` tokens below are kept for an opt-in dark theme later;
+nothing uses them now, and `:root` declares `color-scheme: light`.
+
 ### Neutral
 - **Paper** (`paper`, dark `paper-dark`): the page ground. Warm, never pure white.
 - **Sheet** (`sheet`, dark `sheet-dark`): panels, inputs and tiles that sit on the paper.
@@ -165,7 +169,7 @@ and both are tokens.
   the shell its color without competing with the signal.
 - **Ink** (`ink`, dark `ink-dark`): headings, body text, values.
 - **Ink Muted** (`ink-muted`, dark `ink-muted-dark`): help text, captions, the spec line; 6:1 or
-  better on paper in both themes.
+  better on paper.
 - **Rule** (`rule`, dark `rule-dark`): dividers and panel outlines; structure, not interaction.
 - **Control Edge** (`control-edge`, dark `control-edge-dark`): borders of anything you can type
   into or press; 3:1 against the sheet (WCAG 1.4.11).
@@ -183,8 +187,7 @@ state, never decoration; there is at most one teal button in view per area.
 **The Two Edges Rule.** Rule color outlines structure; Control Edge outlines what responds to
 input. A border that looks interactive must be interactive.
 
-**The Paper Rule.** The QR code always sits on white, in both themes. A proof is never shown on a
-dark tile.
+**The Paper Rule.** The QR code always sits on white. A proof is never shown on a dark tile.
 
 ## Typography
 
@@ -338,7 +341,7 @@ The preview of the code.
 - **Do** outline every control with Control Edge (`#78716c` / `#8a837c`) and every structure with Rule.
 - **Do** make touch targets at least 44px tall on phones.
 - **Do** set measured values (sizes, hex colors, codes) in Geist Mono with tabular numerals.
-- **Do** show the QR code on white in both themes, framed by crop marks that tell its state.
+- **Do** show the QR code on white, framed by crop marks that tell its state.
 - **Do** theme the browser's own surfaces: text selection, caret, focus ring, `accent-color`.
 - **Do** keep transitions between 150 and 250ms and for state changes only; respect reduced motion.
 

@@ -5,6 +5,8 @@
  * so the chrome stays quiet. Every color used by components comes from here.
  */
 :root {
+  /* Light only (2026-11-27): the system's dark mode made the app too dark. */
+  color-scheme: light;
   --background: #fafaf9;
   --foreground: #1c1917;
   --muted: #57534e;
@@ -19,24 +21,6 @@
   --danger: #b91c1c;
   --on-danger: #ffffff;
   --warning: #92400e;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --foreground: #f5f5f4;
-    --muted: #a8a29e;
-    --border: #44403c;
-    --control-border: #8a837c;
-    --surface: #1c1917;
-    --accent: #2dd4bf;
-    --accent-foreground: #042f2e;
-    --accent-soft: #0f2e2b;
-    --header: #141f1d;
-    --danger: #fca5a5;
-    --on-danger: #450a0a;
-    --warning: #fcd34d;
-  }
 }
 
 @theme inline {
@@ -104,13 +88,6 @@ select {
 
 select:disabled {
   cursor: not-allowed;
-}
-
-@media (prefers-color-scheme: dark) {
-  select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a8a29e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    color-scheme: dark;
-  }
 }
 
 /*
