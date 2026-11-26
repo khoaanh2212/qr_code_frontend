@@ -41,10 +41,13 @@ export function PreviewPane({
   note,
   resetLabel,
   onReset,
+  transparent = false,
 }: {
   t: T;
   preview: PreviewState;
   blocked: boolean;
+  /** The design leaves the background unpainted: drawn over a light checkerboard. */
+  transparent?: boolean;
   /** What the drawing stands for; omitted when it is the code itself. */
   note?: string;
   resetLabel: string;
@@ -61,7 +64,7 @@ export function PreviewPane({
       <h2 id={titleId} className="self-start text-sm font-semibold text-muted">
         {w.previewTitle}
       </h2>
-      <div className="flex aspect-square w-full max-w-64 items-center justify-center rounded-[2px] border border-border bg-white p-3 lg:max-w-none">
+      <div className={`flex aspect-square w-full max-w-64 items-center justify-center rounded-[2px] border border-border p-3 lg:max-w-none ${transparent ? "transparency-grid" : "bg-white"}`}>
         {preview.src && !blocked && (
           // A blob: URL from the API; next/image cannot optimize it.
           // eslint-disable-next-line @next/next/no-img-element

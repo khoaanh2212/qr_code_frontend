@@ -10,11 +10,17 @@ import {
   FRAME_MARGIN_MIN,
   FRAME_TEXT_MAX,
   FRAMES,
+  GRADIENT_ANGLE_MAX,
+  GRADIENT_STOPS_MAX,
+  GRADIENTS,
+  gradientParams,
+  bgParam,
   LOGO_ICONS,
   MODULES,
   styleParams,
   mapTriple,
   type EyeTriple,
+  type GradientStop,
   type QrDesign,
 } from "@/lib/qr/types";
 
@@ -33,6 +39,11 @@ export type CodeLook = Pick<
   | "frameColor"
   | "logoIcon"
   | "margin"
+  | "gradient"
+  | "fg2"
+  | "gradientAngle"
+  | "gradientStops"
+  | "transparent"
 >;
 
 const pick = <V extends string>(values: readonly V[], v: unknown, fallback: V): V =>
@@ -51,6 +62,11 @@ export const DEFAULT_LOOK: CodeLook = {
   frameColor: "",
   logoIcon: "",
   margin: DEFAULT_DESIGN.margin,
+  gradient: "",
+  fg2: DEFAULT_DESIGN.fg2,
+  gradientAngle: 0,
+  gradientStops: null,
+  transparent: false,
 };
 
 /** "a" or "a,b,c" (the API's form) as three values, each one allowed, else the fallback. */
@@ -61,6 +77,23 @@ function triple<V extends string>(values: readonly V[], v: unknown, fallback: V)
 }
 
 const color = (v: unknown): string => (typeof v === "string" ? (normalizeHex(v) ?? "") : "");
+
+const angle = (v: unknown): number | null =>
+  typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= GRADIENT_ANGLE_MAX ? v : null;
+
+/** Stored stops as the API answers them, or null unless every one is well formed and in order. */
+function stops(v: unknown): GradientStop[] | null {
+  if (!Array.isArray(v) || v.length < 2 || v.length > GRADIENT_STOPS_MAX) return null;
+  const out: GradientStop[] = [];
+  for (const s of v as unknown[]) {
+    const offset = (s as GradientStop | null)?.offset;
+    const c = color((s as GradientStop | null)?.color);
+    if (typeof offset !== "number" || offset < 0 || offset > 100 || !c) return null;
+    if (out.length > 0 && offset < out[out.length - 1].offset) return null;
+    out.push({ offset, color: c });
+  }
+  return out;
+}
 
 /** Whether every color of a look is a scannable dark-on-light pair with its background. */
 export function lookScannable(look: CodeLook): boolean {
@@ -77,9 +110,14 @@ export function lookFromDesign(d: CodeDesign): CodeLook {
   const eyeBalls = mapTriple(triple(EYE_BALLS, d.eye_ball ?? legacyBall, "square"), (b, i) =>
     eyePairAllowed(eyeFrames[i], b) ? b : "square",
   );
+  const gradient = pick(GRADIENTS, d.gradient, "" as const);
+  const gradientStops = gradient ? stops(d.gradient_stops) : null;
+  const transparent = d.bg === "transparent";
   return {
+    // The stored fg stays as it was (the API still uses it, e.g. for eyes without a color of their
+    // own); the picker shows the stops' first and last colors.
     fg: d.fg ?? DEFAULT_LOOK.fg,
-    bg: d.bg ?? DEFAULT_LOOK.bg,
+    bg: transparent ? DEFAULT_LOOK.bg : (d.bg ?? DEFAULT_LOOK.bg),
     module: pick(MODULES, d.module, DEFAULT_LOOK.module),
     eyeFrames,
     eyeBalls,
@@ -90,12 +128,18 @@ export function lookFromDesign(d: CodeDesign): CodeLook {
     frameColor: color(d.frame_color),
     logoIcon: pick(LOGO_ICONS, d.logo_icon, "" as const),
     margin: d.margin ?? DEFAULT_LOOK.margin,
+    gradient,
+    fg2: gradientStops ? gradientStops[gradientStops.length - 1].color : color(d.fg2) || DEFAULT_LOOK.fg2,
+    gradientAngle: angle(d.gradient_angle) ?? 0,
+    gradientStops,
+    transparent,
   };
 }
 
 /** The design the API stores; the stored ecc and margin are kept as they were. */
 export function designFromLook(look: CodeLook, keep: CodeDesign = {}): CodeDesign {
-  const out: CodeDesign = { fg: look.fg, bg: look.bg, ...styleParams({ ...DEFAULT_DESIGN, ...look }) };
+  const design = { ...DEFAULT_DESIGN, ...look };
+  const out: CodeDesign = { fg: look.fg, bg: bgParam(look), ...styleParams(design), ...gradientParams(design) };
   if (keep.ecc) out.ecc = keep.ecc;
   if (keep.margin !== undefined) out.margin = look.frame === "none" ? keep.margin : Math.max(keep.margin, FRAME_MARGIN_MIN);
   return out;
@@ -116,9 +160,13 @@ export function safeLook(v: Partial<Record<keyof CodeLook, unknown>>): Partial<C
   if (FRAMES.includes(v.frame as never)) out.frame = v.frame as CodeLook["frame"];
   if (typeof v.frameText === "string") out.frameText = v.frameText.slice(0, FRAME_TEXT_MAX);
   if (LOGO_ICONS.includes(v.logoIcon as never)) out.logoIcon = v.logoIcon as CodeLook["logoIcon"];
-  for (const key of ["eyeColor", "eyeBallColor", "frameColor"] as const) {
+  for (const key of ["eyeColor", "eyeBallColor", "frameColor", "fg2"] as const) {
     const c = color(v[key]);
     if (c) out[key] = c;
   }
+  if (GRADIENTS.includes(v.gradient as never)) out.gradient = v.gradient as CodeLook["gradient"];
+  const a = angle(v.gradientAngle);
+  if (a !== null) out.gradientAngle = a;
+  if (v.transparent === true) out.transparent = true;
   return out;
 }

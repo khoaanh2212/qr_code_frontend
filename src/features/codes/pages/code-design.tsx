@@ -125,6 +125,7 @@ function DesignForm({
           t={t}
           preview={preview}
           blocked={blocked}
+          transparent={look.transparent}
           resetLabel={t.wizard.resetDesign}
           onReset={() => {
             setLook(lookFromDesign(code.design));

@@ -7,7 +7,7 @@ import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 import { saveBlob as save } from "@/lib/browser/download";
 import type { RenderRequest } from "@/lib/qr/render-request";
-import { FORMATS, SIZE_MAX, SIZE_MIN, type QrFormat } from "@/lib/qr/types";
+import { FORMATS, formatProblem, SIZE_MAX, SIZE_MIN, type QrDesign, type QrFormat } from "@/lib/qr/types";
 import { errorText } from "./error-text";
 import { render, type PreviewState } from "./use-render";
 
@@ -31,6 +31,7 @@ export function PreviewPanel({
   contentKey,
   buildDownload,
   filename,
+  design,
 }: {
   t: T;
   preview: PreviewState;
@@ -43,8 +44,10 @@ export function PreviewPanel({
   buildDownload: (format: QrFormat, size: number) => RenderRequest;
   /** File name without extension. */
   filename: string;
+  /** What decides which formats work (JPG has no transparency, EPS takes no uploaded logo). */
+  design: Pick<QrDesign, "transparent" | "logo">;
 }) {
-  const ids = { size: useId(), sizeHelp: useId() };
+  const ids = { size: useId(), sizeHelp: useId(), formatHelp: useId() };
   const [fmt, setFmt] = useState<QrFormat>("png");
   const [size, setSize] = useState(1024);
   const [busy, setBusy] = useState(false);
@@ -61,6 +64,9 @@ export function PreviewPanel({
   }
 
   const sizeOk = Number.isInteger(size) && size >= SIZE_MIN && size <= SIZE_MAX;
+  // The format stays chosen when the design rules it out, with a line saying why and what to pick.
+  const problem = formatProblem(design, fmt);
+  const formatHelp = problem ? t.download[problem] : fmt === "eps" ? t.download.epsNote : "";
   // Only a refused content blocks printing; a network hiccup on the preview does not stop a
   // download that may well succeed.
   const refused = preview.error?.code === "validation_error";
@@ -85,7 +91,9 @@ export function PreviewPanel({
         <span aria-hidden="true" className={`absolute top-0 right-0 size-4 border-t-2 border-r-2 transition-colors duration-200 ${marks}`} />
         <span aria-hidden="true" className={`absolute bottom-0 left-0 size-4 border-b-2 border-l-2 transition-colors duration-200 ${marks}`} />
         <span aria-hidden="true" className={`absolute right-0 bottom-0 size-4 border-r-2 border-b-2 transition-colors duration-200 ${marks}`} />
-        <div className="flex size-full items-center justify-center overflow-hidden rounded-sm bg-white">
+        <div
+          className={`flex size-full items-center justify-center overflow-hidden rounded-sm ${design.transparent ? "transparency-grid" : "bg-white"}`}
+        >
           {showImage ? (
             // A blob: URL from the API; next/image cannot optimize it.
             // eslint-disable-next-line @next/next/no-img-element
@@ -120,7 +128,7 @@ export function PreviewPanel({
       <div className="flex flex-col gap-3 border-t border-border pt-5">
         <h2 className="text-lg font-semibold">{t.sections.download}</h2>
         <div className="flex flex-wrap items-start gap-4">
-          <fieldset className="flex flex-col">
+          <fieldset className="flex flex-col" aria-describedby={formatHelp ? ids.formatHelp : undefined}>
             <legend className="mb-1.5 text-sm font-medium">{t.download.format}</legend>
             <div className="flex overflow-hidden rounded-md border border-control">
               {FORMATS.map((f) => (
@@ -133,6 +141,11 @@ export function PreviewPanel({
                 </label>
               ))}
             </div>
+            {formatHelp && (
+              <p id={ids.formatHelp} className={`mt-1.5 max-w-xs text-xs ${problem ? "font-medium text-warning" : "text-muted"}`}>
+                {formatHelp}
+              </p>
+            )}
           </fieldset>
           <div className="flex flex-col gap-1.5">
             <label htmlFor={ids.size} className="text-sm font-medium">
@@ -159,7 +172,8 @@ export function PreviewPanel({
         <button
           type="button"
           data-qr-download
-          disabled={!printable || !sizeOk || busy}
+          disabled={!printable || !sizeOk || busy || problem !== null}
+          aria-describedby={problem ? ids.formatHelp : undefined}
           onClick={async () => {
             setBusy(true);
             setNotice(null);

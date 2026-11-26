@@ -127,6 +127,9 @@ export const CodeCard = memo(function CodeCard({
       <MenuItem icon={Download} onSelect={() => onDownload(code, "svg")}>
         {l.downloadSvg}
       </MenuItem>
+      <MenuItem icon={Download} onSelect={() => onDownload(code, "eps")}>
+        {l.downloadEps}
+      </MenuItem>
       <MenuSeparator />
       {onEditLink && (
         <MenuItem icon={Link2} disabled={busy || code.status === "locked"} onSelect={() => onEditLink(code)}>

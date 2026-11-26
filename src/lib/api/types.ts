@@ -47,6 +47,7 @@ export interface MeResponse {
 /** Image options of a dynamic code; unset values take the renderer's defaults. */
 export interface CodeDesign {
   fg?: string;
+  /** "#rrggbb", or "transparent" (nothing painted; colors are checked against white). */
   bg?: string;
   ecc?: "L" | "M" | "Q" | "H";
   margin?: number;
@@ -60,6 +61,13 @@ export interface CodeDesign {
   eye_ball_color?: string;
   frame_color?: string;
   logo_icon?: string;
+  /** "linear" or "radial": the modules run from `fg` to `fg2`, or through `gradient_stops`. */
+  gradient?: string;
+  fg2?: string;
+  /** Linear only, 0-359; absent means 0. */
+  gradient_angle?: number;
+  /** Two to five colors with offsets in percent; replaces `fg`/`fg2` in the gradient. */
+  gradient_stops?: { offset: number; color: string }[];
 }
 
 export type CodeStatus = "active" | "paused" | "locked";

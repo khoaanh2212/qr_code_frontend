@@ -39,6 +39,10 @@ const DESIGN_FIELDS = new Set([
   "frame_text",
   "frame_color",
   "logo_icon",
+  "gradient",
+  "fg2",
+  "gradient_angle",
+  "gradient_stops",
 ]);
 const URL_FIELDS = new Set(["url", "website"]);
 const PREVIEW_ID = "qr-preview";
@@ -254,6 +258,10 @@ function Editor({
                     frame: design.frame,
                     frameText: design.frameText,
                     frameColor: design.frameColor,
+                    gradient: design.gradient,
+                    fg2: design.fg2,
+                    gradientAngle: design.gradientAngle,
+                    transparent: design.transparent,
                     // An uploaded logo stays in this tab; an icon travels.
                     logoIcon: design.logo ? "" : design.logoIcon,
                   },
@@ -297,6 +305,7 @@ function Editor({
           invalidLabel={invalidLabel}
           contentKey={key ?? blocker ?? ""}
           filename={downloadName(qrType.type, data)}
+          design={design}
           buildDownload={(format, size) =>
             buildRenderRequest({ type: qrType.type, data, design, format, size }, { post: true })
           }
