@@ -1,6 +1,6 @@
 "use client";
 
-import { Contact, Link, Mail, MessageSquare, Phone, QrCode, Type, Wifi, type LucideIcon } from "lucide-react";
+import { AtSign, Contact, Link, Mail, MessageSquare, Phone, QrCode, Type, Wifi, type LucideIcon } from "lucide-react";
 import type { Messages } from "@/i18n/messages";
 import type { QrType } from "@/lib/qr/types";
 import { lookup } from "./fields";
@@ -13,6 +13,7 @@ const ICONS: Record<string, LucideIcon> = {
   email: Mail,
   sms: MessageSquare,
   phone: Phone,
+  social: AtSign,
 };
 
 /** QR type as a radio group: arrow keys move between types, as users of radios expect. */
@@ -32,9 +33,9 @@ export function TypePicker({
     // width of the scrolling row on phones.
     <fieldset className="min-w-0">
       <legend className="sr-only">{t.typesLabel}</legend>
-      {/* Phones: one scrollable row (no orphan row); wider screens: all seven in a grid.
+      {/* Phones: one scrollable row (no orphan row); wider screens: all eight in a grid.
           `relative` keeps the visually hidden radios inside the scroller, not the page. */}
-      <div className="relative -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-7 sm:overflow-visible sm:px-0 sm:pb-0">
+      <div className="relative -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-8 sm:overflow-visible sm:px-0 sm:pb-0">
         {types.map(({ type }) => {
           const Icon = lookup<LucideIcon>(ICONS, type) ?? QrCode;
           return (

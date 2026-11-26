@@ -2,6 +2,7 @@
 
 import type { Messages } from "@/i18n/messages";
 import { isOpenWifi } from "@/lib/qr/render-request";
+import { isSocialNetwork, socialProblem, socialUrl } from "@/lib/qr/social";
 import { isToggle, type QrData, type QrField, type QrType } from "@/lib/qr/types";
 
 type T = Messages["generator"];
@@ -59,8 +60,11 @@ export function ContentFields({
       {qrType.fields.map((field) => {
         // An open network has no password to enter.
         if (field.name === "password" && isOpenWifi(qrType.type, data)) return null;
+        const network = qrType.type === "social" && isSocialNetwork(data.network) ? data.network : null;
+        // The opening message is WhatsApp's only.
+        if (network && field.name === "text" && network !== "whatsapp") return null;
         const id = `qr-${qrType.type}-${field.name}`;
-        const text = fieldText(t, qrType.type, field);
+        const text = socialFieldText(t, network, field.name) ?? fieldText(t, qrType.type, field);
         const error = errors[field.name];
         const describedBy = [text.help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
         const value = data[field.name] ?? "";
@@ -114,7 +118,7 @@ export function ContentFields({
           input = (
             <input
               {...common}
-              {...inputType(field.name)}
+              {...(network === "whatsapp" && field.name === "username" ? inputType("phone") : inputType(field.name))}
               maxLength={field.max_length}
               spellCheck={false}
               onChange={(e) => onChange(field.name, e.target.value)}
@@ -144,9 +148,32 @@ export function ContentFields({
                 {error}
               </p>
             )}
+            {network && field.name === "username" && !error && <SocialLeadsTo t={t} network={network} data={data} />}
           </div>
         );
       })}
     </div>
+  );
+}
+
+/** A social username's label and help depend on the network (WhatsApp takes a phone number). */
+function socialFieldText(t: T, network: string | null, name: string): FieldText | null {
+  if (!network || name !== "username" || !isSocialNetwork(network)) return null;
+  return {
+    label: network === "whatsapp" ? t.social.phone : t.fields.social.username.label,
+    help: t.social.usernameHelp[network],
+  };
+}
+
+/** Where a valid social preset leads, so the user can check it before printing. */
+function SocialLeadsTo({ t, network, data }: { t: T; network: string; data: QrData }) {
+  if (!isSocialNetwork(network)) return null;
+  const link = { network, username: data.username ?? "", text: network === "whatsapp" ? (data.text ?? "") : "" };
+  // Only the profile part: a long opening message would push the line off the screen.
+  if (socialProblem({ ...link, text: "" }) !== null) return null;
+  return (
+    <p className="text-xs break-all text-muted">
+      {t.social.leadsTo}: <span className="font-mono text-foreground">{socialUrl({ ...link, text: "" })}</span>
+    </p>
   );
 }

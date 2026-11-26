@@ -307,6 +307,7 @@ export const de = {
       email: "E-Mail",
       sms: "SMS",
       phone: "Telefon",
+      social: "Social Media",
     },
     fields: {
       url: {
@@ -332,6 +333,11 @@ export const de = {
         address: { label: "Adresse", help: "" },
         note: { label: "Notiz", help: "" },
       },
+      social: {
+        network: { label: "Netzwerk", help: "" },
+        username: { label: "Benutzername", help: "" },
+        text: { label: "Startnachricht", help: "Optional: die Nachricht, mit der der Chat startet, bis zu 500 Zeichen." },
+      },
       email: {
         to: { label: "Empfänger", help: "" },
         subject: { label: "Betreff", help: "" },
@@ -349,6 +355,25 @@ export const de = {
       WPA: "WPA/WPA2/WPA3",
       WEP: "WEP",
       nopass: "Keine (offenes Netzwerk)",
+      instagram: "Instagram",
+      facebook: "Facebook",
+      tiktok: "TikTok",
+      youtube: "YouTube",
+      whatsapp: "WhatsApp",
+    },
+    social: {
+      kind: "Ziel",
+      kindUrl: "Website",
+      kindSocial: "Social Media",
+      phone: "Telefonnummer mit Ländervorwahl",
+      leadsTo: "Führt zu",
+      usernameHelp: {
+        instagram: "1 bis 30 Buchstaben, Ziffern, Punkte oder Unterstriche, etwa proof.qr.",
+        facebook: "Der Seitenname: 5 bis 50 Buchstaben, Ziffern oder Punkte.",
+        tiktok: "2 bis 24 Buchstaben, Ziffern, Punkte oder Unterstriche.",
+        youtube: "Das Handle des Kanals: 3 bis 30 Buchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.",
+        whatsapp: "Mit Ländervorwahl, etwa +49 151 2345678.",
+      },
     },
     sections: {
       content: "Inhalt",
@@ -452,6 +477,8 @@ export const de = {
       ssidBytes: "Der Netzwerkname ist zu lang (höchstens 32 Bytes; Umlaute zählen doppelt).",
       wpa: "Ein WPA-Passwort hat 8 bis 63 Zeichen (oder ist ein 64-stelliger Hex-Schlüssel).",
       vcardName: "Gib einen Vornamen, Nachnamen oder eine Organisation an.",
+      socialUsername: "Dieser Benutzername passt nicht zu den Regeln des Netzwerks (siehe Hinweis).",
+      socialText: "Bis zu 500 Zeichen, ohne Steuerzeichen und kurz genug für den Link.",
     },
     errors: {
       loadTypes: "Die QR-Code-Typen konnten nicht geladen werden.",
@@ -924,6 +951,8 @@ export const de = {
     },
     errors: {
       targetUrl: "Gib eine öffentliche Webadresse ein, die mit https:// beginnt.",
+      socialUsername: "Dieser Benutzername passt nicht zu den Regeln des Netzwerks (siehe Hinweis).",
+      socialText: "Bis zu 500 Zeichen, ohne Steuerzeichen und kurz genug für den Link.",
       colors: "Wähle Farben mit mehr Kontrast.",
       verifyFirst: "Bestätige deine E-Mail-Adresse, bevor du Codes erstellst oder umleitest.",
       limit: "Du hast die maximale Anzahl an Codes erreicht.",

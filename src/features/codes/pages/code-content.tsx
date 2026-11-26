@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { FormAlert, TextLink } from "@/components/form/form-bits";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
@@ -13,9 +13,10 @@ import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
 import type { DynamicCode } from "@/lib/api/types";
-import { normalizeUrlInput } from "@/lib/qr/validate";
 import { updateCode } from "../api";
 import { NAME_MAX } from "../code-form";
+import { destinationChanges, initialDestination, isDestinationField, type DestinationField, type DestinationState } from "../destination";
+import { DestinationFields } from "../destination-fields";
 import { codeFailure, type CodeField } from "../errors";
 import { useCode } from "../use-code";
 import { ACTION_BAR_ROOM, ActionBar } from "./action-bar";
@@ -24,18 +25,30 @@ import { CodePageState } from "./code-page-state";
 type T = Messages["codes"];
 
 /**
- * A code's content: where it leads and its name, with "Save changes" in the action bar. Viewers
- * and a code locked by an operator see the fields read-only, with why.
+ * A code's content: where it leads (an address or a social profile preset) and its name, with
+ * "Save changes" in the action bar. Viewers and a code locked by an operator see the fields
+ * read-only, with why.
  */
-export function CodeContent({ t, auth, locale }: { t: T; auth: AuthMessages; locale: Locale }) {
+export function CodeContent({
+  t,
+  generator,
+  auth,
+  locale,
+}: {
+  t: T;
+  generator: Messages["generator"];
+  auth: AuthMessages;
+  locale: Locale;
+}) {
   const { id } = useParams<{ id: string }>();
   const { load, setCode, workspaceId, canEdit } = useCode(id);
   if (load.kind !== "ready" || !workspaceId) return <CodePageState t={t} locale={locale} load={load} loading={t.insights.loading} />;
-  return <ContentForm key={load.code.id} t={t} auth={auth} locale={locale} ws={workspaceId} code={load.code} canEdit={canEdit} onSaved={setCode} />;
+  return <ContentForm key={load.code.id} t={t} generator={generator} auth={auth} locale={locale} ws={workspaceId} code={load.code} canEdit={canEdit} onSaved={setCode} />;
 }
 
 function ContentForm({
   t,
+  generator,
   auth,
   locale,
   ws,
@@ -44,6 +57,7 @@ function ContentForm({
   onSaved,
 }: {
   t: T;
+  generator: Messages["generator"];
   auth: AuthMessages;
   locale: Locale;
   ws: string;
@@ -53,11 +67,23 @@ function ContentForm({
 }) {
   const p = t.pages;
   const [name, setName] = useState(code.name);
-  const [target, setTarget] = useState(code.target_url);
+  const [destination, setDestination] = useState<DestinationState>(() => initialDestination(code.target_url));
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<{ field?: CodeField; message: string } | null>(null);
   const targetRef = useRef<HTMLInputElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const focusDestination = (field: DestinationField) =>
+    (field === "social.text" ? textRef : field === "social.username" ? usernameRef : targetRef).current?.focus();
+  // The fields are disabled while a save is under way: a refusal is focused once they are back.
+  const refocus = useRef<DestinationField | null>(null);
+  useEffect(() => {
+    const field = refocus.current;
+    if (busy || !field) return;
+    refocus.current = null;
+    (field === "social.text" ? textRef : field === "social.username" ? usernameRef : targetRef).current?.focus();
+  }, [busy]);
   const formId = "code-content";
   const locked = code.status === "locked";
   const readOnly = !canEdit || locked;
@@ -66,16 +92,15 @@ function ContentForm({
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (busy || readOnly) return;
-    const url = normalizeUrlInput(target);
-    if (url !== target) setTarget(url);
-    if (!/^https?:\/\//i.test(url)) {
-      setError({ field: "target_url", message: t.errors.targetUrl });
-      targetRef.current?.focus();
+    const checked = destinationChanges(destination, code.target_url, t);
+    if (!checked.ok) {
+      setError({ field: checked.field, message: checked.message });
+      focusDestination(checked.field);
       return;
     }
     const changes = {
       ...(name.trim() !== code.name ? { name: name.trim() } : {}),
-      ...(url !== code.target_url ? { target_url: url } : {}),
+      ...checked.changes,
     };
     setSaved(false);
     setError(null);
@@ -85,13 +110,13 @@ function ContentForm({
       const updated = await updateCode(ws, code.id, changes);
       onSaved(updated);
       setName(updated.name);
-      setTarget(updated.target_url);
+      setDestination(initialDestination(updated.target_url));
       setSaved(true);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return redirectToLogin();
       const failure = codeFailure(err, t, auth);
       setError(failure);
-      if (failure.field === "target_url") targetRef.current?.focus();
+      if (isDestinationField(failure.field)) refocus.current = failure.field;
     } finally {
       setBusy(false);
     }
@@ -108,23 +133,19 @@ function ContentForm({
       {readOnly && <p className="rounded-md border border-border bg-surface p-3 text-sm text-pretty">{locked ? t.lockedIntro : p.viewerNote}</p>}
       <form id={formId} noValidate onSubmit={submit}>
         <fieldset disabled={readOnly} className="flex flex-col gap-5">
-          <TextField
-            ref={targetRef}
-            label={t.target}
-            help={t.targetHelp}
-            required
-            type="url"
-            inputMode="url"
-            spellCheck={false}
-            maxLength={2048}
+          <DestinationFields
+            t={t}
+            generator={generator}
+            value={destination}
+            error={error}
+            urlRef={targetRef}
+            usernameRef={usernameRef}
+            textRef={textRef}
             readOnly={busy}
-            value={target}
-            error={error?.field === "target_url" ? error.message : undefined}
-            onChange={(e) => {
-              setTarget(e.target.value);
+            onChange={(update) => {
+              setDestination(update);
               setSaved(false);
             }}
-            onBlur={() => setTarget((v) => normalizeUrlInput(v))}
           />
           <TextField
             label={t.name}
@@ -140,7 +161,7 @@ function ContentForm({
           />
         </fieldset>
       </form>
-      <FormAlert message={error && error.field !== "target_url" ? error.message : undefined} />
+      <FormAlert message={error && !isDestinationField(error.field) ? error.message : undefined} />
       <SavedNote message={saved ? t.saved : undefined} />
       <ActionBar>
         <Link

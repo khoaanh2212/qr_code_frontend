@@ -307,6 +307,7 @@ export const vi = {
       email: "Email",
       sms: "SMS",
       phone: "Điện thoại",
+      social: "Mạng xã hội",
     },
     fields: {
       url: {
@@ -332,6 +333,11 @@ export const vi = {
         address: { label: "Địa chỉ", help: "" },
         note: { label: "Ghi chú", help: "" },
       },
+      social: {
+        network: { label: "Mạng", help: "" },
+        username: { label: "Tên người dùng", help: "" },
+        text: { label: "Tin nhắn mở đầu", help: "Không bắt buộc: tin nhắn soạn sẵn khi mở cuộc trò chuyện, tối đa 500 ký tự." },
+      },
       email: {
         to: { label: "Người nhận", help: "" },
         subject: { label: "Tiêu đề", help: "" },
@@ -349,6 +355,25 @@ export const vi = {
       WPA: "WPA/WPA2/WPA3",
       WEP: "WEP",
       nopass: "Không có (mạng mở)",
+      instagram: "Instagram",
+      facebook: "Facebook",
+      tiktok: "TikTok",
+      youtube: "YouTube",
+      whatsapp: "WhatsApp",
+    },
+    social: {
+      kind: "Đích đến",
+      kindUrl: "Website",
+      kindSocial: "Mạng xã hội",
+      phone: "Số điện thoại kèm mã quốc gia",
+      leadsTo: "Dẫn tới",
+      usernameHelp: {
+        instagram: "1 đến 30 chữ cái, chữ số, dấu chấm hoặc gạch dưới, ví dụ proof.qr.",
+        facebook: "Tên trang: 5 đến 50 chữ cái, chữ số hoặc dấu chấm.",
+        tiktok: "2 đến 24 chữ cái, chữ số, dấu chấm hoặc gạch dưới.",
+        youtube: "Handle của kênh: 3 đến 30 chữ cái, chữ số, dấu chấm, gạch ngang hoặc gạch dưới.",
+        whatsapp: "Kèm mã quốc gia, ví dụ +84 90 123 4567.",
+      },
     },
     sections: {
       content: "Nội dung",
@@ -452,6 +477,8 @@ export const vi = {
       ssidBytes: "Tên mạng quá dài (tối đa 32 byte; chữ có dấu tính gấp đôi).",
       wpa: "Mật khẩu WPA có 8 đến 63 ký tự (hoặc là khoá hex 64 chữ số).",
       vcardName: "Nhập tên, họ hoặc tổ chức.",
+      socialUsername: "Tên người dùng này không đúng quy tắc của mạng (xem gợi ý).",
+      socialText: "Tối đa 500 ký tự, không có ký tự điều khiển, và đủ ngắn để nằm trong link.",
     },
     errors: {
       loadTypes: "Không tải được danh sách loại mã QR.",
@@ -924,6 +951,8 @@ export const vi = {
     },
     errors: {
       targetUrl: "Nhập địa chỉ web công khai bắt đầu bằng https://.",
+      socialUsername: "Tên người dùng này không đúng quy tắc của mạng (xem gợi ý).",
+      socialText: "Tối đa 500 ký tự, không có ký tự điều khiển, và đủ ngắn để nằm trong link.",
       colors: "Hãy chọn màu có độ tương phản cao hơn.",
       verifyFirst: "Hãy xác minh địa chỉ email trước khi tạo hoặc đổi đích đến của mã.",
       limit: "Bạn đã đạt số lượng mã tối đa.",

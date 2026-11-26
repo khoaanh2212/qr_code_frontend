@@ -192,6 +192,38 @@ describe("CodeForm", () => {
     expect(push).toHaveBeenCalledWith("/app?ready=c1");
   });
 
+  it("creates a code that leads to a social profile, checked like the API first", async () => {
+    serveCreate();
+    renderForm();
+    await targetField();
+    fireEvent.click(screen.getByRole("radio", { name: en.generator.social.kindSocial }));
+    fireEvent.change(screen.getByRole("combobox", { name: en.generator.fields.social.network.label }), { target: { value: "whatsapp" } });
+    type(new RegExp(en.generator.social.phone), "12");
+    await click(w.skipDesign);
+    expect(created()).toEqual([]);
+    expect(screen.getByText(t.errors.socialUsername)).toBeTruthy();
+    expect(document.activeElement).toBe(field(new RegExp(en.generator.social.phone)));
+
+    type(new RegExp(en.generator.social.phone), "+84 90 123 4567");
+    type(en.generator.fields.social.text.label, "bell \u0007");
+    await click(w.skipDesign);
+    expect(created()).toEqual([]);
+    expect(screen.getByText(t.errors.socialText)).toBeTruthy();
+    expect(document.activeElement).toBe(field(en.generator.fields.social.text.label)); // the message, not the number
+
+    type(en.generator.fields.social.text.label, " Xin chào ");
+    expect(screen.getByText("https://wa.me/84901234567")).toBeTruthy();
+    await click(w.skipDesign);
+    expect(created()).toEqual([
+      {
+        name: "",
+        social: { network: "whatsapp", username: "84901234567", text: "Xin chào" },
+        design: { fg: "#000000", bg: "#ffffff" },
+        captcha_token: "dev-token",
+      },
+    ]);
+  });
+
   it("adds https:// and keeps what is not a web address on the first step, without calling the API", async () => {
     serveCreate();
     renderForm();
@@ -438,7 +470,7 @@ describe("code pages", () => {
 
   describe("content page", () => {
     const showContent = async () => {
-      withSession(<CodeContent t={t} auth={auth} locale="en" />);
+      withSession(<CodeContent t={t} generator={en.generator} auth={auth} locale="en" />);
       await screen.findByRole("heading", { name: t.pages.contentTitle, level: 1 });
     };
 
@@ -488,12 +520,44 @@ describe("code pages", () => {
       expect(screen.queryByRole("button", { name: t.pages.saveChanges })).toBeNull();
     });
 
+    it("opens a preset link as its preset and saves a changed username as a preset", async () => {
+      detailApi({ target_url: "https://www.instagram.com/proof.qr/" });
+      await showContent();
+      expect((screen.getByRole("radio", { name: en.generator.social.kindSocial }) as HTMLInputElement).checked).toBe(true);
+      expect(field(new RegExp(en.generator.fields.social.username.label)).value).toBe("proof.qr");
+      await click(t.pages.saveChanges);
+      expect(patches()).toEqual([]); // still the same link
+      type(new RegExp(en.generator.fields.social.username.label), "@proof_qr");
+      await click(t.pages.saveChanges);
+      expect(patches()).toEqual([{ social: { network: "instagram", username: "proof_qr" } }]);
+    });
+
+    it("puts the API's refusal of a social username on its field", async () => {
+      detailApi({ target_url: "https://www.tiktok.com/@proof_qr" });
+      await showContent();
+      type(new RegExp(en.generator.fields.social.username.label), "other_qr");
+      request.mockRejectedValueOnce(new ApiError(422, "validation_error", "bad", "social.username"));
+      await click(t.pages.saveChanges);
+      expect(screen.getByText(t.errors.socialUsername)).toBeTruthy();
+      expect(document.activeElement).toBe(field(new RegExp(en.generator.fields.social.username.label)));
+    });
+
+    it("turns a website address into a social preset", async () => {
+      detailApi();
+      await showContent();
+      fireEvent.click(screen.getByRole("radio", { name: en.generator.social.kindSocial }));
+      fireEvent.change(screen.getByRole("combobox", { name: en.generator.fields.social.network.label }), { target: { value: "youtube" } });
+      type(new RegExp(en.generator.fields.social.username.label), "proof-qr");
+      await click(t.pages.saveChanges);
+      expect(patches()).toEqual([{ social: { network: "youtube", username: "proof-qr" } }]);
+    });
+
     it("says when the code does not exist", async () => {
       request.mockImplementation(async (path) => {
         if (path === "/v1/me") return me;
         throw new ApiError(404, "not_found", "gone");
       });
-      withSession(<CodeContent t={t} auth={auth} locale="en" />);
+      withSession(<CodeContent t={t} generator={en.generator} auth={auth} locale="en" />);
       expect(await screen.findByText(t.notFound)).toBeTruthy();
     });
   });
