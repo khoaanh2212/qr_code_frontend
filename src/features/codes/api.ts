@@ -15,6 +15,7 @@ import type {
   DynamicCode,
 } from "@/lib/api/types";
 import type { QrFormat } from "@/lib/qr/types";
+import type { PageBody } from "@/features/pages/content";
 import type { DestinationBody, SocialBody } from "./destination";
 
 /** Calls of the dynamic codes API (backend PLAN, items 35-37), always with the session. */
@@ -65,7 +66,7 @@ export type NewCode = {
   name: string;
   design: CodeDesign;
   captcha_token: string;
-} & DestinationBody;
+} & (DestinationBody | { page: PageBody });
 
 export async function createCode(workspaceId: string, body: NewCode): Promise<DynamicCode> {
   return (await sessionApi.request<CodeEnvelope>(base(workspaceId), { method: "POST", body })).code;

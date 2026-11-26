@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { FormAlert, TextLink } from "@/components/form/form-bits";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
@@ -11,6 +11,21 @@ import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-s
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
+import { ColorInput } from "@/features/qr-editor/color-input";
+import { getPageTypes } from "@/features/pages/api";
+import {
+  buildContent,
+  contentPath,
+  editableTypes,
+  editorPath,
+  initialContent,
+  type PageBody,
+  type PageDraft,
+  type PageTypeInfo,
+} from "@/features/pages/content";
+import { OpensPicker } from "@/features/pages/opens-picker";
+import { PageFields } from "@/features/pages/page-fields";
+import { PagePreview } from "@/features/pages/page-preview";
 import { createCode } from "./api";
 import { DEFAULT_LOOK, designFromLook, lookScannable, type CodeLook } from "./design";
 import {
@@ -39,6 +54,8 @@ type Step = "destination" | "design";
 const SAMPLE_LINK = "https://example.com/AbCd1234";
 /** How long after a step change a click on a creating button is taken for a double click. */
 const STEP_GUARD_MS = 500;
+/** A hosted page's colors until the user picks others (ProofQR's own teal). */
+const DEFAULT_THEME = { primary: "#0f766e", button: "#0f766e" };
 
 /**
  * "New dynamic code" in two steps: the destination (and a name), then the design beside a live
@@ -51,6 +68,7 @@ const STEP_GUARD_MS = 500;
 export function CodeForm({
   t,
   generator,
+  pages,
   templates,
   uploads,
   auth,
@@ -59,6 +77,7 @@ export function CodeForm({
 }: {
   t: T;
   generator: Messages["generator"];
+  pages: Messages["pages"];
   templates: Messages["templates"];
   uploads: Messages["uploads"];
   auth: AuthMessages;
@@ -81,6 +100,15 @@ export function CodeForm({
     fg: handoff?.fg ?? DEFAULT_LOOK.fg,
     bg: handoff?.bg ?? DEFAULT_LOOK.bg,
   }));
+  // What the code opens: "url" or "social" (a link), or a hosted page type.
+  const [opens, setOpens] = useState<string>("url");
+  const [pageTypes, setPageTypes] = useState<PageTypeInfo[] | null>(null);
+  const [typesFailed, setTypesFailed] = useState(false);
+  const [typesTry, setTypesTry] = useState(0);
+  /** Each type keeps its content, so looking at another type loses nothing. */
+  const [drafts, setDrafts] = useState<Record<string, PageDraft>>({});
+  const [theme, setTheme] = useState(DEFAULT_THEME);
+  const [pageErrors, setPageErrors] = useState<Record<string, string>>({});
   const [token, setToken] = useState<string | null>(null);
   const [reset, setReset] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -91,6 +119,8 @@ export function CodeForm({
   const headingRef = useRef<HTMLHeadingElement>(null);
   /** A destination field to focus once the first step is back (a refusal found on the second). */
   const focusTarget = useRef<DestinationField | null>(null);
+  /** The same for a page field, by its path (fields carry it as their name). */
+  const focusPage = useRef<string | null>(null);
   const moved = useRef(false);
   // When the step last changed: the bar's buttons swap in place, so the second click of a double
   // click on "Next" would land on "Create" (and one on "Back" on "Create with the default design").
@@ -99,22 +129,56 @@ export function CodeForm({
 
   const contrastOk = lookScannable(look);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    getPageTypes(controller.signal)
+      .then((types) => setPageTypes(editableTypes(types)))
+      .catch(() => {
+        if (!controller.signal.aborted) setTypesFailed(true);
+      });
+    return () => controller.abort();
+  }, [typesTry]);
+
+  const pageType = pageTypes?.find((p) => p.name === opens) ?? null;
+  const blank = useMemo(() => (pageType ? initialContent(pageType) : null), [pageType]);
+  const draft = pageType ? (drafts[pageType.name] ?? blank) : null;
+  const built = useMemo(() => (pageType && draft ? buildContent(pageType, draft) : null), [pageType, draft]);
+  const pageBody: PageBody | null = pageType && built?.ok ? { type: pageType.name, theme, content: built.content } : null;
+
   // A new step starts at its heading; a refused destination goes back to its field.
   useEffect(() => {
     const field = focusTarget.current;
-    if (field) {
+    const pageField = focusPage.current;
+    focusPage.current = null;
+    if (pageField) {
+      // Said in the alert when the editor draws no control for it (a refusal of the page's frame).
+      if (!focusPageField(pageField)) setError({ message: pages.invalid });
+    } else if (field) {
       focusTarget.current = null;
       (field === "social.text" ? textRef : field === "social.username" ? usernameRef : targetRef).current?.focus();
     } else if (moved.current) {
       headingRef.current?.focus();
     }
     moved.current = false;
-  }, [step]);
+  }, [step, pages.invalid]);
 
   function go(next: Step) {
     moved.current = true;
     steppedAt.current = Date.now();
     setStep(next);
+  }
+
+  /** Focuses a page field by its path, or remembers it until the first step is back. */
+  function showPageField(path: string | undefined) {
+    if (!path) return;
+    if (step === "destination") {
+      // A field the editor does not draw (a refusal of the page's frame): said in the alert.
+      if (!focusPageField(path)) setError({ message: pages.invalid });
+    }
+    else {
+      focusPage.current = path;
+      go("destination");
+    }
   }
 
   /** Focuses the destination field a message is about. */
@@ -123,7 +187,16 @@ export function CodeForm({
   }
 
   /** The destination as the API takes it, or null after saying what is wrong with it. */
-  function checkedDestination(): DestinationBody | null {
+  function checkedDestination(): DestinationBody | { page: PageBody } | null {
+    if (pageType) {
+      if (built?.ok) return { page: { type: pageType.name, theme, content: built.content } };
+      const missing = built && !built.ok ? built.missing : [];
+      setPageErrors(Object.fromEntries(missing.map((path) => [path, pages.required])));
+      setError({ message: pages.missingSome });
+      if (missing[0]) showPageField(missing[0]);
+      else if (step !== "destination") go("destination");
+      return null;
+    }
     const checked = destinationFor(destination, t);
     if (checked.ok) {
       if ("target_url" in checked.body && checked.body.target_url !== destination.url) setDestination((d) => ({ ...d, url: checked.url }));
@@ -164,6 +237,17 @@ export function CodeForm({
       router.push(`${localizePath(locale, "/app")}?ready=${encodeURIComponent(code.id)}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return redirectToLogin();
+      const sent = err instanceof ApiError && err.code === "validation_error" ? contentPath(err.field) : undefined;
+      const path = sent && editorPath(sent, built?.ok ? built.places : undefined);
+      if (path) {
+        // A refused page field: back to the page, at the field.
+        setPageErrors({ [path]: pages.invalid });
+        setError(null);
+        showPageField(path);
+        setReset((n) => n + 1);
+        setBusy(false);
+        return;
+      }
       const failure = codeFailure(err, t, auth);
       setError(failure);
       // The address and the name live on the first step: show the refusal where it can be fixed.
@@ -222,10 +306,81 @@ export function CodeForm({
       </header>
 
       {step === "destination" ? (
-        <form id={formId} noValidate onSubmit={next} className="flex max-w-xl flex-col gap-5">
+        // A page's editor sits beside its phone preview: the form widens for it.
+        <form id={formId} noValidate onSubmit={next} className={`flex flex-col gap-5 ${pageType ? "max-w-4xl" : "max-w-xl"}`}>
+          <OpensPicker
+            legend={pages.kindLegend}
+            pageGroup={pages.pageGroup}
+            links={[
+              { value: "url", label: generator.social.kindUrl, help: pages.kindHelp.url },
+              { value: "social", label: generator.social.kindSocial, help: pages.kindHelp.social },
+            ]}
+            pages={(pageTypes ?? []).map((p) => {
+              const words = (pages.types as Record<string, { name: string; help: string } | undefined>)[p.name];
+              return { value: p.name, label: words?.name ?? p.name, help: words?.help ?? "" };
+            })}
+            value={opens}
+            onChange={(next) => {
+              setOpens(next);
+              setError(null);
+              setPageErrors({});
+              if (next === "url" || next === "social") setDestination((d) => ({ ...d, kind: next }));
+            }}
+          />
+          {typesFailed && !pageTypes && (
+            <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted">
+              {pages.typesFailed}
+              <button
+                type="button"
+                onClick={() => {
+                  setTypesFailed(false);
+                  setTypesTry((n) => n + 1);
+                }}
+                className="inline-flex min-h-11 items-center font-medium text-accent underline-offset-4 hover:underline"
+              >
+                {pages.retry}
+              </button>
+            </p>
+          )}
           <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold">
-            {w.destinationTitle}
+            {pageType ? pages.contentTitle : w.destinationTitle}
           </h2>
+          {pageType && draft && workspace ? (
+            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_16rem] md:items-start lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-12">
+              <div className="flex min-w-0 flex-col gap-6">
+                <PageFields
+                  t={pages}
+                  generator={generator}
+                  type={pageType}
+                  value={draft}
+                  errors={pageErrors}
+                  onChange={(update) => {
+                    setDrafts((all) => ({ ...all, [pageType.name]: update(all[pageType.name] ?? initialContent(pageType)) }));
+                    if (Object.keys(pageErrors).length > 0) setPageErrors({});
+                    if (error) setError(null);
+                  }}
+                />
+                <fieldset className="flex min-w-0 flex-col gap-3">
+                  <legend className="mb-1.5 text-sm font-semibold">{pages.theme}</legend>
+                  <div className="flex flex-wrap gap-4">
+                    <ColorInput t={generator} label={pages.primary} value={theme.primary} onChange={(primary) => setTheme((th) => ({ ...th, primary }))} />
+                    <ColorInput t={generator} label={pages.button} value={theme.button} onChange={(button) => setTheme((th) => ({ ...th, button }))} />
+                  </div>
+                </fieldset>
+              </div>
+              <div className="md:sticky md:top-[calc(var(--header-h)+1.5rem)]">
+                <PagePreview
+                  key={pageType.name}
+                  t={pages}
+                  workspaceId={workspace.id}
+                  type={pageType.name}
+                  lang={locale}
+                  body={pageBody}
+                  onRefused={(path) => setPageErrors({ [editorPath(path, built?.ok ? built.places : undefined)]: pages.invalid })}
+                />
+              </div>
+            </div>
+          ) : (
           <DestinationFields
             t={t}
             generator={generator}
@@ -234,12 +389,15 @@ export function CodeForm({
             urlRef={targetRef}
             usernameRef={usernameRef}
             textRef={textRef}
+            hideKind
             onChange={(update) => {
               setDestination(update);
               if (error?.field === "target_url" || error?.field?.startsWith("social.")) setError(null);
             }}
           />
+          )}
           <TextField
+            className={pageType ? "max-w-xl" : ""}
             label={t.name}
             help={t.nameHelp}
             maxLength={NAME_MAX}
@@ -343,4 +501,14 @@ export function CodeForm({
       </div>
     </div>
   );
+}
+
+/**
+ * Focuses the page control drawn for a path (fields and lists carry it as `data-path`); false
+ * when the editor draws none.
+ */
+function focusPageField(path: string): boolean {
+  const el = Array.from(document.querySelectorAll<HTMLElement>("[data-path]")).find((e) => e.dataset.path === path);
+  el?.focus();
+  return Boolean(el);
 }

@@ -52,7 +52,7 @@ describe("buildCsp", () => {
     expect(d.get("script-src")).toEqual(["'self'", "'nonce-bm9uY2UtMTIz'", "'strict-dynamic'"]);
     expect(d.get("connect-src")).toEqual(["'self'", api]);
     expect(d.get("frame-ancestors")).toEqual(["'none'"]);
-    expect(d.get("frame-src")).toEqual(["'none'"]);
+    expect(d.get("frame-src")).toEqual([api, "https://www.youtube-nocookie.com", "https://player.vimeo.com"]);
     expect(d.get("object-src")).toEqual(["'none'"]);
     expect(d.get("base-uri")).toEqual(["'none'"]);
     expect(d.get("form-action")).toEqual(["'self'"]);
@@ -138,8 +138,10 @@ describe("captcha frames", () => {
         .split(";")
         .find((d) => d.trim().startsWith("frame-src"))
         ?.trim();
-    expect(frames("private", true)).toBe("frame-src https://challenges.cloudflare.com");
-    expect(frames("private", false)).toBe("frame-src 'none'");
+    // Private pages frame the page editor's samples (on the API) and its previews' video players.
+    const editor = `${api} https://www.youtube-nocookie.com https://player.vimeo.com`;
+    expect(frames("private", true)).toBe(`frame-src ${editor} https://challenges.cloudflare.com`);
+    expect(frames("private", false)).toBe(`frame-src ${editor}`);
     expect(frames("marketing", true)).toBe("frame-src 'none'");
   });
 

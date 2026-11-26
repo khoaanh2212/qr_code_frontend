@@ -79,6 +79,19 @@ beforeAll(() => {
   };
 });
 
+/** Two hosted page types: one the editor makes, one that needs an upload first (item 27c). */
+const PAGE_TYPES = [
+  {
+    name: "links",
+    fields: [
+      { name: "title", kind: "text", required: true, max: 80 },
+      { name: "avatar_upload_id", kind: "upload" },
+      { name: "links", kind: "list", required: true, max: 20, items: [{ name: "label", kind: "text", required: true }, { name: "url", kind: "url", required: true }] },
+    ],
+  },
+  { name: "pdf", fields: [{ name: "pdf_upload_id", kind: "upload_pdf", required: true }, { name: "title", kind: "text", required: true }] },
+];
+
 beforeEach(() => {
   push.mockReset();
   request = vi.spyOn(sessionApi, "request").mockImplementation(async (path) => {
@@ -88,6 +101,10 @@ beforeEach(() => {
   requestVoid = vi.spyOn(sessionApi, "requestVoid").mockResolvedValue();
   vi.spyOn(sessionApi, "requestBlob").mockResolvedValue(new Blob(["png"], { type: "image/png" }));
   vi.spyOn(publicApi, "requestBlob").mockResolvedValue(new Blob(["png"], { type: "image/png" })); // the wizard's preview
+  vi.spyOn(publicApi, "request").mockImplementation(async (path) => {
+    if (path === "/v1/page-types") return { types: PAGE_TYPES };
+    throw new Error(`unexpected public ${path}`);
+  });
   assign = vi.fn();
   vi.stubGlobal("location", { assign, replace: vi.fn(), pathname: "/app", search: "" });
   URL.createObjectURL = vi.fn(() => "blob:qr");
@@ -112,7 +129,7 @@ describe("CodeForm", () => {
   /** A creating button ignores clicks for a moment after a step change (double clicks): let it pass. */
   const settle = () => void vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60_000);
   const renderForm = () =>
-    withSession(<CodeForm t={t} generator={en.generator} templates={en.templates} uploads={en.uploads} auth={auth} locale="en" captcha={captcha} />);
+    withSession(<CodeForm t={t} generator={en.generator} pages={en.pages} templates={en.templates} uploads={en.uploads} auth={auth} locale="en" captcha={captcha} />);
   const created = () => request.mock.calls.filter(([p, o]) => p === "/v1/workspaces/w1/codes" && o?.method === "POST").map(([, o]) => o?.body);
   const serveCreate = () =>
     request.mockImplementation(async (path, opts) => {
@@ -277,6 +294,84 @@ describe("CodeForm", () => {
     expect(screen.getAllByRole("alert").some((a) => a.textContent === t.errors.verifyFirst)).toBe(true);
     expect(step()).toContain(w.stepDesign);
     expect(push).not.toHaveBeenCalled();
+  });
+
+  describe("hosted pages", () => {
+    const p = en.pages;
+    const pickLinks = async () => {
+      await targetField();
+      fireEvent.click(await screen.findByRole("radio", { name: p.types.links.name }));
+    };
+
+    it("offers the hosted pages next to a website and a social profile, leaving out those that need an upload", async () => {
+      serveCreate();
+      renderForm();
+      await targetField();
+      const group = screen.getByRole("radiogroup", { name: p.kindLegend });
+      expect(within(group).getByRole("radio", { name: en.generator.social.kindUrl })).toBeTruthy();
+      expect(await within(group).findByRole("radio", { name: p.types.links.name })).toBeTruthy();
+      expect(within(group).queryByRole("radio", { name: p.types.pdf.name })).toBeNull();
+    });
+
+    it("shows the type's sample, then the page itself, and creates the code with the page", async () => {
+      serveCreate();
+      // jsdom's Blob has no text(); the browser's has.
+      const html = vi.mocked(sessionApi.requestBlob).mockResolvedValue({ text: async () => "<h1>Café</h1>" } as unknown as Blob);
+      renderForm();
+      await pickLinks();
+      expect((screen.getByTitle(p.sampleFrame) as HTMLIFrameElement).src).toContain("/v1/page-types/links/sample?lang=en");
+      expect(screen.queryByRole("textbox", { name: new RegExp(t.target) })).toBeNull();
+      type(new RegExp(p.fields.title), " Café Lan ");
+      type(new RegExp(p.fields.label), "Menu");
+      type(/Link \(URL\)/, "example.com/menu");
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 600));
+      });
+      await waitFor(() => expect(screen.getByTitle(p.previewFrame).getAttribute("srcdoc")).toBe("<h1>Café</h1>"));
+      expect(html).toHaveBeenCalledWith("/v1/workspaces/w1/pages/preview", expect.objectContaining({ method: "POST" }), "text/html");
+
+      await click(w.skipDesign);
+      const [body] = created() as Record<string, unknown>[];
+      expect(body.target_url).toBeUndefined();
+      expect(body.page).toEqual({
+        type: "links",
+        theme: { primary: "#0f766e", button: "#0f766e" },
+        content: { title: "Café Lan", links: [{ label: "Menu", url: "https://example.com/menu" }] },
+      });
+    });
+
+    it("names the missing fields of the page before going on, without calling the API", async () => {
+      serveCreate();
+      renderForm();
+      await pickLinks();
+      await click(w.next);
+      expect(step()).toContain(w.stepDestination);
+      expect(created()).toEqual([]);
+      expect(screen.getAllByText(p.required).length).toBeGreaterThan(0);
+      expect(field(new RegExp(p.fields.title)).getAttribute("aria-invalid")).toBe("true");
+      expect(document.activeElement).toBe(field(new RegExp(p.fields.title)));
+    });
+
+    it("returns to the page's field the API refuses", async () => {
+      request.mockImplementation(async (path, opts) => {
+        if (path === "/v1/me") return me;
+        if (path === "/v1/workspaces/w1/templates") return { templates: [] };
+        if (opts?.method === "POST") throw new ApiError(422, "validation_error", "bad", "page.content.links[0].url");
+        throw new Error(`unexpected ${path}`);
+      });
+      renderForm();
+      await pickLinks();
+      type(new RegExp(p.fields.title), "Café");
+      type(new RegExp(p.fields.label), "Menu");
+      type(/Link \(URL\)/, "https://example.com/x");
+      await click(w.next);
+      settle();
+      await click(t.create);
+      await waitFor(() => expect(step()).toContain(w.stepDestination));
+      expect(field(/Link \(URL\)/).getAttribute("aria-invalid")).toBe("true");
+      expect(screen.getByText(p.invalid)).toBeTruthy();
+      await waitFor(() => expect(document.activeElement).toBe(field(/Link \(URL\)/)));
+    });
   });
 
   it("returns to the destination when the API refuses the address", async () => {

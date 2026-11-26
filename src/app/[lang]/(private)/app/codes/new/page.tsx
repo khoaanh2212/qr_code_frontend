@@ -13,6 +13,6 @@ export default async function NewCodePage() {
   const locale = await getLocale();
   const t = await getMessages();
   return (
-    <CodeForm t={t.codes} generator={t.generator} templates={t.templates} uploads={t.uploads} auth={t.auth} locale={locale} captcha={await getCaptchaConfig()} />
+    <CodeForm t={t.codes} generator={t.generator} pages={t.pages} templates={t.templates} uploads={t.uploads} auth={t.auth} locale={locale} captcha={await getCaptchaConfig()} />
   );
 }

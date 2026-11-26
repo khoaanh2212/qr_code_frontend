@@ -382,3 +382,19 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     field the API refuses opens its tab. The home page dropped from about 2,200 px to about
     1,500 px tall at desktop width, leaving room below the generator for SEO content (not
     written yet: how-to steps, FAQ).
+28. Hosted pages in "New code" (backend PLAN item 27b, `src/features/pages`): the first step
+    starts with what the code opens, as a grid of cards: a website, a social profile, or one of
+    the pages ProofQR hosts (from `GET /v1/page-types`; the types whose required fields need an
+    upload wait for item 27c). A page type's content editor is drawn from the type's field
+    schema (text, long text, links, phone, email, dates and times, weekdays, time zones,
+    networks, and lists of those with add and remove), with the page's two colors. Beside it a
+    phone frame shows the type's sample (`GET /v1/page-types/{type}/sample`, framed from the API)
+    until the required fields are filled, then the API's preview of the page itself
+    (POST `.../pages/preview`, drawn as sandboxed `srcdoc`) once typing pauses. Missing fields and
+    the API's refusals (`page.content.links[0].url`) show at their field, and the form returns to
+    it. The code is created with `page` instead of `target_url`. The private CSP frames the API
+    and the two video players previews embed (`frame-src`); public pages still frame nothing.
+    Not built yet: uploads in the editor, the menu's sections of dishes (a list inside a list) and
+    editing a page code (27c), page-type tabs in the public generator (27d). A video page's player
+    stays blank in the live preview (the sandboxed frame runs no script, nor do frames inside it);
+    the type's sample and the page itself play it.
