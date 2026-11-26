@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api";
 
 import { SLUG_LIMITS } from "./slug-rules";
 
-export type CodeField = "target_url" | "name" | "colors" | "frame_text" | "short_code";
+export type CodeField = "target_url" | "name" | "colors" | "frame_text" | "short_code" | "social.username" | "social.text";
 
 /** What to show for a failed code request: a field message or a form alert. */
 export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessages): { field?: CodeField; message: string } {
@@ -13,6 +13,10 @@ export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessag
   switch (err.code) {
     case "validation_error":
       if (err.field === "target_url") return { field: "target_url", message: t.errors.targetUrl };
+      if (err.field === "social.text") return { field: "social.text", message: t.errors.socialText };
+      // The network comes from a fixed list; a refusal of it is shown at the username next to it.
+      if (err.field === "social.username" || err.field === "social.network")
+        return { field: "social.username", message: t.errors.socialUsername };
       if (err.field === "short_code") return { field: "short_code", message: t.errors.slugRefused };
       if (err.field === "name") return { field: "name", message: t.errors.generic };
       if (["fg", "bg", "eye_color", "eye_ball_color", "frame_color", "gradient", "fg2", "gradient_angle", "gradient_stops"].includes(err.field ?? ""))

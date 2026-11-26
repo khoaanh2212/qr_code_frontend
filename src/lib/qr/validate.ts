@@ -1,11 +1,12 @@
 import { validEmail } from "@/lib/forms/email";
+import { isSocialNetwork, normalizeUsername, socialProblem } from "./social";
 import type { QrData, QrType } from "./types";
 
 /**
  * Client-side copies of the API's rules (internal/qr/encoders.go in the backend), so the
  * generator can say exactly what is wrong before calling the API. The API stays the authority.
  */
-export type FieldProblem = "url" | "email" | "phone" | "ssidBytes" | "wpa";
+export type FieldProblem = "url" | "email" | "phone" | "ssidBytes" | "wpa" | "socialUsername" | "socialText";
 
 const URL_FIELDS = new Set(["url", "website"]);
 const EMAIL_FIELDS = new Set(["email", "to"]);
@@ -49,6 +50,13 @@ export function validateFields(type: QrType, data: QrData): Record<string, Field
     if ((data.encryption ?? "WPA") === "WPA" && password !== "" && !HEX64.test(password) && (len < 8 || len > 63)) {
       problems.password = "wpa";
     }
+  }
+  if (type.type === "social" && isSocialNetwork(data.network) && (data.username ?? "").trim() !== "") {
+    // A message left over from WhatsApp is never sent for another network (buildRenderRequest).
+    const text = data.network === "whatsapp" ? (data.text ?? "") : "";
+    const problem = socialProblem({ network: data.network, username: data.username ?? "", text });
+    if (problem === "username") problems.username = "socialUsername";
+    else if (problem === "text" || problem === "textLong") problems.text = "socialText";
   }
   return problems;
 }
@@ -105,6 +113,11 @@ export function downloadName(type: string, data: QrData): string {
     case "text":
       part = slug(data.text ?? "", 3);
       break;
+    case "social": {
+      const user = isSocialNetwork(data.network) ? slug(normalizeUsername(data.network, data.username ?? "")) : "";
+      part = user && `${data.network}-${user}`;
+      break;
+    }
   }
   return part ? `qr-${part}` : `qr-code-${type}`;
 }

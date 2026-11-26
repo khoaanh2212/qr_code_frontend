@@ -11,9 +11,17 @@ import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-s
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
-import { normalizeUrlInput } from "@/lib/qr/validate";
 import { createCode } from "./api";
 import { DEFAULT_LOOK, designFromLook, lookScannable, type CodeLook } from "./design";
+import {
+  destinationFor,
+  initialDestination,
+  isDestinationField,
+  type DestinationBody,
+  type DestinationField,
+  type DestinationState,
+} from "./destination";
+import { DestinationFields } from "./destination-fields";
 import { codeFailure, type CodeField } from "./errors";
 import { clearHandoff, readHandoff } from "./handoff";
 import { LookFields } from "./look-fields";
@@ -64,7 +72,7 @@ export function CodeForm({
   useEffect(clearHandoff, []);
   const [step, setStep] = useState<Step>("destination");
   const [name, setName] = useState("");
-  const [target, setTarget] = useState(handoff?.url ?? "");
+  const [destination, setDestination] = useState<DestinationState>(() => ({ ...initialDestination(""), url: handoff?.url ?? "" }));
   const [look, setLook] = useState<CodeLook>(() => ({
     ...DEFAULT_LOOK,
     ...handoff?.style,
@@ -76,8 +84,11 @@ export function CodeForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ field?: CodeField; message: string } | null>(null);
   const targetRef = useRef<HTMLInputElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const focusTarget = useRef(false);
+  /** A destination field to focus once the first step is back (a refusal found on the second). */
+  const focusTarget = useRef<DestinationField | null>(null);
   const moved = useRef(false);
   // When the step last changed: the bar's buttons swap in place, so the second click of a double
   // click on "Next" would land on "Create" (and one on "Back" on "Create with the default design").
@@ -86,11 +97,12 @@ export function CodeForm({
 
   const contrastOk = lookScannable(look);
 
-  // A new step starts at its heading; a refused address goes back to its field.
+  // A new step starts at its heading; a refused destination goes back to its field.
   useEffect(() => {
-    if (focusTarget.current) {
-      focusTarget.current = false;
-      targetRef.current?.focus();
+    const field = focusTarget.current;
+    if (field) {
+      focusTarget.current = null;
+      (field === "social.text" ? textRef : field === "social.username" ? usernameRef : targetRef).current?.focus();
     } else if (moved.current) {
       headingRef.current?.focus();
     }
@@ -103,15 +115,22 @@ export function CodeForm({
     setStep(next);
   }
 
-  /** The address as the API takes it, or null after saying what is wrong with it. */
-  function checkedTarget(): string | null {
-    const url = normalizeUrlInput(target);
-    if (url !== target) setTarget(url);
-    if (/^https?:\/\//i.test(url)) return url;
-    setError({ field: "target_url", message: t.errors.targetUrl });
-    if (step === "destination") targetRef.current?.focus();
+  /** Focuses the destination field a message is about. */
+  function focusDestination(field: DestinationField) {
+    (field === "social.text" ? textRef : field === "social.username" ? usernameRef : targetRef).current?.focus();
+  }
+
+  /** The destination as the API takes it, or null after saying what is wrong with it. */
+  function checkedDestination(): DestinationBody | null {
+    const checked = destinationFor(destination, t);
+    if (checked.ok) {
+      if ("target_url" in checked.body && checked.body.target_url !== destination.url) setDestination((d) => ({ ...d, url: checked.url }));
+      return checked.body;
+    }
+    setError({ field: checked.field, message: checked.message });
+    if (step === "destination") focusDestination(checked.field);
     else {
-      focusTarget.current = true;
+      focusTarget.current = checked.field;
       go("destination");
     }
     return null;
@@ -119,7 +138,7 @@ export function CodeForm({
 
   function next(e: FormEvent) {
     e.preventDefault();
-    if (busy || checkedTarget() === null) return;
+    if (busy || checkedDestination() === null) return;
     setError(null);
     go("design");
   }
@@ -127,8 +146,8 @@ export function CodeForm({
   async function create(withLook: CodeLook) {
     if (!workspace || busy) return;
     if (Date.now() - steppedAt.current < STEP_GUARD_MS) return; // the tail of a double click
-    const url = checkedTarget();
-    if (url === null) return;
+    const where = checkedDestination();
+    if (where === null) return;
     if (!lookScannable(withLook)) return setError({ field: "colors", message: t.errors.colors });
     if (!token) return setError({ message: auth.errors.captchaRequired });
     setBusy(true);
@@ -136,7 +155,7 @@ export function CodeForm({
     try {
       const code = await createCode(workspace.id, {
         name: name.trim(),
-        target_url: url,
+        ...where,
         design: designFromLook(withLook),
         captcha_token: token,
       });
@@ -146,10 +165,11 @@ export function CodeForm({
       const failure = codeFailure(err, t, auth);
       setError(failure);
       // The address and the name live on the first step: show the refusal where it can be fixed.
-      if ((failure.field === "target_url" || failure.field === "name") && step !== "destination") {
-        focusTarget.current = failure.field === "target_url";
+      const at = isDestinationField(failure.field) ? failure.field : null;
+      if ((at || failure.field === "name") && step !== "destination") {
+        focusTarget.current = at;
         go("destination");
-      } else if (failure.field === "target_url") targetRef.current?.focus();
+      } else if (at) focusDestination(at);
       setReset((n) => n + 1);
       setBusy(false);
     }
@@ -159,7 +179,8 @@ export function CodeForm({
 
   // A refusal about a field the current step does not show (the default design, say, from the
   // first step) is said in the alert, so it is never silent.
-  const fieldsHere: CodeField[] = step === "destination" ? ["target_url", "name"] : ["colors", "frame_text"];
+  const fieldsHere: CodeField[] =
+    step === "destination" ? ["target_url", "social.username", "social.text", "name"] : ["colors", "frame_text"];
   const alert = error && (!error.field || !fieldsHere.includes(error.field)) ? error.message : undefined;
 
   const steps: { id: Step; label: string }[] = [
@@ -203,23 +224,18 @@ export function CodeForm({
           <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold">
             {w.destinationTitle}
           </h2>
-          <TextField
-            ref={targetRef}
-            label={t.target}
-            help={t.targetHelp}
-            required
-            type="url"
-            inputMode="url"
-            autoComplete="url"
-            spellCheck={false}
-            maxLength={2048}
-            value={target}
-            error={error?.field === "target_url" ? error.message : undefined}
-            onChange={(e) => {
-              setTarget(e.target.value);
-              if (error?.field === "target_url") setError(null);
+          <DestinationFields
+            t={t}
+            generator={generator}
+            value={destination}
+            error={error}
+            urlRef={targetRef}
+            usernameRef={usernameRef}
+            textRef={textRef}
+            onChange={(update) => {
+              setDestination(update);
+              if (error?.field === "target_url" || error?.field?.startsWith("social.")) setError(null);
             }}
-            onBlur={() => setTarget((v) => normalizeUrlInput(v))}
           />
           <TextField
             label={t.name}

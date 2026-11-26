@@ -313,6 +313,7 @@ export const en = {
       email: "Email",
       sms: "SMS",
       phone: "Phone",
+      social: "Social profile",
     },
     fields: {
       url: {
@@ -338,6 +339,11 @@ export const en = {
         address: { label: "Address", help: "" },
         note: { label: "Note", help: "" },
       },
+      social: {
+        network: { label: "Network", help: "" },
+        username: { label: "Username", help: "" },
+        text: { label: "Opening message", help: "Optional: the message the chat opens with, up to 500 characters." },
+      },
       email: {
         to: { label: "Recipient", help: "" },
         subject: { label: "Subject", help: "" },
@@ -355,6 +361,25 @@ export const en = {
       WPA: "WPA/WPA2/WPA3",
       WEP: "WEP",
       nopass: "None (open network)",
+      instagram: "Instagram",
+      facebook: "Facebook",
+      tiktok: "TikTok",
+      youtube: "YouTube",
+      whatsapp: "WhatsApp",
+    },
+    social: {
+      kind: "Destination",
+      kindUrl: "Website",
+      kindSocial: "Social profile",
+      phone: "Phone number with country code",
+      leadsTo: "Leads to",
+      usernameHelp: {
+        instagram: "1 to 30 letters, digits, dots or underscores, like proof.qr.",
+        facebook: "The page name: 5 to 50 letters, digits or dots.",
+        tiktok: "2 to 24 letters, digits, dots or underscores.",
+        youtube: "The channel handle: 3 to 30 letters, digits, dots, dashes or underscores.",
+        whatsapp: "With the country code, like +84 90 123 4567.",
+      },
     },
     sections: {
       content: "Content",
@@ -499,6 +524,8 @@ export const en = {
       ssidBytes: "The network name is too long (32 bytes at most; accented letters count double).",
       wpa: "A WPA password has 8 to 63 characters (or is a 64-digit hex key).",
       vcardName: "Enter a first name, last name or organization.",
+      socialUsername: "This username does not fit the network’s rules (see the hint).",
+      socialText: "Up to 500 characters, without control characters, and short enough to fit in the link.",
     },
     errors: {
       loadTypes: "Could not load the QR code types.",
@@ -983,6 +1010,8 @@ export const en = {
     },
     errors: {
       targetUrl: "Enter a public web address that starts with https://.",
+      socialUsername: "This username does not fit the network’s rules (see the hint).",
+      socialText: "Up to 500 characters, without control characters, and short enough to fit in the link.",
       colors: "Choose colors with more contrast.",
       verifyFirst: "Verify your email address before you create or redirect codes.",
       limit: "You have reached the maximum number of codes.",

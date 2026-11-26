@@ -165,6 +165,8 @@ function Editor({
     phone: t.validation.phone,
     ssidBytes: t.validation.ssidBytes,
     wpa: t.validation.wpa,
+    socialUsername: t.validation.socialUsername,
+    socialText: t.validation.socialText,
   };
   const fieldErrors: Record<string, string> = {};
   for (const name of missing) {

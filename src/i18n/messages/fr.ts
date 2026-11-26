@@ -307,6 +307,7 @@ export const fr = {
       email: "E-mail",
       sms: "SMS",
       phone: "Téléphone",
+      social: "Réseau social",
     },
     fields: {
       url: {
@@ -332,6 +333,11 @@ export const fr = {
         address: { label: "Adresse", help: "" },
         note: { label: "Note", help: "" },
       },
+      social: {
+        network: { label: "Réseau", help: "" },
+        username: { label: "Nom d’utilisateur", help: "" },
+        text: { label: "Message d’ouverture", help: "Facultatif : le message proposé à l’ouverture du chat, 500 caractères au plus." },
+      },
       email: {
         to: { label: "Destinataire", help: "" },
         subject: { label: "Objet", help: "" },
@@ -349,6 +355,25 @@ export const fr = {
       WPA: "WPA/WPA2/WPA3",
       WEP: "WEP",
       nopass: "Aucune (réseau ouvert)",
+      instagram: "Instagram",
+      facebook: "Facebook",
+      tiktok: "TikTok",
+      youtube: "YouTube",
+      whatsapp: "WhatsApp",
+    },
+    social: {
+      kind: "Destination",
+      kindUrl: "Site web",
+      kindSocial: "Réseau social",
+      phone: "Numéro de téléphone avec l’indicatif du pays",
+      leadsTo: "Mène à",
+      usernameHelp: {
+        instagram: "1 à 30 lettres, chiffres, points ou tirets bas, par exemple proof.qr.",
+        facebook: "Le nom de la page : 5 à 50 lettres, chiffres ou points.",
+        tiktok: "2 à 24 lettres, chiffres, points ou tirets bas.",
+        youtube: "Le handle de la chaîne : 3 à 30 lettres, chiffres, points, tirets ou tirets bas.",
+        whatsapp: "Avec l’indicatif du pays, par exemple +33 6 12 34 56 78.",
+      },
     },
     sections: {
       content: "Contenu",
@@ -452,6 +477,8 @@ export const fr = {
       ssidBytes: "Le nom du réseau est trop long (32 octets maximum ; les lettres accentuées comptent double).",
       wpa: "Un mot de passe WPA comporte de 8 à 63 caractères (ou une clé hexadécimale de 64 chiffres).",
       vcardName: "Indiquez un prénom, un nom ou une organisation.",
+      socialUsername: "Ce nom d’utilisateur ne respecte pas les règles du réseau (voir l’indication).",
+      socialText: "500 caractères au plus, sans caractères de contrôle, et assez court pour tenir dans le lien.",
     },
     errors: {
       loadTypes: "Impossible de charger les types de QR code.",
@@ -924,6 +951,8 @@ export const fr = {
     },
     errors: {
       targetUrl: "Saisissez une adresse web publique qui commence par https://.",
+      socialUsername: "Ce nom d’utilisateur ne respecte pas les règles du réseau (voir l’indication).",
+      socialText: "500 caractères au plus, sans caractères de contrôle, et assez court pour tenir dans le lien.",
       colors: "Choisissez des couleurs plus contrastées.",
       verifyFirst: "Vérifiez votre adresse e-mail avant de créer ou de rediriger des codes.",
       limit: "Vous avez atteint le nombre maximal de codes.",

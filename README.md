@@ -344,3 +344,20 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     with an uploaded logo (built-in icons are fine). The generator's "Make it dynamic" hands the
     gradient and transparency over, and the API's refusals of `gradient`, `fg2`,
     `gradient_angle` and `gradient_stops` land with the colors.
+25. ~~Social presets~~ Done (backend PLAN item 58, `src/lib/qr/social.ts`,
+    `src/features/codes/destination*.ts(x)`): Instagram, Facebook, TikTok, YouTube and WhatsApp
+    profiles from a username (WhatsApp: a phone number with its country code and an optional
+    opening message), for static and dynamic codes. The generator shows the API's `social` type
+    with its own icon, network names, a username rule per network, and the link the username
+    leads to; the message field is WhatsApp's only and is never sent for another network, and a
+    WhatsApp preset renders with POST like Wi-Fi and vCard (a phone number and a personal message
+    stay out of URLs and logs; public profiles keep the cacheable GET). A
+    dynamic code's destination is "Website" or "Social profile" (a segmented choice in the create
+    wizard and on the content page; both keep their input while switching): a preset is sent as
+    `social`, and the API stores the link it builds. The API answers only `target_url`, so the
+    content page opens a link as a preset only when it is exactly a link the API builds from
+    valid parts (`parseSocialUrl`), and saves nothing while the preset still builds the stored
+    link. `social.ts` copies the API's rules (each network's alphabet and length, a letter or digit
+    required, WhatsApp separators dropped, the message's 500 characters without control or bidi
+    characters, its length once escaped like Go's `QueryEscape`) so mistakes are shown at their
+    field before any call; the API's `social.*` refusals land on the same fields.

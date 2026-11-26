@@ -15,6 +15,7 @@ import type {
   DynamicCode,
 } from "@/lib/api/types";
 import type { QrFormat } from "@/lib/qr/types";
+import type { DestinationBody, SocialBody } from "./destination";
 
 /** Calls of the dynamic codes API (backend PLAN, items 35-37), always with the session. */
 
@@ -59,12 +60,12 @@ export async function getCode(workspaceId: string, id: string, signal?: AbortSig
   return (await sessionApi.request<CodeEnvelope>(one(workspaceId, id), { signal })).code;
 }
 
-export interface NewCode {
+/** A new code leads to `target_url`, or to the link the API builds from `social` (never both). */
+export type NewCode = {
   name: string;
-  target_url: string;
   design: CodeDesign;
   captcha_token: string;
-}
+} & DestinationBody;
 
 export async function createCode(workspaceId: string, body: NewCode): Promise<DynamicCode> {
   return (await sessionApi.request<CodeEnvelope>(base(workspaceId), { method: "POST", body })).code;
@@ -73,6 +74,8 @@ export async function createCode(workspaceId: string, body: NewCode): Promise<Dy
 export interface CodeChanges {
   name?: string;
   target_url?: string;
+  /** A social profile preset instead of `target_url`; the API stores the link it builds. */
+  social?: SocialBody;
   /** The last part of the short link; the old link keeps working. */
   short_code?: string;
   /** Replaces the whole design. */

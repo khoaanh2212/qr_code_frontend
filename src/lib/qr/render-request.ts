@@ -45,6 +45,8 @@ function filled(type: string, data: QrData): QrData {
   const out: QrData = {};
   for (const [k, v] of Object.entries(data)) if (v.trim() !== "") out[k] = v;
   if (isOpenWifi(type, data)) delete out.password;
+  // The opening message is WhatsApp's only; the API refuses it for the other networks.
+  if (type === "social" && data.network !== "whatsapp") delete out.text;
   return out;
 }
 
@@ -62,7 +64,9 @@ export function buildRenderRequest(input: RenderInput, { post = false } = {}): R
 
   const custom = hasCustomCaption(design);
   const gradient = gradientParams(design);
-  if (!post && !design.logo && !custom && !gradient.gradient_stops && !SENSITIVE_TYPES.has(input.type)) {
+  // A WhatsApp preset carries a phone number and maybe a personal message: kept out of URLs too.
+  const sensitive = SENSITIVE_TYPES.has(input.type) || (input.type === "social" && data.network === "whatsapp");
+  if (!post && !design.logo && !custom && !gradient.gradient_stops && !sensitive) {
     const { gradient_angle: angle, ...colors } = gradient;
     const q = new URLSearchParams({
       type: input.type,
