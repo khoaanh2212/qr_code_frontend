@@ -57,4 +57,51 @@ describe("code designs", () => {
       }),
     ).toEqual({ frameColor: "#0b5d1e" });
   });
+
+  it("round-trips a two-color gradient with its angle", () => {
+    const look = lookFromDesign({ fg: "#112233", gradient: "linear", fg2: "#0F766E", gradient_angle: 45 });
+    expect(look).toMatchObject({ gradient: "linear", fg2: "#0f766e", gradientAngle: 45, gradientStops: null });
+    expect(designFromLook(look)).toMatchObject({ gradient: "linear", fg2: "#0f766e", gradient_angle: 45 });
+    expect(designFromLook({ ...look, gradient: "radial" })).not.toHaveProperty("gradient_angle");
+    expect(designFromLook({ ...look, gradient: "" })).not.toHaveProperty("gradient");
+  });
+
+  it("keeps stored stops, shown as their first and last colors", () => {
+    const stops = [
+      { offset: 0, color: "#0b2a6f" },
+      { offset: 40, color: "#6d108a" },
+      { offset: 100, color: "#0a5c36" },
+    ];
+    const look = lookFromDesign({ fg: "#000000", gradient: "radial", gradient_stops: stops });
+    expect(look).toMatchObject({ fg: "#000000", fg2: "#0a5c36", gradientStops: stops });
+    const design = designFromLook(look);
+    expect(design.gradient_stops).toEqual(stops);
+    expect(design.fg).toBe("#000000"); // saved untouched, never the first stop
+    expect(design).not.toHaveProperty("fg2");
+  });
+
+  it("drops malformed stops and unknown gradient kinds", () => {
+    expect(lookFromDesign({ gradient: "conic", fg2: "#111111" }).gradient).toBe("");
+    const look = lookFromDesign({ gradient: "linear", fg2: "#111111", gradient_stops: [{ offset: 0, color: "red" }] as never });
+    expect(look.gradientStops).toBeNull();
+    expect(lookFromDesign({ gradient: "linear", gradient_angle: 999 }).gradientAngle).toBe(0);
+  });
+
+  it("round-trips a transparent background and keeps the color for later", () => {
+    const look = lookFromDesign({ fg: "#000000", bg: "transparent" });
+    expect(look.transparent).toBe(true);
+    expect(look.bg).toBe(DEFAULT_LOOK.bg);
+    expect(designFromLook(look).bg).toBe("transparent");
+    expect(designFromLook({ ...look, transparent: false, bg: "#fde68a" }).bg).toBe("#fde68a");
+  });
+
+  it("accepts gradient and transparency from the generator's hand-off", () => {
+    expect(safeLook({ gradient: "radial", fg2: "#0F766E", gradientAngle: 30, transparent: true })).toEqual({
+      gradient: "radial",
+      fg2: "#0f766e",
+      gradientAngle: 30,
+      transparent: true,
+    });
+    expect(safeLook({ gradient: "spiral", gradientAngle: -1, transparent: "yes" })).toEqual({});
+  });
 });

@@ -116,6 +116,10 @@ export function ReadyDialog({
                 <Download aria-hidden="true" className="size-4" />
                 {t.list.downloadSvg}
               </Button>
+              <Button variant="secondary" onClick={() => onDownload(code, "eps")}>
+                <Download aria-hidden="true" className="size-4" />
+                {t.list.downloadEps}
+              </Button>
             </div>
             <Link
               href={localizePath(locale, `/app/codes/${encodeURIComponent(code.id)}/design`)}

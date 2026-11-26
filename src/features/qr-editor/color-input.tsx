@@ -13,11 +13,13 @@ export function ColorInput({
   label,
   value,
   onChange,
+  disabled = false,
 }: {
   t: T;
   label: string;
   value: string;
   onChange: (hex: string) => void;
+  disabled?: boolean;
 }) {
   const ids = { text: useId(), error: useId() };
   const [text, setText] = useState(value);
@@ -28,6 +30,8 @@ export function ColorInput({
     setSynced(value);
     if (normalizeHex(text) !== value) setText(value);
   }
+  // A field turned off (a transparent background) drops what was being typed and its error.
+  if (disabled && text !== value) setText(value);
   const invalid = normalizeHex(text) === null;
   return (
     <div className="flex flex-col gap-1.5">
@@ -39,12 +43,14 @@ export function ColorInput({
           type="color"
           aria-label={format(t.design.colorPicker, { name: label })}
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
-          className="h-10 w-12 cursor-pointer rounded-md border border-control bg-surface p-1"
+          className="h-10 w-12 cursor-pointer rounded-md border border-control bg-surface p-1 disabled:cursor-not-allowed disabled:opacity-40"
         />
         <input
           id={ids.text}
           value={text}
+          disabled={disabled}
           maxLength={7}
           spellCheck={false}
           autoComplete="off"
@@ -58,7 +64,7 @@ export function ColorInput({
           onBlur={() => {
             if (invalid) setText(value);
           }}
-          className="w-28 rounded-md border border-control bg-surface px-3 py-2 font-mono text-sm uppercase aria-[invalid=true]:border-danger"
+          className="w-28 rounded-md border border-control bg-surface px-3 py-2 font-mono text-sm uppercase disabled:opacity-40 aria-[invalid=true]:border-danger"
         />
       </div>
       {invalid && (

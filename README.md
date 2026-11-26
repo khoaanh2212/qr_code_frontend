@@ -328,3 +328,19 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     bar of item 21 ("Save changes"). The list's row menu also gets "Edit short link", and its
     shortcuts lead to these pages. Viewers get the download only; a locked code keeps its
     download and deletion, and its edit pages show why they are read-only.
+24. ~~Design outputs~~ Done (backend PLAN item 57, `src/features/qr-editor/color-fields.tsx`): the
+    colors of the generator, the new-code form and a code's design page are one group of fields.
+    "Fill" is a segmented choice of solid, linear gradient or radial gradient; a gradient adds an
+    end color, and a linear one an angle (0-359°, sent only when not 0). A solid fill sends no
+    gradient options, so plain GET URLs and their CDN copies are unchanged. A stored design with
+    more than two gradient colors (`gradient_stops`, which the API takes on POST and in a design
+    only, so such a design always renders with POST) shows its first and last colors with a note;
+    editing either color replaces the stops with those two. "Transparent background" sends
+    `bg=transparent`, keeps the chosen color for when it is turned off, checks every color
+    (gradient colors included) against white paper as the API does, and draws the previews over
+    a light checkerboard (`transparency-grid` in `globals.css`). Downloads gain EPS (generator,
+    the code's download dialog and its menu in the list); a format the design rules out stays
+    selectable but says why and disables the download: JPG with a transparent background, EPS
+    with an uploaded logo (built-in icons are fine). The generator's "Make it dynamic" hands the
+    gradient and transparency over, and the API's refusals of `gradient`, `fg2`,
+    `gradient_angle` and `gradient_stops` land with the colors.

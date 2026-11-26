@@ -87,6 +87,10 @@ describe("QrEditor", () => {
         frame: "none",
         frameText: "",
         frameColor: "",
+        gradient: "",
+        fg2: "#0f766e",
+        gradientAngle: 0,
+        transparent: false,
         logoIcon: "",
       },
     });

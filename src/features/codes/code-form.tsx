@@ -238,6 +238,7 @@ export function CodeForm({
             t={t}
             preview={preview}
             blocked={!contrastOk}
+            transparent={look.transparent}
             note={w.previewNote}
             resetLabel={w.resetDesign}
             onReset={() => setLook(DEFAULT_LOOK)}

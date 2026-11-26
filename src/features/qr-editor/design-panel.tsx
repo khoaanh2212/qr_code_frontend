@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState, type Dispatch, type ReactNode, type
 import type { Messages } from "@/i18n/messages";
 import { LogoError, readLogo } from "@/lib/qr/logo";
 import { ECC_LEVELS, FRAME_MARGIN_MIN, MARGIN_MAX, type Ecc, type QrDesign } from "@/lib/qr/types";
-import { ColorInput } from "./color-input";
+import { ColorFields } from "./color-fields";
 import { LogoIconPicker } from "./logo-icons";
 import { StylePicker } from "./style-picker";
 
@@ -47,10 +47,7 @@ export function DesignPanel({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap gap-6">
-        <ColorInput t={t} label={t.design.fg} value={design.fg} onChange={(fg) => onChange((d) => ({ ...d, fg }))} />
-        <ColorInput t={t} label={t.design.bg} value={design.bg} onChange={(bg) => onChange((d) => ({ ...d, bg }))} />
-      </div>
+      <ColorFields t={t} value={design} onChange={(update) => onChange((d) => ({ ...d, ...update(d) }))} />
       {/* The preview's status announces this; here it is shown next to the colors. */}
       {!contrastOk && <p className="text-sm font-medium text-warning">{t.design.lowContrast}</p>}
       {error && error.field !== "logo" && error.field !== "frame_text" && (

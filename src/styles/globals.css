@@ -160,3 +160,14 @@ dialog.drawer[open] {
     animation-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Behind a code with a transparent background: a light checkerboard, the usual sign of "nothing
+ * painted here". Both squares are light, so the preview still shows what the code looks like on
+ * white paper (the contrast rule it was checked against).
+ */
+@utility transparency-grid {
+  background-color: #ffffff;
+  background-image: repeating-conic-gradient(#e7e5e4 0% 25%, transparent 0% 50%);
+  background-size: 16px 16px;
+}

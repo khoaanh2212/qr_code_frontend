@@ -1,4 +1,4 @@
-import { isPresetCaption, styleParams, type QrData, type QrDesign, type QrFormat, type QrType } from "./types";
+import { bgParam, gradientParams, isPresetCaption, styleParams, type QrData, type QrDesign, type QrFormat, type QrType } from "./types";
 
 /** Types whose content is a secret or personal data: never put in a URL. */
 const SENSITIVE_TYPES = new Set(["wifi", "vcard"]);
@@ -21,7 +21,7 @@ export interface RenderPostBody {
   size: number;
   margin: number;
   ecc: string;
-  style: { fg: string; bg: string; logo_base64?: string } & ReturnType<typeof styleParams>;
+  style: { fg: string; bg: string; logo_base64?: string } & ReturnType<typeof styleParams> & ReturnType<typeof gradientParams>;
 }
 
 /** The signed-in render: the only one that takes a caption of the user's own. */
@@ -50,8 +50,9 @@ function filled(type: string, data: QrData): QrData {
 
 /**
  * The API call that renders `input`. GET (cacheable at the CDN) for plain content without a
- * logo; POST for Wi-Fi and vCard content (kept out of URLs, logs and history), for a logo, and
- * whenever `post` is set (downloads). A logo forces error correction H, as the API does.
+ * logo; POST for Wi-Fi and vCard content (kept out of URLs, logs and history), for a logo, for
+ * gradient stops (the API takes them on POST only), and whenever `post` is set (downloads). A logo
+ * forces error correction H, as the API does.
  */
 export function buildRenderRequest(input: RenderInput, { post = false } = {}): RenderRequest {
   const data = filled(input.type, input.data);
@@ -60,7 +61,9 @@ export function buildRenderRequest(input: RenderInput, { post = false } = {}): R
   const ecc = design.logo || design.logoIcon ? "H" : design.ecc;
 
   const custom = hasCustomCaption(design);
-  if (!post && !design.logo && !custom && !SENSITIVE_TYPES.has(input.type)) {
+  const gradient = gradientParams(design);
+  if (!post && !design.logo && !custom && !gradient.gradient_stops && !SENSITIVE_TYPES.has(input.type)) {
+    const { gradient_angle: angle, ...colors } = gradient;
     const q = new URLSearchParams({
       type: input.type,
       format: input.format,
@@ -68,14 +71,17 @@ export function buildRenderRequest(input: RenderInput, { post = false } = {}): R
       margin: String(design.margin),
       ecc,
       fg: design.fg.replace(/^#/, ""),
-      bg: design.bg.replace(/^#/, ""),
+      bg: bgParam(design).replace(/^#/, ""),
       ...styleParams(design),
+      ...(colors.gradient ? { gradient: colors.gradient } : {}),
+      ...(colors.fg2 ? { fg2: colors.fg2.replace(/^#/, "") } : {}),
+      ...(angle !== undefined ? { gradient_angle: String(angle) } : {}),
     });
     for (const [k, v] of Object.entries(data)) q.append(k, v);
     return { method: "GET", path: `/v1/qr/render?${q.toString()}` };
   }
 
-  const style: RenderPostBody["style"] = { fg: design.fg, bg: design.bg, ...styleParams(design) };
+  const style: RenderPostBody["style"] = { fg: design.fg, bg: bgParam(design), ...styleParams(design), ...gradient };
   if (design.logo) style.logo_base64 = design.logo.base64;
   return {
     method: "POST",

@@ -15,7 +15,7 @@ export function codeFailure(err: unknown, t: Messages["codes"], auth: AuthMessag
       if (err.field === "target_url") return { field: "target_url", message: t.errors.targetUrl };
       if (err.field === "short_code") return { field: "short_code", message: t.errors.slugRefused };
       if (err.field === "name") return { field: "name", message: t.errors.generic };
-      if (["fg", "bg", "eye_color", "eye_ball_color", "frame_color"].includes(err.field ?? ""))
+      if (["fg", "bg", "eye_color", "eye_ball_color", "frame_color", "gradient", "fg2", "gradient_angle", "gradient_stops"].includes(err.field ?? ""))
         return { field: "colors", message: t.errors.colors };
       // The caption's message lives with the style picker (generator messages).
       if (err.field === "frame_text") return { field: "frame_text", message: t.errors.generic };

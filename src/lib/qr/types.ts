@@ -24,7 +24,7 @@ export interface QrCatalog {
 export const ECC_LEVELS = ["L", "M", "Q", "H"] as const;
 export type Ecc = (typeof ECC_LEVELS)[number];
 
-export const FORMATS = ["png", "svg", "jpg", "pdf"] as const;
+export const FORMATS = ["png", "svg", "jpg", "pdf", "eps"] as const;
 export type QrFormat = (typeof FORMATS)[number];
 
 export interface QrLogo {
@@ -57,6 +57,31 @@ export interface QrDesign {
   frameColor: string;
   /** A built-in icon over the center, or "" (never together with `logo`). */
   logoIcon: QrLogoIcon | "";
+  /** Fill of the modules: "" is the solid `fg`; a gradient runs from `fg` to `fg2`. */
+  gradient: QrGradient | "";
+  /** "#RRGGBB", the gradient's end color. */
+  fg2: string;
+  /** Direction of a linear gradient in degrees, 0-359 (0 runs left to right, 90 top to bottom). */
+  gradientAngle: number;
+  /**
+   * More than two colors, as a stored design may hold them (the API takes them in a design and on
+   * POST only); null otherwise. Editing either color replaces them with `fg` to `fg2`.
+   */
+  gradientStops: GradientStop[] | null;
+  /** Leaves the background unpainted; `bg` is kept for when it is turned off again. */
+  transparent: boolean;
+}
+
+export const GRADIENTS = ["linear", "radial"] as const;
+export type QrGradient = (typeof GRADIENTS)[number];
+export const GRADIENT_ANGLE_MAX = 359;
+export const GRADIENT_STOPS_MAX = 5;
+
+export interface GradientStop {
+  /** Percent of the way, 0-100, in order. */
+  offset: number;
+  /** "#rrggbb" */
+  color: string;
 }
 
 export const LOGO_ICONS = ["scan-me", "link", "wifi", "mail", "location", "user", "star", "heart"] as const;
@@ -145,6 +170,11 @@ export const DEFAULT_DESIGN: QrDesign = {
   eyeBallColor: "",
   frameColor: "",
   logoIcon: "",
+  gradient: "",
+  fg2: "#0f766e",
+  gradientAngle: 0,
+  gradientStops: null,
+  transparent: false,
 };
 
 type StyleParam = "logo_icon" | "module" | "eye_frame" | "eye_ball" | "eye_color" | "eye_ball_color" | "frame" | "frame_text" | "frame_color";
@@ -176,14 +206,56 @@ export function styleParams(design: QrDesign): Partial<Record<StyleParam, string
   return out;
 }
 
-/** Whether every color of a design is a scannable dark-on-light pair with its background. */
+/**
+ * The gradient options under the API's names (the angle is a number: send it as text in a URL).
+ * Nothing for a solid fill; stops replace `fg2`; the angle only when linear and not 0.
+ */
+export function gradientParams(design: QrDesign): {
+  gradient?: QrGradient;
+  fg2?: string;
+  gradient_angle?: number;
+  gradient_stops?: GradientStop[];
+} {
+  if (!design.gradient) return {};
+  const out: ReturnType<typeof gradientParams> = { gradient: design.gradient };
+  if (design.gradientStops) out.gradient_stops = design.gradientStops.map((s) => ({ ...s }));
+  else out.fg2 = design.fg2;
+  if (design.gradient === "linear" && design.gradientAngle !== 0) out.gradient_angle = design.gradientAngle;
+  return out;
+}
+
+/** The background as the API takes it: a color, or "transparent". */
+export function bgParam(design: Pick<QrDesign, "bg" | "transparent">): string {
+  return design.transparent ? "transparent" : design.bg;
+}
+
+/** What a transparent code is checked against: the white paper it is most likely printed on. */
+const PAPER = "#ffffff";
+
+/**
+ * Whether every color of a design is a scannable dark-on-light pair with its background (white
+ * paper when the background is transparent, as the API checks it).
+ */
 export function designScannable(design: QrDesign): boolean {
-  return partColors(design).every((c) => isScannable(c, design.bg));
+  const bg = design.transparent ? PAPER : design.bg;
+  return partColors(design).every((c) => isScannable(c, bg));
+}
+
+/** Why a design cannot be downloaded in a format, or null when it can. */
+export type FormatProblem = "jpgTransparent" | "epsLogo";
+
+/** JPEG has no transparency; EPS cannot carry an uploaded logo (built-in icons are outlines). */
+export function formatProblem(design: Pick<QrDesign, "transparent"> & Partial<QrDesign>, format: QrFormat): FormatProblem | null {
+  if (format === "jpg" && design.transparent) return "jpgTransparent";
+  if (format === "eps" && design.logo) return "epsLogo";
+  return null;
 }
 
 /** The colors a design paints with besides the background: each must keep the contrast. */
 export function partColors(design: QrDesign): string[] {
-  const out = [design.fg];
+  // With stops, fg still paints what they do not cover (eyes without a color of their own).
+  const out = design.gradientStops && design.gradient ? [design.fg, ...design.gradientStops.map((s) => s.color)] : [design.fg];
+  if (design.gradient && !design.gradientStops) out.push(design.fg2);
   if (design.eyeColor) out.push(design.eyeColor);
   if (design.eyeBallColor) out.push(design.eyeBallColor);
   if (design.frameColor && design.frame !== "none") out.push(design.frameColor);
