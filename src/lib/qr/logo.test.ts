@@ -12,9 +12,16 @@ describe("readLogo", () => {
     await expect(readLogo(new File([jpeg], "photo", { type: "" }))).resolves.toMatchObject({ name: "photo" });
   });
 
+  it("accepts GIF and SVG by their content", async () => {
+    await expect(readLogo(new File(["GIF89a\x01\x00"], "anim", { type: "" }))).resolves.toMatchObject({ name: "anim" });
+    const svg = '\ufeff<?xml version="1.0"?>\n<!-- logo --><svg xmlns="http://www.w3.org/2000/svg"/>';
+    await expect(readLogo(new File([svg], "logo.txt", { type: "text/plain" }))).resolves.toMatchObject({ name: "logo.txt" });
+  });
+
   it("rejects other content, whatever the name or declared type says", async () => {
-    const svg = new File(["<svg/>"], "logo.png", { type: "image/png" });
-    await expect(readLogo(svg)).rejects.toMatchObject({ reason: "type" });
+    const html = new File(["<html><svg/></html>"], "logo.svg", { type: "image/svg+xml" });
+    await expect(readLogo(html)).rejects.toMatchObject({ reason: "type" });
+    await expect(readLogo(new File(["%PDF-1.7"], "logo.png", { type: "image/png" }))).rejects.toMatchObject({ reason: "type" });
   });
 
   it("rejects files over 1 MB", async () => {

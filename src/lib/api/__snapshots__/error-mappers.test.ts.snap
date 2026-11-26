@@ -95,7 +95,7 @@ exports[`API error mappers > map every code the same way (en) 1`] = `
       "message": "Something went wrong. Try again.",
     },
     "field": undefined,
-    "generator": "Choose a PNG or JPEG image.",
+    "generator": "Choose a PNG, JPEG, GIF or simple SVG image.",
     "retryAfter": undefined,
   },
   {
@@ -383,7 +383,7 @@ exports[`API error mappers > map every code the same way (vi) 1`] = `
       "message": "Đã có lỗi xảy ra. Vui lòng thử lại.",
     },
     "field": undefined,
-    "generator": "Hãy chọn ảnh PNG hoặc JPEG.",
+    "generator": "Hãy chọn ảnh PNG, JPEG, GIF hoặc SVG đơn giản.",
     "retryAfter": undefined,
   },
   {

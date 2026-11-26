@@ -61,6 +61,8 @@ export interface CodeDesign {
   eye_ball_color?: string;
   frame_color?: string;
   logo_icon?: string;
+  /** An image the workspace uploaded, drawn over the center; never with logo_icon. */
+  logo_upload_id?: string;
   /** "linear" or "radial": the modules run from `fg` to `fg2`, or through `gradient_stops`. */
   gradient?: string;
   fg2?: string;
@@ -280,4 +282,16 @@ export interface NewPasskey {
   token: string;
   attestation: RegistrationResponseJSON;
   name: string;
+}
+
+/** A file a workspace uploaded (hosted pages, logos); `url` is on the files host. */
+export interface Upload {
+  id: string;
+  kind: "image" | "pdf" | "audio";
+  content_type: string;
+  size_bytes: number;
+  width?: number;
+  height?: number;
+  url: string;
+  created_at: string;
 }

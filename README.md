@@ -361,3 +361,17 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     required, WhatsApp separators dropped, the message's 500 characters without control or bidi
     characters, its length once escaped like Go's `QueryEscape`) so mistakes are shown at their
     field before any call; the API's `social.*` refusals land on the same fields.
+26. ~~Uploaded logos, GIF and SVG~~ Done (backend PLAN item 22b, `src/features/uploads`): the
+    generator's logo accepts GIF (the first frame is drawn) and SVG (the API draws it into
+    pixels) next to PNG and JPEG, checked by their bytes first. The new-code form and a code's
+    design page get "Upload logo": the file goes to the workspace's files
+    (`POST .../uploads`, `FormData`, no JSON type), and the design keeps `logo_upload_id`. The
+    preview draws the stored, re-encoded pixels (fetched from the files host without
+    credentials, so an SVG previews as the code will look); a saved logo is found again with
+    `GET .../uploads/{id}`. An image outside 16-1024 px is refused before it is used, and the
+    API's refusals (type, size, quota, verification, a busy server) are said in words. An
+    uploaded logo and a built-in icon replace each other. The private CSP allows the files host
+    (`NEXT_PUBLIC_FILES_URL`, required for production builds) in `img-src` and `connect-src`;
+    the marketing pages never list it. Not built: deleting a logo from the workspace's files
+    (the API refuses while a code or template uses it), and template thumbnails with their
+    uploaded logo.

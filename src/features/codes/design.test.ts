@@ -105,3 +105,16 @@ describe("code designs", () => {
     expect(safeLook({ gradient: "spiral", gradientAngle: -1, transparent: "yes" })).toEqual({});
   });
 });
+
+describe("uploaded logos", () => {
+  it("round-trips logo_upload_id and keeps it exclusive with an icon", () => {
+    const look = lookFromDesign({ logo_upload_id: "00000000-0000-4000-8000-000000000001" });
+    expect(look.logoUploadId).toBe("00000000-0000-4000-8000-000000000001");
+    expect(designFromLook(look)).toMatchObject({ logo_upload_id: "00000000-0000-4000-8000-000000000001" });
+    expect(designFromLook(look)).not.toHaveProperty("logo_icon");
+    expect(designFromLook({ ...look, logoUploadId: "" })).not.toHaveProperty("logo_upload_id");
+    // An icon chosen later wins over the uploaded logo.
+    expect(designFromLook({ ...look, logoIcon: "star" })).not.toHaveProperty("logo_upload_id");
+    expect(lookFromDesign({ logo_upload_id: "../x" }).logoUploadId).toBe("");
+  });
+});

@@ -52,6 +52,7 @@ export function CodeForm({
   t,
   generator,
   templates,
+  uploads,
   auth,
   locale,
   captcha,
@@ -59,6 +60,7 @@ export function CodeForm({
   t: T;
   generator: Messages["generator"];
   templates: Messages["templates"];
+  uploads: Messages["uploads"];
   auth: AuthMessages;
   locale: Locale;
   captcha: CaptchaConfig;
@@ -285,6 +287,7 @@ export function CodeForm({
               }}
               error={error}
               templates={workspace ? { t: templates, workspaceId: workspace.id } : undefined}
+              uploads={workspace ? { t: uploads, workspaceId: workspace.id } : undefined}
             />
           </form>
         </div>

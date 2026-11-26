@@ -125,7 +125,7 @@ export function DesignPanel({
               ref={fileRef}
               id={ids.logo}
               type="file"
-              accept="image/png,image/jpeg"
+              accept="image/png,image/jpeg,image/gif,image/svg+xml"
               className="sr-only"
               aria-describedby={[ids.logoHelp, shownLogoError && ids.logoError].filter(Boolean).join(" ")}
               aria-invalid={shownLogoError ? true : undefined}
