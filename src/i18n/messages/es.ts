@@ -380,6 +380,14 @@ export const es = {
       design: "Diseño",
       download: "Descargar",
     },
+    designTabs: {
+      label: "Opciones de diseño",
+      colors: "Colores",
+      shape: "Forma",
+      frame: "Marco",
+      logo: "Logo",
+      more: "Más",
+    },
     design: {
       fg: "Color del código",
       bg: "Fondo",

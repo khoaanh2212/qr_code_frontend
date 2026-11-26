@@ -380,6 +380,14 @@ export const fr = {
       design: "Apparence",
       download: "Télécharger",
     },
+    designTabs: {
+      label: "Options de design",
+      colors: "Couleurs",
+      shape: "Forme",
+      frame: "Cadre",
+      logo: "Logo",
+      more: "Plus",
+    },
     design: {
       fg: "Couleur du code",
       bg: "Arrière-plan",

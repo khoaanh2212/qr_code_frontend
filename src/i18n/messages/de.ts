@@ -380,6 +380,14 @@ export const de = {
       design: "Design",
       download: "Herunterladen",
     },
+    designTabs: {
+      label: "Gestaltungsoptionen",
+      colors: "Farben",
+      shape: "Form",
+      frame: "Rahmen",
+      logo: "Logo",
+      more: "Mehr",
+    },
     design: {
       fg: "Vordergrund",
       bg: "Hintergrund",

@@ -55,6 +55,8 @@ describe("QrEditor rendering", () => {
   it("does not redraw the design controls while the content is typed", async () => {
     render(<QrEditor t={en.generator} locale="en" />);
     const input = await screen.findByLabelText(/Website address/);
+    // The style picker draws on the Shape tab (the design options sit in tabs).
+    fireEvent.click(screen.getByRole("tab", { name: en.generator.designTabs.shape }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10);
     });
