@@ -5,6 +5,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "@/i18n/messages/en";
 import { ApiError, sessionApi } from "@/lib/api";
+import { config } from "@/lib/config";
 import type { QrLogo } from "@/lib/qr/types";
 import { LogoUpload, type LogoValue } from "./logo-upload";
 
@@ -12,7 +13,7 @@ const t = en.uploads;
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
 const upload = (over: Partial<{ width: number; height: number }> = {}) => ({
   id: "00000000-0000-4000-8000-000000000001", kind: "image", content_type: "image/png", size_bytes: 11,
-  width: 256, height: 256, url: "http://localhost:8181/w/abc.png", created_at: "2026-11-26T00:00:00Z", ...over,
+  width: 256, height: 256, url: `${config.filesBaseUrl}/w/abc.png`, created_at: "2026-11-26T00:00:00Z", ...over,
 });
 const seen: { value: LogoValue } = { value: { logoUploadId: "" } };
 

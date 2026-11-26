@@ -330,13 +330,16 @@ describe("code pages", () => {
       await showInsights();
       expect(screen.getByRole("link", { name: t.pages.editContent }).getAttribute("href")).toBe("/app/codes/c1/edit");
       moreActions();
-      expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual([
-        t.pages.editDesign,
-        t.pages.editShortLink,
-        t.folders.move,
-        t.pause,
-        t.list.delete,
-      ]);
+      // "Move to folder" appears once the folders have loaded.
+      await waitFor(() =>
+        expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual([
+          t.pages.editDesign,
+          t.pages.editShortLink,
+          t.folders.move,
+          t.pause,
+          t.list.delete,
+        ]),
+      );
       await pick(t.pages.editDesign);
       expect(push).toHaveBeenCalledWith("/app/codes/c1/design");
     });
