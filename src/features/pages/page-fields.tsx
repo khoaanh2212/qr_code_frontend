@@ -93,6 +93,8 @@ function ListField({
   t,
   generator,
   field,
+  path = field.name,
+  context,
   items,
   errors,
   onChange,
@@ -101,13 +103,18 @@ function ListField({
   t: T;
   generator: Messages["generator"];
   field: PageField;
+  /** The list's editor path (`sections[1].items` for a list inside an item). */
+  path?: string;
+  /** The item a list inside an item belongs to ("Sections 2"): its buttons name it, so each is distinct. */
+  context?: string;
   items: DraftItem[];
   errors: Record<string, string>;
   onChange: (update: (items: DraftItem[]) => DraftItem[]) => void;
 }) {
   const label = labelOf(t, field.name);
+  const within = context ? ` (${context})` : "";
   const full = field.max !== undefined && items.length >= field.max;
-  const listError = errors[field.name];
+  const listError = errors[path];
   const errorId = useId();
   const subFields = editableFields(field.items ?? []);
   // Items keep their key when one before them goes (ids, caret and date pickers follow the item).
@@ -124,14 +131,14 @@ function ListField({
     pendingFocus.current = null;
     const first = subFields[0];
     const target =
-      at >= 0 && first ? listRef.current?.querySelector<HTMLElement>(`[data-path="${field.name}[${at}].${first.name}"]`) : null;
+      at >= 0 && first ? listRef.current?.querySelector<HTMLElement>(`[data-path="${path}[${at}].${first.name}"]`) : null;
     (target ?? addRef.current)?.focus();
-  }, [items.length, field.name, subFields]);
+  }, [items.length, path, subFields]);
 
   return (
     <fieldset
       ref={listRef}
-      data-path={field.name}
+      data-path={path}
       tabIndex={-1}
       className="flex min-w-0 flex-col gap-3 focus:outline-none"
       aria-describedby={listError ? errorId : undefined}
@@ -145,22 +152,45 @@ function ListField({
         return (
           <fieldset key={keys[i] ?? i} className="flex min-w-0 flex-col gap-3 rounded-lg border border-border p-4">
             <legend className="sr-only">{itemLabel}</legend>
-            {subFields.map((sub) => (
-              <Field
-                key={sub.name}
-                workspaceId={workspaceId}
-                t={t}
-                generator={generator}
-                field={sub}
-                path={`${field.name}[${i}].${sub.name}`}
-                value={item[sub.name] ?? ""}
-                error={errors[`${field.name}[${i}].${sub.name}`]}
-                onChange={(v) => onChange((list) => list.map((it, j) => (j === i ? { ...it, [sub.name]: v } : it)))}
-              />
-            ))}
+            {subFields.map((sub) => {
+              const at = `${path}[${i}].${sub.name}`;
+              const set = (v: DraftItem[string]) => onChange((list) => list.map((it, j) => (j === i ? { ...it, [sub.name]: v } : it)));
+              const inner = item[sub.name];
+              return sub.kind === "list" ? (
+                // A list inside the item (a menu section's dishes).
+                <ListField
+                  key={sub.name}
+                  workspaceId={workspaceId}
+                  t={t}
+                  generator={generator}
+                  field={sub}
+                  path={at}
+                  context={itemLabel}
+                  items={Array.isArray(inner) ? inner : []}
+                  errors={errors}
+                  onChange={(update) =>
+                    onChange((list) =>
+                      list.map((it, j) => (j === i ? { ...it, [sub.name]: update(Array.isArray(it[sub.name]) ? (it[sub.name] as DraftItem[]) : []) } : it)),
+                    )
+                  }
+                />
+              ) : (
+                <Field
+                  key={sub.name}
+                  workspaceId={workspaceId}
+                  t={t}
+                  generator={generator}
+                  field={sub}
+                  path={at}
+                  value={typeof inner === "string" ? inner : ""}
+                  error={errors[at]}
+                  onChange={set}
+                />
+              );
+            })}
             <button
               type="button"
-              aria-label={`${t.remove}: ${itemLabel}`}
+              aria-label={`${t.remove}: ${itemLabel}${within}`}
               onClick={() => {
                 setKeys((k) => k.filter((_, j) => j !== i));
                 pendingFocus.current = items.length > 1 ? Math.min(i, items.length - 2) : -1;
@@ -178,7 +208,7 @@ function ListField({
         ref={addRef}
         type="button"
         disabled={full}
-        aria-label={`${t.add}: ${label}`}
+        aria-label={`${t.add}: ${label}${within}`}
         onClick={() => {
           setKeys((k) => [...k, newKey()]);
           pendingFocus.current = items.length;

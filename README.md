@@ -399,7 +399,9 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     decides the type from the bytes), kept as its upload id, and shown as a thumbnail from the
     files host or by kind and size; the private CSP's `media-src` lets previews play a page's
     sound. A file replaced or removed before the code is saved stays unused in the workspace's
-    files until the API's janitor deletes it (7 days). Not built yet: the menu's sections of dishes (a list inside a list) and editing a
-    page code (27c), page-type tabs in the public generator (27d). A video page's player
+    files until the API's janitor deletes it (7 days). A list item can hold a list of its own (a menu's sections of dishes, each with Add
+    and Remove); blank items are left out at every depth, and a refusal's path is mapped back
+    level by level. Not built yet: editing a page code (27c), page-type tabs in the public
+    generator (27d). A video page's player
     stays blank in the live preview (the sandboxed frame runs no script, nor do frames inside it);
     the type's sample and the page itself play it.

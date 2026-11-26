@@ -79,7 +79,7 @@ beforeAll(() => {
   };
 });
 
-/** Hosted page types: a links page, a PDF (an upload) and a menu (a list in a list, item 27c). */
+/** Hosted page types: a links page, a PDF (an upload) and a menu (a list in a list). */
 const PAGE_TYPES = [
   {
     name: "links",
@@ -307,7 +307,7 @@ describe("CodeForm", () => {
       fireEvent.click(await screen.findByRole("radio", { name: p.types.links.name }));
     };
 
-    it("offers the hosted pages next to a website and a social profile, leaving out the menu for now", async () => {
+    it("offers every hosted page type next to a website and a social profile", async () => {
       serveCreate();
       renderForm();
       await targetField();
@@ -315,7 +315,7 @@ describe("CodeForm", () => {
       expect(within(group).getByRole("radio", { name: en.generator.social.kindUrl })).toBeTruthy();
       expect(await within(group).findByRole("radio", { name: p.types.links.name })).toBeTruthy();
       expect(within(group).getByRole("radio", { name: p.types.pdf.name })).toBeTruthy();
-      expect(within(group).queryByRole("radio", { name: p.types.menu.name })).toBeNull();
+      expect(within(group).getByRole("radio", { name: p.types.menu.name })).toBeTruthy();
     });
 
     it("shows the type's sample, then the page itself, and creates the code with the page", async () => {

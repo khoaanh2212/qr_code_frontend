@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildContent, editorPath, initialContent, editableTypes, type PageTypeInfo } from "./content";
+import { buildContent, editorPath, initialContent, editableTypes, newItem, type PageTypeInfo } from "./content";
 
 const links: PageTypeInfo = {
   name: "links",
@@ -62,15 +62,48 @@ describe("page content", () => {
     expect(editableTypes([links, pdf, images, business]).map((t) => t.name)).toEqual(["links", "pdf", "images", "business"]);
   });
 
-  it("leaves out types with a list inside a list item until the editor draws them (menu)", () => {
-    const menu: PageTypeInfo = {
-      name: "menu",
-      fields: [
-        { name: "title", kind: "text", required: true },
-        { name: "sections", kind: "list", items: [{ name: "name", kind: "text", required: true }, { name: "items", kind: "list", required: true, items: [{ name: "name", kind: "text" }] }] },
+  const menu: PageTypeInfo = {
+    name: "menu",
+    fields: [
+      { name: "title", kind: "text", required: true },
+      {
+        name: "sections",
+        kind: "list",
+        items: [
+          { name: "name", kind: "text", required: true },
+          { name: "items", kind: "list", required: true, items: [{ name: "name", kind: "text", required: true }, { name: "price", kind: "text" }] },
+        ],
+      },
+    ],
+  };
+
+  it("draws lists inside list items: a new section starts with one dish", () => {
+    expect(editableTypes([menu]).map((t) => t.name)).toEqual(["menu"]);
+    expect(newItem(menu.fields[1])).toEqual({ name: "", items: [{ name: "", price: "" }] });
+  });
+
+  it("builds nested lists, leaving out blank dishes and sections, with paths at every depth", () => {
+    const built = buildContent(menu, {
+      title: "Café",
+      sections: [
+        { name: "", items: [{ name: "", price: "" }] },
+        { name: "Drinks", items: [{ name: "", price: "" }, { name: "Tea", price: " 40k " }] },
       ],
-    };
-    expect(editableTypes([menu, links]).map((t) => t.name)).toEqual(["links"]);
+    });
+    expect(built).toEqual({
+      ok: true,
+      content: { title: "Café", sections: [{ name: "Drinks", items: [{ name: "Tea", price: "40k" }] }] },
+      places: { sections: [1], "sections[1].items": [1] },
+    });
+    expect(editorPath("sections[0].items[0].price", built.ok ? built.places : undefined)).toBe("sections[1].items[1].price");
+    expect(buildContent(menu, { title: "Café", sections: [{ name: "Drinks", items: [{ name: "", price: "5" }] }] })).toEqual({
+      ok: false,
+      missing: ["sections[0].items[0].name"],
+    });
+    expect(buildContent(menu, { title: "Café", sections: [{ name: "Drinks", items: [] }] })).toEqual({
+      ok: false,
+      missing: ["sections[0].items"],
+    });
   });
 
   it("takes an item whose only values are preset choices as blank", () => {

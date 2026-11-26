@@ -171,4 +171,40 @@ describe("PageFields", () => {
     await act(async () => finish({ id: "late", kind: "pdf", content_type: "application/pdf", size_bytes: 1, url: "", created_at: "" }));
     expect(seen.draft.pdf_upload_id).toBe("");
   });
+
+  it("draws a list inside each list item, with its own add and remove (a menu's dishes)", () => {
+    const menu: PageTypeInfo = {
+      name: "menu",
+      fields: [
+        {
+          name: "sections",
+          kind: "list",
+          required: true,
+          items: [
+            { name: "name", kind: "text", required: true },
+            { name: "items", kind: "list", required: true, items: [{ name: "name", kind: "text", required: true }, { name: "price", kind: "text" }] },
+          ],
+        },
+      ],
+    };
+    const { container } = render(<Harness type={menu} />);
+    const section = screen.getByRole("group", { name: `${t.fields.sections} 1` });
+    const dishes = within(section).getByRole("group", { name: t.fields.items });
+    fireEvent.change(container.querySelector('[data-path="sections[0].items[0].name"]')!, { target: { value: "Tea" } });
+    fireEvent.click(within(dishes).getByRole("button", { name: `${t.add}: ${t.fields.items} (${t.fields.sections} 1)` }));
+    expect(document.activeElement).toBe(container.querySelector('[data-path="sections[0].items[1].name"]'));
+    fireEvent.change(container.querySelector('[data-path="sections[0].items[1].price"]')!, { target: { value: "40k" } });
+    expect(seen.draft.sections).toEqual([{ name: "", items: [{ name: "Tea", price: "" }, { name: "", price: "40k" }] }]);
+    fireEvent.click(within(dishes).getByRole("button", { name: `${t.remove}: ${t.fields.items} 1 (${t.fields.sections} 1)` }));
+    expect(seen.draft.sections).toEqual([{ name: "", items: [{ name: "", price: "40k" }] }]);
+
+    // A second section with its own dish; removing the first keeps the second whole and focused.
+    fireEvent.click(screen.getByRole("button", { name: `${t.add}: ${t.fields.sections}` }));
+    fireEvent.change(container.querySelector('[data-path="sections[1].name"]')!, { target: { value: "Cakes" } });
+    fireEvent.change(container.querySelector('[data-path="sections[1].items[0].name"]')!, { target: { value: "Flan" } });
+    fireEvent.click(screen.getByRole("button", { name: `${t.remove}: ${t.fields.sections} 1` }));
+    expect(seen.draft.sections).toEqual([{ name: "Cakes", items: [{ name: "Flan", price: "" }] }]);
+    expect(document.activeElement).toBe(container.querySelector('[data-path="sections[0].name"]'));
+    expect((container.querySelector('[data-path="sections[0].items[0].name"]') as HTMLInputElement).value).toBe("Flan");
+  });
 });
