@@ -66,6 +66,9 @@ export interface CspOptions {
 
 const NONCE = /^[A-Za-z0-9+/=_-]{8,}$/;
 
+/** The video players a hosted page's preview embeds (the API's page CSP names the same two). */
+const PAGE_PLAYERS = ["https://www.youtube-nocookie.com", "https://player.vimeo.com"];
+
 /** Origin of Cloudflare Turnstile's script and iframe. */
 export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 
@@ -104,8 +107,11 @@ export function buildCsp({ surface, captcha = false, nonce, apiOrigin, filesOrig
     ["img-src", "'self'", "blob:", "data:", api, ...files],
     ["font-src", "'self'"],
     ["connect-src", "'self'", api, ...files],
-    // Only the pages with the Cloudflare Turnstile check frame anything (its iframe).
-    surface === "private" && captcha ? ["frame-src", TURNSTILE_ORIGIN] : ["frame-src", "'none'"],
+    // Public pages frame nothing. Private pages frame the page editor's samples (served by the
+    // API) and the video players its previews embed, and Cloudflare Turnstile where it checks.
+    surface === "private"
+      ? ["frame-src", api, ...PAGE_PLAYERS, ...(captcha ? [TURNSTILE_ORIGIN] : [])]
+      : ["frame-src", "'none'"],
     ["object-src", "'none'"],
     ["base-uri", "'none'"],
     ["form-action", "'self'"],

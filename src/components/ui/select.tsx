@@ -17,6 +17,8 @@ export interface SelectProps<T extends string> {
   /** Label above the select, as a form field has it (default: beside it, for toolbars). */
   stacked?: boolean;
   className?: string;
+  /** Names the select for a message that leads to it (a form's field path). */
+  dataPath?: string;
 }
 
 /** Runs of options that share a group, in order; ungrouped options are runs of their own. */
@@ -45,6 +47,7 @@ export function Select<T extends string>({
   onChange,
   stacked = false,
   className = "",
+  dataPath,
 }: SelectProps<T>) {
   const id = useId();
   const item = (o: SelectOption<T>) => (
@@ -59,6 +62,7 @@ export function Select<T extends string>({
       </label>
       <select
         id={id}
+        data-path={dataPath}
         value={value}
         onChange={(e) => {
           const next = options.find((o) => o.value === e.target.value);

@@ -23,6 +23,7 @@ export function DestinationFields({
   usernameRef,
   textRef,
   readOnly = false,
+  hideKind = false,
 }: {
   t: Messages["codes"];
   generator: Messages["generator"];
@@ -34,6 +35,8 @@ export function DestinationFields({
   textRef?: Ref<HTMLTextAreaElement>;
   /** While a save is under way: nothing can change under it. */
   readOnly?: boolean;
+  /** The kind is chosen elsewhere (the new-code form's grid of what a code opens). */
+  hideKind?: boolean;
 }) {
   const s = generator.social;
   const ids = { text: useId(), textHelp: useId(), textError: useId() };
@@ -50,15 +53,17 @@ export function DestinationFields({
     // `disabled` while saving covers the kind, the network and the fields alike (the reply would
     // otherwise overwrite a change made meanwhile).
     <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-5">
-      <SegmentedControl<DestinationKind>
-        legend={s.kind}
-        value={value.kind}
-        options={[
-          { value: "url", label: s.kindUrl },
-          { value: "social", label: s.kindSocial },
-        ]}
-        onChange={(kind) => onChange((d) => ({ ...d, kind }))}
-      />
+      {!hideKind && (
+        <SegmentedControl<DestinationKind>
+          legend={s.kind}
+          value={value.kind}
+          options={[
+            { value: "url", label: s.kindUrl },
+            { value: "social", label: s.kindSocial },
+          ]}
+          onChange={(kind) => onChange((d) => ({ ...d, kind }))}
+        />
+      )}
       {value.kind === "url" ? (
         <TextField
           ref={urlRef}
