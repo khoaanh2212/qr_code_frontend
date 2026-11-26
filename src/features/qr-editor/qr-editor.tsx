@@ -298,7 +298,7 @@ function Editor({
 
       <aside
         id={PREVIEW_ID}
-        className="scroll-mt-6 rounded-lg border border-border bg-surface p-5 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+        className="scroll-mt-6 rounded-lg border border-border bg-surface p-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:col-start-2 lg:row-span-2 lg:row-start-1"
       >
         <PreviewPanel
           t={t}

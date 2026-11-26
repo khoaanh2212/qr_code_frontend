@@ -7,6 +7,9 @@
 :root {
   /* Light only (2026-11-27): the system's dark mode made the app too dark. */
   color-scheme: light;
+  /* The sticky site header's height (a 44px control plus 12px above and below, and its border):
+     what sticks below it, and anchors, keep clear of it. */
+  --header-h: 4.3rem;
   --background: #fafaf9;
   --foreground: #1c1917;
   --muted: #57534e;
@@ -239,6 +242,11 @@ select:disabled {
 
 :root {
   accent-color: var(--accent);
+}
+
+/* The header stays on top while scrolling: in-page links land below it. */
+html {
+  scroll-padding-top: var(--header-h);
 }
 
 a {

@@ -59,7 +59,7 @@ export function PreviewPane({
     <section
       id={PREVIEW_ID}
       aria-labelledby={titleId}
-      className="flex scroll-mt-4 flex-col items-center gap-3 lg:sticky lg:top-6 lg:order-last"
+      className="flex scroll-mt-4 flex-col items-center gap-3 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:order-last"
     >
       <h2 id={titleId} className="self-start text-sm font-semibold text-muted">
         {w.previewTitle}

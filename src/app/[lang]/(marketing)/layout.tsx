@@ -26,12 +26,12 @@ export default async function MarketingLayout({ children }: LayoutProps<"/[lang]
   const t = await getMessages();
   return (
     <RootDocument locale={locale} googleConnected={{ message: t.auth.googleConnected, dismiss: t.auth.noticeDismiss }}>
-      <header className="border-b border-border bg-header">
+      <header className="sticky top-0 z-30 border-b border-border bg-header shadow-sm">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link href={localizePath(locale, "/")} className="inline-flex min-h-11 items-center">
             <Logo />
           </Link>
-          <div className="flex items-center gap-2 text-sm sm:gap-4">
+          <div className="flex shrink-0 items-center gap-2 text-sm whitespace-nowrap sm:gap-4">
             <LanguageSwitcher locale={locale} label={t.nav.language} />
             <Link href={localizePath(locale, "/login")} className="inline-flex min-h-11 items-center px-1">
               {t.nav.login}
