@@ -220,11 +220,16 @@ function Editor({
     }));
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
-      <div className="flex min-w-0 flex-col gap-8">
+    // One bounded card (type row, then content and design beside the preview), so the page keeps
+    // room below the generator for the rest of its content.
+    <div className="grid gap-6 rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-8">
+      <div className="min-w-0 lg:col-span-2">
         <TypePickerMemo t={t} types={types} value={qrType.type} onChange={setTypeName} />
+      </div>
+      <div className="flex min-w-0 flex-col gap-8">
         <section aria-labelledby={headingIds.content} className="flex flex-col gap-4">
-          <h2 id={headingIds.content} className="text-lg font-semibold">
+          <h2 id={headingIds.content} className="flex items-center gap-2.5 text-lg font-semibold">
+            <StepNumber n={1} />
             {t.sections.content}
           </h2>
           <ContentFields
@@ -274,8 +279,9 @@ function Editor({
         </section>
       </div>
 
-      <section aria-labelledby={headingIds.design} className="flex flex-col gap-4 lg:col-start-1 lg:row-start-2">
-        <h2 id={headingIds.design} className="text-lg font-semibold">
+      <section aria-labelledby={headingIds.design} className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-3">
+        <h2 id={headingIds.design} className="flex items-center gap-2.5 text-lg font-semibold">
+          <StepNumber n={2} />
           {t.sections.design}
         </h2>
         {templates && (
@@ -298,7 +304,7 @@ function Editor({
 
       <aside
         id={PREVIEW_ID}
-        className="scroll-mt-6 rounded-lg border border-border bg-surface p-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:col-start-2 lg:row-span-2 lg:row-start-1"
+        className="scroll-mt-6 rounded-lg border border-border bg-background p-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:col-start-2 lg:row-span-2 lg:row-start-2"
       >
         <PreviewPanel
           t={t}
@@ -316,6 +322,18 @@ function Editor({
 
       <MobilePreviewBar t={t} src={blocker === null && !preview.error ? preview.src : null} targetId={PREVIEW_ID} />
     </div>
+  );
+}
+
+/** The step's number beside its heading; the heading itself says what the step is. */
+function StepNumber({ n }: { n: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground font-mono text-sm text-background"
+    >
+      {n}
+    </span>
   );
 }
 
@@ -341,12 +359,16 @@ function MakeDynamic({ t, href, onFollow }: { t: T; href: string; onFollow: () =
 
 function EditorSkeleton({ label }: { label: string }) {
   return (
-    <div role="status" aria-busy="true" className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
+    <div
+      role="status"
+      aria-busy="true"
+      className="grid gap-6 rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-8"
+    >
       <span className="sr-only">{label}</span>
       <div aria-hidden="true" className="flex animate-pulse flex-col gap-8">
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+        <div className="flex gap-2 overflow-hidden">
           {Array.from({ length: 7 }, (_, i) => (
-            <div key={i} className="h-[4.5rem] rounded-lg bg-foreground/5" />
+            <div key={i} className="h-11 w-24 shrink-0 rounded-full bg-foreground/5" />
           ))}
         </div>
         <div className="flex flex-col gap-3">

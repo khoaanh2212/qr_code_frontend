@@ -380,6 +380,14 @@ export const vi = {
       design: "Thiết kế",
       download: "Tải về",
     },
+    designTabs: {
+      label: "Tùy chọn thiết kế",
+      colors: "Màu sắc",
+      shape: "Hình dạng",
+      frame: "Khung",
+      logo: "Logo",
+      more: "Nâng cao",
+    },
     design: {
       fg: "Màu mã",
       bg: "Màu nền",

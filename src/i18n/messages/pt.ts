@@ -380,6 +380,14 @@ export const pt = {
       design: "Design",
       download: "Baixar",
     },
+    designTabs: {
+      label: "Opções de design",
+      colors: "Cores",
+      shape: "Forma",
+      frame: "Moldura",
+      logo: "Logo",
+      more: "Mais",
+    },
     design: {
       fg: "Cor do código",
       bg: "Fundo",

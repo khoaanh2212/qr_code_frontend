@@ -103,6 +103,7 @@ describe("QrEditor", () => {
       .mockRejectedValue(new ApiError(401, "unauthenticated", "Sign in first."));
     render(<QrEditor t={t} locale="vi" />);
     fireEvent.change(await screen.findByLabelText(/Website address/), { target: { value: "https://example.com" } });
+    fireEvent.click(screen.getByRole("tab", { name: t.designTabs.frame }));
     fireEvent.click(screen.getByRole("radio", { name: t.design.styles.frames.box }));
     fireEvent.change(screen.getByRole("textbox", { name: t.design.frameText }), { target: { value: "Thực đơn" } });
     await settle();

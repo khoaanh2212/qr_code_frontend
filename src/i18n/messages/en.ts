@@ -386,6 +386,14 @@ export const en = {
       design: "Design",
       download: "Download",
     },
+    designTabs: {
+      label: "Design options",
+      colors: "Colors",
+      shape: "Shape",
+      frame: "Frame",
+      logo: "Logo",
+      more: "More",
+    },
     design: {
       fg: "Foreground",
       bg: "Background",

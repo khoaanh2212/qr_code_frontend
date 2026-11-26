@@ -375,3 +375,10 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     the marketing pages never list it. Not built: deleting a logo from the workspace's files
     (the API refuses while a code or template uses it), and template thumbnails with their
     uploaded logo.
+27. ~~Compact generator~~ Done (`src/features/qr-editor`): the home and per-type generator is one
+    bounded card, laid out after the reference product but in ProofQR's own style. QR types are a
+    row of pills, and content and design are numbered steps beside the preview. The design
+    options sit in tabs (Colors, Shape, Frame, Logo, More); only the open tab is drawn, and a
+    field the API refuses opens its tab. The home page dropped from about 2,200 px to about
+    1,500 px tall at desktop width, leaving room below the generator for SEO content (not
+    written yet: how-to steps, FAQ).

@@ -33,15 +33,15 @@ export function TypePicker({
     // width of the scrolling row on phones.
     <fieldset className="min-w-0">
       <legend className="sr-only">{t.typesLabel}</legend>
-      {/* Phones: one scrollable row (no orphan row); wider screens: all eight in a grid.
+      {/* A compact row of pills: phones scroll it sideways (no orphan row), wider screens wrap it.
           `relative` keeps the visually hidden radios inside the scroller, not the page. */}
-      <div className="relative -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-8 sm:overflow-visible sm:px-0 sm:pb-0">
+      <div className="relative -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
         {types.map(({ type }) => {
           const Icon = lookup<LucideIcon>(ICONS, type) ?? QrCode;
           return (
             <label
               key={type}
-              className="flex min-w-[5.25rem] shrink-0 cursor-pointer snap-start flex-col items-center gap-1.5 rounded-lg sm:min-w-0 border border-border bg-surface px-2 py-3 text-center text-sm font-medium text-muted transition-colors duration-150 hover:border-foreground/40 hover:text-foreground has-checked:border-accent has-checked:bg-accent-soft has-checked:text-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
+              className="inline-flex min-h-11 shrink-0 cursor-pointer snap-start items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-medium whitespace-nowrap text-muted transition-colors duration-150 hover:border-foreground/40 hover:text-foreground has-checked:border-accent has-checked:bg-accent-soft has-checked:text-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
             >
               <input
                 type="radio"
@@ -51,8 +51,8 @@ export function TypePicker({
                 onChange={() => onChange(type)}
                 className="sr-only"
               />
-              <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
-              <span className="leading-tight">{lookup<string>(t.types, type) ?? type}</span>
+              <Icon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+              <span>{lookup<string>(t.types, type) ?? type}</span>
             </label>
           );
         })}
