@@ -77,3 +77,64 @@ describe("native selects", () => {
     expect(forced).toMatch(/background-image:\s*none/);
   });
 });
+
+describe("styled select pickers", () => {
+  // Where the browser lets CSS style a select's picker (appearance: base-select), the list it opens
+  // follows the design system too; elsewhere the native picker above stays. No script, no library:
+  // the control is still a <select>, with its keyboard and screen reader behaviour.
+  const supports = "@supports (appearance: base-select)";
+  const rule = (prelude: string) => nested(supports, prelude);
+
+  it("opt the select and its picker into base-select only where it is supported", () => {
+    expect(rule("select,\n  ::picker(select)") || rule("select, ::picker(select)")).toMatch(/appearance:\s*base-select/);
+    // The drawn chevron gives way to the picker icon, which turns when the list is open.
+    expect(rule("select")).toMatch(/background-image:\s*none/);
+    expect(rule("select::picker-icon")).toMatch(/mask/);
+    expect(rule("select:open::picker-icon")).toMatch(/rotate:\s*180deg/);
+  });
+
+  it("draw the list as a themed popover: surface, border, rounded, with depth", () => {
+    const picker = rule("::picker(select)");
+    expect(picker).toMatch(/background(-color)?:\s*var\(--surface\)/);
+    expect(picker).toMatch(/border:\s*1px solid var\(--border\)/);
+    expect(picker).toMatch(/border-radius/);
+    expect(picker).toMatch(/box-shadow/);
+    expect(picker).toMatch(/max-height/);
+  });
+
+  it("give options 44px targets, a soft accent under the pointer, and mark the chosen one", () => {
+    expect(rule("option")).toMatch(/min-height:\s*2\.75rem/);
+    expect(rule("option:hover")).toMatch(/var\(--accent-soft\)/);
+    expect(rule("option:checked")).toMatch(/var\(--accent\)/);
+    // The check is decoration: empty alternative text, so screen readers do not read it out.
+    expect(rule("option::checkmark")).toMatch(/content:\s*"✓"\s*\/\s*""/);
+  });
+
+  it("show keyboard focus with a real outline, apart from hover (WCAG 2.4.7, 1.4.11)", () => {
+    const focus = rule("option:focus-visible");
+    expect(focus).toMatch(/outline:\s*2px solid var\(--accent\)/);
+    expect(css.replace(/\/\*[\s\S]*?\*\//g, "")).not.toMatch(/option[^{]*\{[^}]*outline:\s*none/);
+    // Forced colors drop backgrounds: focus is an outline in the system's colors there.
+    expect(nested("@media (forced-colors: active)", "option:focus-visible")).toMatch(/outline:\s*2px solid/);
+  });
+
+  it("stay inline and size the picker to its field, within the screen", () => {
+    expect(rule("select")).toMatch(/display:\s*inline-flex/);
+    const picker = rule("::picker(select)");
+    expect(picker).toMatch(/min-width:\s*anchor-size\(width\)/);
+    expect(picker).toMatch(/max-width/);
+  });
+
+  it("animate only with motion allowed, open and close alike, never everything", () => {
+    const block = top.find((b) => b.prelude === supports)?.body ?? "";
+    expect(block).not.toMatch(/transition:\s*all/);
+    const motion = blocks(block).find((b) => b.prelude === "@media (prefers-reduced-motion: no-preference)")?.body ?? "";
+    // Closed state, open state and the entry frame all live under the media query.
+    expect(body("::picker(select)", blocks(motion))).toMatch(/opacity:\s*0/);
+    expect(body("select:open::picker(select)", blocks(motion))).toMatch(/opacity:\s*1/);
+    expect(motion).toMatch(/@starting-style/);
+    // Outside it, nothing moves.
+    const outside = blocks(block).filter((b) => !b.prelude.startsWith("@media")).map((b) => b.body).join("\n");
+    expect(outside).not.toMatch(/transition/);
+  });
+});
