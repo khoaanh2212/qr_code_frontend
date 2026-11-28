@@ -167,7 +167,7 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
    a different Google address would log in to another account.
 6. ~~Dynamic codes~~ Done (backend items 35-37, `src/features/codes`): the dashboard at `/app`
    lists the personal workspace's codes; `/app/codes/new` creates one (Turnstile), prefilled when
-   the generator's "Make it dynamic" (website type) hands over the destination and colors through
+   the generator's "Track scans" switch (website and social types) hands over the destination and colors through
    sessionStorage; `/app/codes/{id}` shows the code image and short link (copy, PNG/SVG download),
    edits destination and name, pauses and resumes, shows 30 days of scans as a bar chart (with a
    table view) plus top countries and devices, and deletes after a confirmation. Locked codes are
@@ -341,7 +341,7 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     a light checkerboard (`transparency-grid` in `globals.css`). Downloads gain EPS (generator,
     the code's download dialog and its menu in the list); a format the design rules out stays
     selectable but says why and disables the download: JPG with a transparent background, EPS
-    with an uploaded logo (built-in icons are fine). The generator's "Make it dynamic" hands the
+    with an uploaded logo (built-in icons are fine). The generator's "Track scans" switch hands the
     gradient and transparency over, and the API's refusals of `gradient`, `fg2`,
     `gradient_angle` and `gradient_stops` land with the colors.
 25. ~~Social presets~~ Done (backend PLAN item 58, `src/lib/qr/social.ts`,
@@ -406,6 +406,13 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     page's frame (cover, button, social channels) is sent back as saved, and only a changed page
     or name is sent. Viewers and a locked code see it disabled and without a preview (previews
     are for editors). Lists and the code's header name a page code's destination "Hosted page".
-    Not built yet: page-type tabs in the public generator (27d). A video page's player
+    The public generator (27d) offers hosted page tabs after the static types (contact,
+    business, PDF, links, menu, app): a tab shows what the page is, the API's sample in a phone
+    frame (the marketing CSP frames only `{api}/v1/page-types/`, sandboxed) and "Create this page
+    for free", which opens "New code" on that type (the type travels in the sessionStorage
+    hand-off, checked against `GET /v1/page-types` there). A website or social profile has a
+    "Track scans" switch instead of the old "Make it dynamic" link: on, the static download gives
+    way to a tracked (dynamic) code made with the same content and look; a social profile opens
+    as its preset. A video page's player
     stays blank in the live preview (the sandboxed frame runs no script, nor do frames inside it);
     the type's sample and the page itself play it.

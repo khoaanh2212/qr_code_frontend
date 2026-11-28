@@ -297,8 +297,20 @@ export const vi = {
   generator: {
     loading: "Đang tải…",
     typesLabel: "Loại mã QR",
-    makeDynamic: "Chuyển thành mã QR động",
-    makeDynamicHelp: "Đổi đích đến sau khi in và đếm lượt quét. Cần có tài khoản miễn phí.",
+    trackScans: "Theo dõi lượt quét",
+    trackScansHelp: "Đếm mọi lượt quét và đổi nơi mã dẫn tới sau khi in. Cần có tài khoản miễn phí.",
+    trackScansContinue: "Tiếp tục với mã có theo dõi",
+    trackScansNote: "Nội dung và thiết kế sẽ được mang theo. Mã tĩnh tải xuống thì không được theo dõi.",
+    pagesGroup: "Trang chúng tôi lưu trữ",
+    pagePromo: {
+      intro: "Một trang di động do chúng tôi lưu trữ cho bạn. Sửa bất cứ lúc nào, kể cả sau khi đã in mã.",
+      benefitEdit: "Đổi nội dung mà không cần in lại",
+      benefitScans: "Xem mọi lượt quét theo ngày, quốc gia và thiết bị",
+      benefitNoApp: "Mở được trên mọi điện thoại, không cần cài ứng dụng",
+      create: "Tạo trang này miễn phí",
+      note: "Tài khoản miễn phí. Không cần thẻ.",
+      sampleFrame: "Trang {type} mẫu",
+    },
     types: {
       url: "Website",
       text: "Văn bản",
@@ -1042,7 +1054,7 @@ export const vi = {
     pageGroup: "Trang do chúng tôi lưu trữ cho bạn",
     types: {
       links: { name: "Trang liên kết", help: "Nhiều liên kết trên một trang" },
-      contact: { name: "Danh thiếp", help: "Thông tin của bạn, lưu vào điện thoại chỉ với một chạm" },
+      contact: { name: "Danh thiếp số", help: "Thông tin của bạn, lưu vào điện thoại chỉ với một chạm" },
       business: { name: "Doanh nghiệp", help: "Giờ mở cửa, địa chỉ và cách liên hệ" },
       social: { name: "Mạng xã hội", help: "Mọi kênh mạng xã hội trên một trang" },
       pdf: { name: "PDF", help: "Mở một tài liệu PDF" },

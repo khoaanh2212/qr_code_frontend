@@ -9,7 +9,10 @@ import { safeLook, type CodeLook } from "./design";
 const KEY = "proofqr:dynamic-handoff";
 
 export interface Handoff {
+  /** A website or social profile link; empty when a hosted page type is picked. */
   url: string;
+  /** A hosted page type to open with ("pdf"), picked in the generator's page tabs. */
+  opens?: string;
   fg?: string;
   bg?: string;
   /** Pattern, eyes and frame of the generator's design. */
@@ -38,10 +41,11 @@ export function readHandoff(): Handoff | null {
     if (!raw) return null;
     const v: unknown = JSON.parse(raw);
     if (!v || typeof v !== "object" || typeof (v as Handoff).url !== "string") return null;
-    const { url, fg, bg, style } = v as Handoff;
+    const { url, opens, fg, bg, style } = v as Handoff;
     const hex = (c: unknown) => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c : undefined);
     const look = style && typeof style === "object" ? safeLook(style) : {};
-    return { url: url.slice(0, 2048), fg: hex(fg), bg: hex(bg), style: look };
+    const pageType = typeof opens === "string" && /^[a-z][a-z_]{0,31}$/.test(opens) ? opens : undefined;
+    return { url: url.slice(0, 2048), ...(pageType ? { opens: pageType } : {}), fg: hex(fg), bg: hex(bg), style: look };
   } catch {
     return null;
   }

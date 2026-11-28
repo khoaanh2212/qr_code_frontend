@@ -1,23 +1,26 @@
 "use client";
 
-import { RotateCw, Sparkles } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo, useCallback, useId, useMemo, useState } from "react";
 import { saveHandoff } from "@/features/codes/handoff";
+import { Switch } from "@/components/ui/switch";
 import { applyTemplate, templateFromDesign } from "@/features/templates/convert";
 import { GeneratorTemplates } from "@/features/templates/generator-templates";
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { buildRenderRequest, missingRequired, requestKey } from "@/lib/qr/render-request";
+import { isSocialNetwork, socialUrl } from "@/lib/qr/social";
 import { downloadName, normalizeUrlInput, validateFields, type FieldProblem } from "@/lib/qr/validate";
 import { DEFAULT_DESIGN, designScannable, type QrData, type QrDesign, type QrType } from "@/lib/qr/types";
 import { DesignPanel } from "./design-panel";
 import { errorText } from "./error-text";
 import { ContentFields, fieldText, initialData } from "./fields";
 import { MobilePreviewBar } from "./mobile-preview-bar";
+import { PagePromo } from "./page-promo";
 import { PreviewPanel, type Blocker } from "./preview-panel";
-import { TypePicker } from "./type-picker";
+import { pageTab, TypePicker } from "./type-picker";
 import { useQrTypes } from "./use-qr-types";
 import { useRenderPreview } from "./use-render";
 
@@ -45,6 +48,10 @@ const DESIGN_FIELDS = new Set([
   "gradient_stops",
 ]);
 const URL_FIELDS = new Set(["url", "website"]);
+/** The static types a dynamic code can lead to: the switch "Track scans" is offered for them. */
+const TRACKABLE = new Set(["url", "social"]);
+/** Hosted page types offered as tabs after the static ones (backend PLAN item 27d). */
+const PAGE_TABS = ["contact", "business", "pdf", "links", "menu", "app"] as const;
 const PREVIEW_ID = "qr-preview";
 
 // Typing the content changes only the content and the preview: the design controls (the style
@@ -65,12 +72,15 @@ const PREVIEW_SIZE = 512;
 export function QrEditor({
   t,
   templates,
+  pageTypes,
   initialType,
   locale,
 }: {
   t: T;
   /** Messages of design templates; without them the generator offers none. */
   templates?: Messages["templates"];
+  /** Names of the hosted page types; without them the generator offers no page tabs. */
+  pageTypes?: Messages["pages"]["types"];
   initialType?: string;
   locale: Locale;
 }) {
@@ -93,18 +103,20 @@ export function QrEditor({
       </div>
     );
   }
-  return <Editor t={t} templates={templates} types={state.catalog.types} initialType={initialType} locale={locale} />;
+  return <Editor t={t} templates={templates} pageTypes={pageTypes} types={state.catalog.types} initialType={initialType} locale={locale} />;
 }
 
 function Editor({
   t,
   templates,
+  pageTypes,
   types,
   initialType,
   locale,
 }: {
   t: T;
   templates?: Messages["templates"];
+  pageTypes?: Messages["pages"]["types"];
   types: QrType[];
   initialType?: string;
   locale: Locale;
@@ -116,6 +128,23 @@ function Editor({
   const [dataByType, setDataByType] = useState<Record<string, QrData>>({});
   const [touched, setTouched] = useState<Record<string, true>>({});
   const [design, setDesign] = useState<QrDesign>(DEFAULT_DESIGN);
+  const [track, setTrack] = useState(false);
+  // Every type starts with scan tracking off: the switch never hides a download unseen.
+  const pickType = useCallback((type: string) => {
+    setTypeName(type);
+    setTrack(false);
+  }, []);
+  const pageTabs = useMemo(
+    () =>
+      pageTypes
+        ? PAGE_TABS.map((name) => {
+            const words = (pageTypes as Record<string, { name: string; help: string } | undefined>)[name];
+            return { name, label: words?.name ?? name, help: words?.help ?? "" };
+          })
+        : [],
+    [pageTypes],
+  );
+  const openPage = pageTabs.find((p) => pageTab(p.name) === typeName) ?? null;
 
   const qrType = types.find((x) => x.type === typeName) ?? types[0];
   const data = useMemo(() => dataByType[qrType.type] ?? initialData(qrType), [dataByType, qrType]);
@@ -124,7 +153,10 @@ function Editor({
   const problemNames = Object.keys(problems);
   const contrastOk = designScannable(design);
 
-  const canRender = missing.length === 0 && problemNames.length === 0 && contrastOk;
+  const contentOk = missing.length === 0 && problemNames.length === 0;
+  // A hosted page tab draws no code: nothing to render behind it.
+  const canRender = !openPage && contentOk && contrastOk;
+  const trackable = TRACKABLE.has(qrType.type);
   const request = useMemo(
     () =>
       canRender ? buildRenderRequest({ type: qrType.type, data, design, format: "png", size: PREVIEW_SIZE }) : null,
@@ -224,8 +256,12 @@ function Editor({
     // room below the generator for the rest of its content.
     <div className="grid gap-6 rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-8">
       <div className="min-w-0 lg:col-span-2">
-        <TypePickerMemo t={t} types={types} value={qrType.type} onChange={setTypeName} />
+        <TypePickerMemo t={t} types={types} pages={pageTabs} value={openPage ? typeName : qrType.type} onChange={pickType} />
       </div>
+      {openPage ? (
+        <PagePromo t={t} type={openPage.name} name={openPage.label} help={openPage.help} locale={locale} />
+      ) : (
+      <>
       <div className="flex min-w-0 flex-col gap-8">
         <section aria-labelledby={headingIds.content} className="flex flex-col gap-4">
           <h2 id={headingIds.content} className="flex items-center gap-2.5 text-lg font-semibold">
@@ -247,35 +283,7 @@ function Editor({
               setTouched((prev) => ({ ...prev, [`${qrType.type}.${name}`]: true }));
             }}
           />
-          {qrType.type === "url" && missing.length === 0 && problemNames.length === 0 && (
-            <MakeDynamic
-              t={t}
-              href={localizePath(locale, "/app/codes/new")}
-              onFollow={() =>
-                saveHandoff({
-                  url: data.url ?? "",
-                  fg: design.fg,
-                  bg: design.bg,
-                  style: {
-                    module: design.module,
-                    eyeFrames: design.eyeFrames,
-                    eyeBalls: design.eyeBalls,
-                    eyeColor: design.eyeColor,
-                    eyeBallColor: design.eyeBallColor,
-                    frame: design.frame,
-                    frameText: design.frameText,
-                    frameColor: design.frameColor,
-                    gradient: design.gradient,
-                    fg2: design.fg2,
-                    gradientAngle: design.gradientAngle,
-                    transparent: design.transparent,
-                    // An uploaded logo stays in this tab; an icon travels.
-                    logoIcon: design.logo ? "" : design.logoIcon,
-                  },
-                })
-              }
-            />
-          )}
+          {trackable && <Switch label={t.trackScans} help={t.trackScansHelp} checked={track} onChange={setTrack} />}
         </section>
       </div>
 
@@ -317,10 +325,22 @@ function Editor({
           buildDownload={(format, size) =>
             buildRenderRequest({ type: qrType.type, data, design, format, size }, { post: true })
           }
+          tracked={
+            trackable && track ? (
+              <TrackedCode
+                t={t}
+                href={localizePath(locale, "/app/codes/new")}
+                ready={contentOk}
+                onFollow={() => saveHandoff(handoffOf(qrType.type, data, design))}
+              />
+            ) : undefined
+          }
         />
       </aside>
 
       <MobilePreviewBar t={t} src={blocker === null && !preview.error ? preview.src : null} targetId={PREVIEW_ID} />
+      </>
+      )}
     </div>
   );
 }
@@ -337,22 +357,54 @@ function StepNumber({ n }: { n: number }) {
   );
 }
 
+/** What "New code" starts from: the destination (a website, or a social profile's link) and the look. */
+function handoffOf(type: string, data: QrData, design: QrDesign) {
+  const url =
+    type === "social" && isSocialNetwork(data.network)
+      ? socialUrl({ network: data.network, username: data.username ?? "", text: data.text ?? "" })
+      : (data.url ?? "");
+  return {
+    url,
+    fg: design.fg,
+    bg: design.bg,
+    style: {
+      module: design.module,
+      eyeFrames: design.eyeFrames,
+      eyeBalls: design.eyeBalls,
+      eyeColor: design.eyeColor,
+      eyeBallColor: design.eyeBallColor,
+      frame: design.frame,
+      frameText: design.frameText,
+      frameColor: design.frameColor,
+      gradient: design.gradient,
+      fg2: design.fg2,
+      gradientAngle: design.gradientAngle,
+      transparent: design.transparent,
+      // An uploaded logo stays in this tab; an icon travels.
+      logoIcon: design.logo ? "" : design.logoIcon,
+    },
+  };
+}
+
 /**
- * The way from a static website code to a dynamic one: the destination and colors go along
- * (sessionStorage), and login or sign-up in between returns to the new-code form.
+ * In place of the static download while "Track scans" is on: a tracked code is a dynamic one,
+ * made in a free account. The content and look go along (sessionStorage), and login or sign-up
+ * in between returns to the new-code form.
  */
-function MakeDynamic({ t, href, onFollow }: { t: T; href: string; onFollow: () => void }) {
+function TrackedCode({ t, href, ready, onFollow }: { t: T; href: string; ready: boolean; onFollow: () => void }) {
   return (
-    <div className="flex flex-col items-start gap-1.5 rounded-lg border border-dashed border-border p-4">
-      <Link
-        href={href}
-        onClick={onFollow}
-        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-control bg-surface px-3 text-sm font-medium hover:bg-foreground/5"
-      >
-        <Sparkles aria-hidden="true" className="size-4 text-accent" />
-        {t.makeDynamic}
-      </Link>
-      <p className="text-xs text-pretty text-muted">{t.makeDynamicHelp}</p>
+    <div className="flex flex-col items-start gap-2">
+      <h2 className="text-lg font-semibold">{t.trackScans}</h2>
+      <p className="text-sm text-pretty text-muted">{t.trackScansNote}</p>
+      {ready && (
+        <Link
+          href={href}
+          onClick={onFollow}
+          className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent/90"
+        >
+          {t.trackScansContinue}
+        </Link>
+      )}
     </div>
   );
 }

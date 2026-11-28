@@ -19,7 +19,4 @@ export async function previewPage(workspaceId: string, page: PageBody, signal?: 
   return blob.text();
 }
 
-/** The sample page of a type in a language: a URL the editor frames (public, cacheable). */
-export function sampleUrl(type: string, lang: string): string {
-  return publicApi.url(`/v1/page-types/${encodeURIComponent(type)}/sample?lang=${encodeURIComponent(lang)}`);
-}
+export { sampleUrl } from "./sample";

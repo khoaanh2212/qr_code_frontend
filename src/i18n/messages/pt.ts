@@ -297,8 +297,20 @@ export const pt = {
   generator: {
     loading: "Carregando…",
     typesLabel: "Tipo de QR Code",
-    makeDynamic: "Tornar dinâmico",
-    makeDynamicHelp: "Mude o destino depois de imprimir e conte as leituras. Requer uma conta grátis.",
+    trackScans: "Acompanhar leituras",
+    trackScansHelp: "Conte cada leitura e mude para onde o código leva depois de imprimir. Requer uma conta grátis.",
+    trackScansContinue: "Continuar com um código rastreado",
+    trackScansNote: "Seu conteúdo e seu design vão junto. Um código estático baixado não é rastreado.",
+    pagesGroup: "Páginas que hospedamos",
+    pagePromo: {
+      intro: "Uma página móvel que hospedamos para você. Edite quando quiser, mesmo depois de imprimir o código.",
+      benefitEdit: "Mude o conteúdo sem reimprimir",
+      benefitScans: "Veja cada leitura por dia, país e dispositivo",
+      benefitNoApp: "Abre em qualquer celular, sem instalar app",
+      create: "Criar esta página grátis",
+      note: "Conta grátis. Sem cartão.",
+      sampleFrame: "Página {type} de exemplo",
+    },
     types: {
       url: "Site",
       text: "Texto",

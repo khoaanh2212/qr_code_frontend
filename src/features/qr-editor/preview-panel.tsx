@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Download, QrCode } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { format } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
@@ -32,6 +32,7 @@ export function PreviewPanel({
   buildDownload,
   filename,
   design,
+  tracked,
 }: {
   t: T;
   preview: PreviewState;
@@ -46,6 +47,8 @@ export function PreviewPanel({
   filename: string;
   /** What decides which formats work (JPG has no transparency, EPS takes no uploaded logo). */
   design: Pick<QrDesign, "transparent" | "logo">;
+  /** Shown instead of the static download while "Track scans" is on. */
+  tracked?: ReactNode;
 }) {
   const ids = { size: useId(), sizeHelp: useId(), formatHelp: useId() };
   const [fmt, setFmt] = useState<QrFormat>("png");
@@ -125,6 +128,9 @@ export function PreviewPanel({
         </p>
       )}
 
+      {tracked ? (
+        <div className="border-t border-border pt-5">{tracked}</div>
+      ) : (
       <div className="flex flex-col gap-3 border-t border-border pt-5">
         <h2 className="text-lg font-semibold">{t.sections.download}</h2>
         <div className="flex flex-wrap items-start gap-4">
@@ -205,6 +211,7 @@ export function PreviewPanel({
           {notice?.kind === "error" ? notice.text : ""}
         </p>
       </div>
+      )}
     </div>
   );
 }

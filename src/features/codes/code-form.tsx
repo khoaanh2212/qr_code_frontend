@@ -85,13 +85,14 @@ export function CodeForm({
   const w = t.wizard;
   const router = useRouter();
   const workspace = usePersonalWorkspace();
-  // The public generator's "Make it dynamic" hands over its destination and look. The form
+  // The public generator ("Track scans", page tabs) hands over its destination and look. The form
   // renders only on the client (after the session check), so reading storage here is safe.
   const [handoff] = useState(readHandoff);
   useEffect(clearHandoff, []);
   const [step, setStep] = useState<Step>("destination");
   const [name, setName] = useState("");
-  const [destination, setDestination] = useState<DestinationState>(() => ({ ...initialDestination(""), url: handoff?.url ?? "" }));
+  // A social profile link from the generator opens as its preset.
+  const [destination, setDestination] = useState<DestinationState>(() => initialDestination(handoff?.url ?? ""));
   const [look, setLook] = useState<CodeLook>(() => ({
     ...DEFAULT_LOOK,
     ...handoff?.style,
@@ -99,7 +100,7 @@ export function CodeForm({
     bg: handoff?.bg ?? DEFAULT_LOOK.bg,
   }));
   // What the code opens: "url" or "social" (a link), or a hosted page type.
-  const [opens, setOpens] = useState<string>("url");
+  const [opens, setOpens] = useState<string>(() => handoff?.opens ?? initialDestination(handoff?.url ?? "").kind);
   const [pageTypes, setPageTypes] = useState<PageTypeInfo[] | null>(null);
   const [typesFailed, setTypesFailed] = useState(false);
   const [typesTry, setTypesTry] = useState(0);
@@ -130,9 +131,16 @@ export function CodeForm({
   useEffect(() => {
     const controller = new AbortController();
     getPageTypes(controller.signal)
-      .then((types) => setPageTypes(editableTypes(types)))
+      .then((types) => {
+        setPageTypes(editableTypes(types));
+        // A page type handed over from the generator that the API does not offer: a website.
+        setOpens((o) => (o === "url" || o === "social" || types.some((p) => p.name === o) ? o : "url"));
+      })
       .catch(() => {
-        if (!controller.signal.aborted) setTypesFailed(true);
+        if (controller.signal.aborted) return;
+        setTypesFailed(true);
+        // Without the types, a page type handed over cannot be drawn: a website.
+        setOpens((o) => (o === "url" || o === "social" ? o : "url"));
       });
     return () => controller.abort();
   }, [typesTry]);
