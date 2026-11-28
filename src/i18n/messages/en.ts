@@ -1105,12 +1105,13 @@ export const en = {
     },
   },
   pages: {
-    kindLegend: "What the code opens",
+    moreTypes: "Or pick another type",
+    webPreview: "What a scan opens",
+    webPreviewEmpty: "The address you enter appears here.",
     kindHelp: {
       url: "Sends people to a web address",
       social: "Opens a social network profile",
     },
-    pageGroup: "Pages we host for you",
     types: {
       links: { name: "Links page", help: "Several links on one page" },
       contact: { name: "Contact card", help: "Your details, saved to the phone in one tap" },

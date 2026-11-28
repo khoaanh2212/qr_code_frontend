@@ -1046,12 +1046,13 @@ export const de = {
     },
   },
   pages: {
-    kindLegend: "Was der Code öffnet",
+    moreTypes: "Oder einen anderen Typ wählen",
+    webPreview: "Was ein Scan öffnet",
+    webPreviewEmpty: "Die eingegebene Adresse erscheint hier.",
     kindHelp: {
       url: "Führt zu einer Webadresse",
       social: "Öffnet ein Profil in einem sozialen Netzwerk",
     },
-    pageGroup: "Seiten, die wir für dich hosten",
     types: {
       links: { name: "Linkseite", help: "Mehrere Links auf einer Seite" },
       contact: { name: "Visitenkarte", help: "Deine Daten, mit einem Tipp im Handy gespeichert" },

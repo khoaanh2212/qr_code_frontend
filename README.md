@@ -383,7 +383,12 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     1,500 px tall at desktop width, leaving room below the generator for SEO content (not
     written yet: how-to steps, FAQ).
 28. Hosted pages in "New code" (backend PLAN item 27b, `src/features/pages`): the first step
-    starts with what the code opens, as a grid of cards: a website, a social profile, or one of
+    starts with what the code opens. Laid out after qr-code-generator.com's create page (2026-11-28):
+    the chosen type on top as a card with its name, help and fields, a sticky phone beside it
+    (the page's sample or live preview, or the address a redirect opens), then "Or pick another
+    type" over a two-column grid of every type; pointing at or focusing a card peeks at its
+    sample. Page types are values `page:<type>`, so the hosted social page never collides with
+    the social profile preset. The choices: a website, a social profile, or one of
     the pages ProofQR hosts (from `GET /v1/page-types`; the types whose required fields need an
     upload wait for item 27c). A page type's content editor is drawn from the type's field
     schema (text, long text, links, phone, email, dates and times, weekdays, time zones,

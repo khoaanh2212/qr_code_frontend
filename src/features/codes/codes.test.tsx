@@ -344,11 +344,80 @@ describe("CodeForm", () => {
       serveCreate();
       renderForm();
       await targetField();
-      const group = screen.getByRole("radiogroup", { name: p.kindLegend });
+      const group = screen.getByRole("radiogroup", { name: p.moreTypes });
       expect(within(group).getByRole("radio", { name: en.generator.social.kindUrl })).toBeTruthy();
       expect(await within(group).findByRole("radio", { name: p.types.links.name })).toBeTruthy();
       expect(within(group).getByRole("radio", { name: p.types.pdf.name })).toBeTruthy();
       expect(within(group).getByRole("radio", { name: p.types.menu.name })).toBeTruthy();
+    });
+
+    it("peeks at the focused card while the pointer passes over others, and keeps the chosen page's preview", async () => {
+      serveCreate();
+      renderForm();
+      await targetField();
+      const radio = async (name: string) => (await screen.findByRole("radio", { name })) as HTMLInputElement;
+      const pdf = await radio(p.types.pdf.name);
+      fireEvent.focus(pdf);
+      expect((screen.getByTitle(p.sampleFrame) as HTMLIFrameElement).src).toContain("/pdf/sample");
+      // The pointer crossing the group and leaving it does not end the keyboard's peek.
+      const menu = (await radio(p.types.menu.name)).closest("label") as HTMLElement;
+      fireEvent.mouseEnter(menu);
+      expect((screen.getByTitle(p.sampleFrame) as HTMLIFrameElement).src).toContain("/menu/sample");
+      fireEvent.mouseLeave(menu);
+      expect((screen.getByTitle(p.sampleFrame) as HTMLIFrameElement).src).toContain("/pdf/sample");
+      fireEvent.blur(pdf);
+      expect(screen.queryByTitle(p.sampleFrame)).toBeNull();
+
+      // A chosen page keeps its own preview mounted while another card is peeked at.
+      fireEvent.click(await radio(p.types.links.name));
+      fireEvent.mouseEnter(pdf.closest("label") as HTMLElement);
+      expect(screen.getAllByTitle(p.sampleFrame).map((f) => (f as HTMLIFrameElement).src).some((src) => src.includes("/links/sample"))).toBe(true);
+    });
+
+    it("tells the social profile preset from the hosted social page", async () => {
+      serveCreate();
+      vi.mocked(publicApi.request).mockImplementation(async (path) => {
+        if (path === "/v1/page-types") return { types: [...PAGE_TYPES, { name: "social", fields: [{ name: "title", kind: "text", required: true }] }] };
+        throw new Error(`unexpected public ${path}`);
+      });
+      renderForm();
+      await targetField();
+      fireEvent.click(await screen.findByRole("radio", { name: p.types.social.name }));
+      expect(screen.getByRole("heading", { name: p.types.social.name, level: 2 })).toBeTruthy();
+      expect(screen.queryByRole("textbox", { name: new RegExp(en.generator.fields.social.username.label) })).toBeNull();
+      fireEvent.click(screen.getByRole("radio", { name: en.generator.social.kindSocial }));
+      expect(screen.getByRole("heading", { name: en.generator.social.kindSocial, level: 2 })).toBeTruthy();
+      expect(screen.getByRole("textbox", { name: new RegExp(en.generator.fields.social.username.label) })).toBeTruthy();
+      expect((screen.getByRole("radio", { name: p.types.social.name }) as HTMLInputElement).checked).toBe(false);
+    });
+
+    it("puts the chosen type on top, as a card with its name, help and fields", async () => {
+      serveCreate();
+      renderForm();
+      await targetField();
+      const card = screen.getByRole("region", { name: en.generator.social.kindUrl });
+      expect(within(card).getByRole("heading", { name: en.generator.social.kindUrl, level: 2 })).toBeTruthy();
+      expect(within(card).getByText(p.kindHelp.url)).toBeTruthy();
+      expect(within(card).getByRole("textbox", { name: new RegExp(t.target) })).toBeTruthy();
+      fireEvent.click(await screen.findByRole("radio", { name: p.types.pdf.name }));
+      expect(screen.getByRole("heading", { name: p.types.pdf.name, level: 2 })).toBeTruthy();
+      expect(screen.queryByRole("textbox", { name: new RegExp(t.target) })).toBeNull();
+    });
+
+    it("shows a website's address in the phone, and a type's sample while pointing at its card", async () => {
+      serveCreate();
+      renderForm();
+      await targetField();
+      type(new RegExp(t.target), "https://example.com/menu");
+      const phone = screen.getByRole("region", { name: p.webPreview });
+      expect(within(phone).getByText("https://example.com/menu")).toBeTruthy();
+      const pdf = (await screen.findByRole("radio", { name: p.types.pdf.name })).closest("label") as HTMLElement;
+      fireEvent.mouseEnter(pdf);
+      expect((screen.getByTitle(p.sampleFrame) as HTMLIFrameElement).src).toContain("/v1/page-types/pdf/sample");
+      expect((screen.getByRole("radio", { name: en.generator.social.kindUrl }) as HTMLInputElement).checked).toBe(true);
+      fireEvent.mouseLeave(pdf);
+      expect(screen.queryByTitle(p.sampleFrame)).toBeNull();
+      expect(screen.getByRole("region", { name: p.webPreview })).toBeTruthy();
     });
 
     it("shows the type's sample, then the page itself, and creates the code with the page", async () => {
