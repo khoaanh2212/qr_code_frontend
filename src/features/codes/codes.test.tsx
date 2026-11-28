@@ -302,6 +302,37 @@ describe("CodeForm", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  describe("from the public generator", () => {
+    it("opens on the hosted page type picked there", async () => {
+      saveHandoff({ url: "", opens: "pdf" });
+      renderForm();
+      expect(((await screen.findByRole("radio", { name: en.pages.types.pdf.name })) as HTMLInputElement).checked).toBe(true);
+      await waitFor(() => expect(screen.queryByRole("textbox", { name: new RegExp(t.target) })).toBeNull());
+    });
+
+    it("opens a social profile link as its preset", async () => {
+      saveHandoff({ url: "https://www.instagram.com/proofqr/" });
+      renderForm();
+      expect(((await screen.findByRole("radio", { name: en.generator.social.kindSocial })) as HTMLInputElement).checked).toBe(true);
+      expect(field(new RegExp(en.generator.fields.social.username.label)).value).toBe("proofqr");
+    });
+
+    it("falls back to a website when the page types cannot be loaded", async () => {
+      saveHandoff({ url: "", opens: "pdf" });
+      vi.mocked(publicApi.request).mockRejectedValue(new Error("offline"));
+      renderForm();
+      expect(await screen.findByText(en.pages.typesFailed)).toBeTruthy();
+      expect((screen.getByRole("radio", { name: en.generator.social.kindUrl }) as HTMLInputElement).checked).toBe(true);
+    });
+
+    it("falls back to a website when the type is not offered", async () => {
+      saveHandoff({ url: "", opens: "retired" });
+      renderForm();
+      await screen.findByRole("radio", { name: en.pages.types.links.name });
+      await waitFor(() => expect((screen.getByRole("radio", { name: en.generator.social.kindUrl }) as HTMLInputElement).checked).toBe(true));
+    });
+  });
+
   describe("hosted pages", () => {
     const p = en.pages;
     const pickLinks = async () => {

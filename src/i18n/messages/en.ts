@@ -303,8 +303,20 @@ export const en = {
   generator: {
     loading: "Loading…",
     typesLabel: "QR code type",
-    makeDynamic: "Make it dynamic",
-    makeDynamicHelp: "Change the destination after printing and count scans. Needs a free account.",
+    trackScans: "Track scans",
+    trackScansHelp: "Count every scan and change where the code leads after printing. Needs a free account.",
+    trackScansContinue: "Continue with a tracked code",
+    trackScansNote: "Your content and design go along. A downloaded static code is not tracked.",
+    pagesGroup: "Pages we host",
+    pagePromo: {
+      intro: "A mobile page we host for you. Edit it any time, even after the code is printed.",
+      benefitEdit: "Change the content without reprinting",
+      benefitScans: "See every scan, by day, country and device",
+      benefitNoApp: "Opens on any phone, no app to install",
+      create: "Create this page for free",
+      note: "Free account. No card needed.",
+      sampleFrame: "Sample {type} page",
+    },
     types: {
       url: "Website",
       text: "Text",

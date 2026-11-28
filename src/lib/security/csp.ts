@@ -109,11 +109,12 @@ export function buildCsp({ surface, captcha = false, nonce, apiOrigin, filesOrig
     ["connect-src", "'self'", api, ...files],
     // The page editor's previews play a page's sound from the files host; nothing else plays media.
     ["media-src", ...(files.length > 0 ? files : ["'none'"])],
-    // Public pages frame nothing. Private pages frame the page editor's samples (served by the
-    // API) and the video players its previews embed, and Cloudflare Turnstile where it checks.
+    // Public pages frame only the API's sample pages (fixed content, sandboxed; the generator's
+    // page tabs show them). Private pages frame the page editor's samples and previews' video
+    // players, and Cloudflare Turnstile where it checks.
     surface === "private"
       ? ["frame-src", api, ...PAGE_PLAYERS, ...(captcha ? [TURNSTILE_ORIGIN] : [])]
-      : ["frame-src", "'none'"],
+      : ["frame-src", `${api}/v1/page-types/`],
     ["object-src", "'none'"],
     ["base-uri", "'none'"],
     ["form-action", "'self'"],

@@ -67,7 +67,8 @@ describe("buildCsp", () => {
     const csp = buildCsp({ surface: "marketing", nonce: "bm9uY2UtMTIz", apiOrigin: api, dev: false });
     expect(csp).not.toContain("nonce-");
     expect(directives(csp).get("script-src")).toEqual(["'self'", "'unsafe-inline'"]);
-    expect(directives(csp).get("frame-src")).toEqual(["'none'"]);
+    // Only the API's sample pages (the generator's page tabs show them), nothing else.
+    expect(directives(csp).get("frame-src")).toEqual([`${api}/v1/page-types/`]);
   });
 
   it("never allows eval outside development", () => {
@@ -142,7 +143,7 @@ describe("captcha frames", () => {
     const editor = `${api} https://www.youtube-nocookie.com https://player.vimeo.com`;
     expect(frames("private", true)).toBe(`frame-src ${editor} https://challenges.cloudflare.com`);
     expect(frames("private", false)).toBe(`frame-src ${editor}`);
-    expect(frames("marketing", true)).toBe("frame-src 'none'");
+    expect(frames("marketing", true)).toBe(`frame-src ${api}/v1/page-types/`);
   });
 
   it("lets the app read and show the files host's files on the private surface", () => {

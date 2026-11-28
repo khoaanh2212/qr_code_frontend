@@ -24,4 +24,11 @@ describe("generator hand-off", () => {
     sessionStorage.setItem("proofqr:dynamic-handoff", "{not json");
     expect(readHandoff()).toBeNull();
   });
+
+  it("carries a hosted page type to open, when it reads like one", () => {
+    saveHandoff({ url: "", opens: "pdf" });
+    expect(readHandoff()).toEqual({ url: "", opens: "pdf", fg: undefined, bg: undefined, style: {} });
+    sessionStorage.setItem("proofqr:dynamic-handoff", JSON.stringify({ url: "", opens: "../x" }));
+    expect(readHandoff()?.opens).toBeUndefined();
+  });
 });

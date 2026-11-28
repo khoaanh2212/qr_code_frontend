@@ -297,8 +297,20 @@ export const de = {
   generator: {
     loading: "Wird geladen…",
     typesLabel: "QR-Code-Typ",
-    makeDynamic: "Dynamisch machen",
-    makeDynamicHelp: "Ändere das Ziel nach dem Drucken und zähle die Scans. Erfordert ein kostenloses Konto.",
+    trackScans: "Scans verfolgen",
+    trackScansHelp: "Zähle jeden Scan und ändere nach dem Drucken, wohin der Code führt. Erfordert ein kostenloses Konto.",
+    trackScansContinue: "Weiter mit einem verfolgten Code",
+    trackScansNote: "Inhalt und Design werden übernommen. Ein heruntergeladener statischer Code wird nicht verfolgt.",
+    pagesGroup: "Von uns gehostete Seiten",
+    pagePromo: {
+      intro: "Eine mobile Seite, die wir für dich hosten. Jederzeit bearbeitbar, auch nachdem der Code gedruckt ist.",
+      benefitEdit: "Inhalt ändern, ohne neu zu drucken",
+      benefitScans: "Jeden Scan nach Tag, Land und Gerät sehen",
+      benefitNoApp: "Öffnet sich auf jedem Handy, ohne App",
+      create: "Diese Seite kostenlos erstellen",
+      note: "Kostenloses Konto. Keine Karte nötig.",
+      sampleFrame: "Beispielseite {type}",
+    },
     types: {
       url: "Website",
       text: "Text",

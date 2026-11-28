@@ -30,6 +30,7 @@ Feature code lives in `src/features/<feature>` and composes these; see
 | `Button` | Primary / secondary / danger action | `variant`, `busy` |
 | `IconButton` | Icon-only action, 44px | `label` (required), `icon` |
 | `Checkbox` | Native checkbox in a 44px label | `label`, `hideLabel`, `indeterminate` |
+| `Switch` | On/off setting that applies at once (`role="switch"`), 44px target | `label`, `help`, `checked`, `onChange` |
 | `Menu`, `MenuItem`, `MenuSeparator` | Actions menu (WAI-ARIA menu button) | `label`, `align`; item `onSelect`, `icon`, `tone`, `disabled` |
 | `SegmentedControl<T>` | 2–3 exclusive options (radio group) | `legend`, `value`, `options`, `onChange`, `hideLabels` |
 | `SearchField` | Search box with icon | `label`, `value`, `onValueChange` |

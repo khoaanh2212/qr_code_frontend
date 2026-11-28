@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { format } from "@/i18n/config";
 import { en } from "@/i18n/messages/en";
 import { ApiError, publicApi, sessionApi } from "@/lib/api";
 import type { MockInstance } from "vitest";
@@ -66,12 +67,20 @@ describe("QrEditor", () => {
     expect(await screen.findByAltText(t.preview.alt)).toBeTruthy();
   });
 
-  it("offers a dynamic code for a valid website address and hands it over", async () => {
+  it("tracks a website's scans through a dynamic code: the switch trades the download for it", async () => {
     render(<QrEditor t={t} locale="vi" />);
     const input = await screen.findByLabelText(/Website address/);
-    expect(screen.queryByRole("link", { name: t.makeDynamic })).toBeNull();
     fireEvent.change(input, { target: { value: "https://example.com/menu" } });
-    const link = screen.getByRole("link", { name: t.makeDynamic });
+    await settle();
+    const track = screen.getByRole("switch", { name: t.trackScans });
+    expect(track.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByRole("button", { name: /Download/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: t.trackScansContinue })).toBeNull();
+
+    fireEvent.click(track);
+    expect(track.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByRole("button", { name: /Download/ })).toBeNull();
+    const link = screen.getByRole("link", { name: t.trackScansContinue });
     expect(link.getAttribute("href")).toBe("/vi/app/codes/new");
     fireEvent.click(link);
     expect(JSON.parse(sessionStorage.getItem("proofqr:dynamic-handoff") ?? "{}")).toEqual({
@@ -95,6 +104,85 @@ describe("QrEditor", () => {
       },
     });
     sessionStorage.clear();
+
+    fireEvent.click(track);
+    expect(screen.getByRole("button", { name: /Download/ })).toBeTruthy();
+  });
+
+  it("starts every type with scan tracking off, and toggles from its label too", async () => {
+    render(<QrEditor t={t} locale="en" />);
+    await screen.findByLabelText(/Website address/);
+    fireEvent.click(screen.getByText(t.trackScans));
+    expect(screen.getByRole("switch", { name: t.trackScans }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(await wifiType());
+    fireEvent.click(within(screen.getByRole("group", { name: t.typesLabel })).getByLabelText(t.types.url));
+    expect(screen.getByRole("switch", { name: t.trackScans }).getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("offers no scan tracking for types a dynamic code cannot lead to", async () => {
+    render(<QrEditor t={t} locale="en" />);
+    await screen.findByLabelText(/Website address/);
+    fireEvent.click(await wifiType());
+    expect(screen.queryByRole("switch", { name: t.trackScans })).toBeNull();
+  });
+
+  it("tracks a social profile's scans as its link", async () => {
+    vi.mocked(publicApi.request).mockResolvedValue({
+      ...catalog,
+      types: [
+        ...catalog.types,
+        {
+          type: "social",
+          fields: [
+            { name: "network", required: true, options: ["instagram", "tiktok"] },
+            { name: "username", required: true },
+            { name: "text", required: false },
+          ],
+        },
+      ],
+    });
+    render(<QrEditor t={t} locale="en" initialType="social" />);
+    fireEvent.change(await screen.findByLabelText(new RegExp(t.fields.social.username.label)), { target: { value: "@proofqr" } });
+    fireEvent.click(screen.getByRole("switch", { name: t.trackScans }));
+    fireEvent.click(screen.getByRole("link", { name: t.trackScansContinue }));
+    expect(JSON.parse(sessionStorage.getItem("proofqr:dynamic-handoff") ?? "{}").url).toBe("https://www.instagram.com/proofqr/");
+    sessionStorage.clear();
+  });
+
+  describe("hosted page tabs", () => {
+    const p = en.pages;
+    const tabs = async () => within(await screen.findByRole("group", { name: t.typesLabel }));
+
+    it("offers the hosted page types after the static ones, each showing its sample and leading to a free account", async () => {
+      render(<QrEditor t={t} pageTypes={p.types} locale="vi" />);
+      fireEvent.click((await tabs()).getByLabelText(p.types.pdf.name));
+      expect(screen.queryByLabelText(/Website address/)).toBeNull();
+      expect(screen.getByRole("heading", { name: p.types.pdf.name, level: 2 })).toBeTruthy();
+      const frame = screen.getByTitle(format(t.pagePromo.sampleFrame, { type: p.types.pdf.name })) as HTMLIFrameElement;
+      expect(frame.src).toMatch(/\/v1\/page-types\/pdf\/sample\?lang=vi$/);
+      expect(frame.getAttribute("sandbox")).toBe("");
+      expect(screen.queryByRole("button", { name: /Download/ })).toBeNull();
+      const create = screen.getByRole("link", { name: t.pagePromo.create });
+      expect(create.getAttribute("href")).toBe("/vi/app/codes/new");
+      fireEvent.click(create);
+      expect(JSON.parse(sessionStorage.getItem("proofqr:dynamic-handoff") ?? "{}")).toEqual({ url: "", opens: "pdf" });
+      sessionStorage.clear();
+      // Back to a static type: its fields return.
+      fireEvent.click((await tabs()).getByLabelText(t.types.url));
+      expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
+    });
+
+    it("tells screen readers a page tab is a hosted page", async () => {
+      render(<QrEditor t={t} pageTypes={p.types} locale="en" />);
+      const pdf = (await tabs()).getByLabelText(p.types.pdf.name);
+      const said = (pdf.getAttribute("aria-describedby") ?? "").split(" ").map((id) => document.getElementById(id)?.textContent);
+      expect(said).toContain(t.pagesGroup);
+    });
+
+    it("has no page tabs without the pages' messages", async () => {
+      render(<QrEditor t={t} locale="en" />);
+      expect((await tabs()).queryByLabelText(p.types.pdf.name)).toBeNull();
+    });
   });
 
   it("renders an own caption through the session and asks to sign in on 401", async () => {
