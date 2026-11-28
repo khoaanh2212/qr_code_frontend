@@ -36,6 +36,8 @@ const code: DynamicCode = {
   id: "c1",
   short_code: "Ab3dE5gH",
   short_url: "http://localhost:8180/Ab3dE5gH",
+  kind: "redirect",
+  page: null,
   name: "Menu",
   target_url: "https://example.com/menu",
   design: { fg: "#000000", bg: "#ffffff" },
@@ -595,7 +597,7 @@ describe("code pages", () => {
 
   describe("content page", () => {
     const showContent = async () => {
-      withSession(<CodeContent t={t} generator={en.generator} auth={auth} locale="en" />);
+      withSession(<CodeContent t={t} generator={en.generator} pages={en.pages} auth={auth} locale="en" />);
       await screen.findByRole("heading", { name: t.pages.contentTitle, level: 1 });
     };
 
@@ -677,12 +679,134 @@ describe("code pages", () => {
       expect(patches()).toEqual([{ social: { network: "youtube", username: "proof-qr" } }]);
     });
 
+    describe("of a page code", () => {
+      const p = en.pages;
+      const saved = {
+        type: "links",
+        theme: { primary: "#112233", button: "#445566" },
+        share: true,
+        button: { label: "Book", url: "https://example.com/book" },
+        content: { title: "Café", links: [{ label: "Menu", url: "https://example.com/menu" }] },
+      };
+      const pageCode = { kind: "page" as const, target_url: "", page: saved };
+
+      it("opens the saved page in its editor, without a destination field", async () => {
+        detailApi(pageCode);
+        await showContent();
+        expect((await screen.findByRole("textbox", { name: new RegExp(p.fields.title) }) as HTMLInputElement).value).toBe("Café");
+        expect(field(new RegExp(p.fields.label)).value).toBe("Menu");
+        expect(screen.queryByRole("textbox", { name: new RegExp(t.target) })).toBeNull();
+        expect(screen.queryByRole("radio", { name: en.generator.social.kindSocial })).toBeNull();
+      });
+
+      it("saves the changed content with the saved theme and frame, and nothing when nothing changed", async () => {
+        detailApi(pageCode);
+        await showContent();
+        await screen.findByRole("textbox", { name: new RegExp(p.fields.title) });
+        await click(t.pages.saveChanges);
+        expect(patches()).toEqual([]);
+        expect(screen.getByText(t.saved)).toBeTruthy();
+        type(new RegExp(p.fields.title), " Café Lan ");
+        await click(t.pages.saveChanges);
+        expect(patches()).toEqual([{ page: { ...saved, content: { ...saved.content, title: "Café Lan" } } }]);
+        expect(screen.getByText(t.saved)).toBeTruthy();
+      });
+
+      it("saves a new name alone", async () => {
+        detailApi(pageCode);
+        await showContent();
+        await screen.findByRole("textbox", { name: new RegExp(p.fields.title) });
+        type(t.name, "Brunch");
+        await click(t.pages.saveChanges);
+        expect(patches()).toEqual([{ name: "Brunch" }]);
+      });
+
+      it("names a missing field and sends nothing", async () => {
+        detailApi(pageCode);
+        await showContent();
+        await screen.findByRole("textbox", { name: new RegExp(p.fields.title) });
+        type(new RegExp(p.fields.title), " ");
+        await click(t.pages.saveChanges);
+        expect(patches()).toEqual([]);
+        expect(screen.getByText(p.missingSome)).toBeTruthy();
+        expect(document.activeElement).toBe(field(new RegExp(p.fields.title)));
+      });
+
+      it("puts the API's refusal of a page field on that field", async () => {
+        detailApi(pageCode);
+        await showContent();
+        await screen.findByRole("textbox", { name: new RegExp(p.fields.title) });
+        type(/Link \(URL\)/, "https://other.example");
+        request.mockRejectedValueOnce(new ApiError(422, "validation_error", "bad", "page.content.links[0].url"));
+        await click(t.pages.saveChanges);
+        expect(screen.getByText(p.invalid)).toBeTruthy();
+        expect(document.activeElement).toBe(field(/Link \(URL\)/));
+      });
+
+      it("is read-only for viewers, who get no preview", async () => {
+        detailApi(pageCode, [], "viewer");
+        const blobs = vi.mocked(sessionApi.requestBlob);
+        await showContent();
+        const title = await screen.findByRole("textbox", { name: new RegExp(p.fields.title) });
+        expect(title.matches(":disabled")).toBe(true);
+        expect(screen.queryByRole("button", { name: t.pages.saveChanges })).toBeNull();
+        expect(screen.queryByTitle(p.sampleFrame)).toBeNull();
+        expect(blobs).not.toHaveBeenCalledWith("/v1/workspaces/w1/pages/preview", expect.anything(), "text/html");
+      });
+
+      it("sends social channels back by network and username, as the API takes them", async () => {
+        const socials = [{ network: "instagram", username: "proof.qr", url: "https://www.instagram.com/proof.qr/" }];
+        detailApi({ ...pageCode, page: { ...saved, socials } });
+        await showContent();
+        await screen.findByRole("textbox", { name: new RegExp(p.fields.title) });
+        type(new RegExp(p.fields.title), "Café Lan");
+        await click(t.pages.saveChanges);
+        expect(patches()).toEqual([
+          { page: { ...saved, socials: [{ network: "instagram", username: "proof.qr" }], content: { ...saved.content, title: "Café Lan" } } },
+        ]);
+      });
+
+      it("sends no page when only the name changed, even if the saved page reads differently once rebuilt", async () => {
+        detailApi({ ...pageCode, page: { ...saved, content: { ...saved.content, title: " Café " } } });
+        await showContent();
+        await screen.findByRole("textbox", { name: new RegExp(p.fields.title) });
+        type(t.name, "Brunch");
+        await click(t.pages.saveChanges);
+        expect(patches()).toEqual([{ name: "Brunch" }]);
+      });
+
+      it("saves a new name while the page types cannot be loaded", async () => {
+        detailApi(pageCode);
+        vi.mocked(publicApi.request).mockRejectedValueOnce(new Error("offline"));
+        await showContent();
+        await screen.findByText(p.typesFailed);
+        type(t.name, "Brunch");
+        await click(t.pages.saveChanges);
+        expect(patches()).toEqual([{ name: "Brunch" }]);
+      });
+
+      it("says so when the saved page's type is not offered", async () => {
+        detailApi({ ...pageCode, page: { ...saved, type: "retired" } });
+        await showContent();
+        expect(await screen.findByText(p.typesFailed)).toBeTruthy();
+      });
+
+      it("offers a retry when the page types cannot be loaded", async () => {
+        detailApi(pageCode);
+        vi.mocked(publicApi.request).mockRejectedValueOnce(new Error("offline"));
+        await showContent();
+        expect(await screen.findByText(p.typesFailed)).toBeTruthy();
+        await click(p.retry);
+        expect(await screen.findByRole("textbox", { name: new RegExp(p.fields.title) })).toBeTruthy();
+      });
+    });
+
     it("says when the code does not exist", async () => {
       request.mockImplementation(async (path) => {
         if (path === "/v1/me") return me;
         throw new ApiError(404, "not_found", "gone");
       });
-      withSession(<CodeContent t={t} generator={en.generator} auth={auth} locale="en" />);
+      withSession(<CodeContent t={t} generator={en.generator} pages={en.pages} auth={auth} locale="en" />);
       expect(await screen.findByText(t.notFound)).toBeTruthy();
     });
   });

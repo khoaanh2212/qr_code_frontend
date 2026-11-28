@@ -401,7 +401,11 @@ deploy item (backend `docs/PLAN.md`, Phase 1 item 11).
     sound. A file replaced or removed before the code is saved stays unused in the workspace's
     files until the API's janitor deletes it (7 days). A list item can hold a list of its own (a menu's sections of dishes, each with Add
     and Remove); blank items are left out at every depth, and a refusal's path is mapped back
-    level by level. Not built yet: editing a page code (27c), page-type tabs in the public
-    generator (27d). A video page's player
+    level by level. A page code's content page (`/app/codes/{id}/edit`) opens its saved page in
+    the same editor (`PageEditor`), filled from `page` on GET of the code; the type stays, the
+    page's frame (cover, button, social channels) is sent back as saved, and only a changed page
+    or name is sent. Viewers and a locked code see it disabled and without a preview (previews
+    are for editors). Lists and the code's header name a page code's destination "Hosted page".
+    Not built yet: page-type tabs in the public generator (27d). A video page's player
     stays blank in the live preview (the sandboxed frame runs no script, nor do frames inside it);
     the type's sample and the page itself play it.

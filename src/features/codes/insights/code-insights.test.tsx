@@ -23,6 +23,8 @@ const code: DynamicCode = {
   id: "c1",
   short_code: "Ab3dE5gH",
   short_url: "http://localhost:8180/Ab3dE5gH",
+  kind: "redirect",
+  page: null,
   name: "Menu",
   target_url: "https://example.com/menu",
   design: {},
@@ -115,6 +117,20 @@ describe("CodeInsights", () => {
     expect(list(t.countries)).toEqual(["Vietnam7", `${t.unknown}3`]); // what the API left out is "Unknown"
     expect(list(t.devices)).toEqual([`${t.deviceNames.mobile}10`]);
     expect(list(i.browsers)).toEqual(["Safari6", `${t.unknown}4`]);
+  });
+
+  it("names a page code's destination as a hosted page", async () => {
+    serve();
+    const page = { type: "links", theme: { primary: "#0f766e", button: "#0f766e" }, content: { title: "Café" } };
+    request.mockImplementation(async (path) => {
+      if (path === CODE) return { code: { ...code, kind: "page", target_url: "", page } };
+      if (path === "/v1/me") return me;
+      if (path === "/v1/workspaces/w1/folders") return { folders: [] };
+      return stats();
+    });
+    show();
+    await screen.findByRole("heading", { name: "Menu", level: 1 });
+    expect(screen.getByText(t.list.hostedPage)).toBeTruthy();
   });
 
   it("asks the API again for another period", async () => {

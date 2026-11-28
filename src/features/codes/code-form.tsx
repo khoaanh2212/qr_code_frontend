@@ -11,7 +11,6 @@ import { redirectToLogin, usePersonalWorkspace } from "@/features/auth/require-s
 import { localizePath, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages";
 import { ApiError } from "@/lib/api";
-import { ColorInput } from "@/features/qr-editor/color-input";
 import { getPageTypes } from "@/features/pages/api";
 import {
   buildContent,
@@ -24,8 +23,7 @@ import {
   type PageTypeInfo,
 } from "@/features/pages/content";
 import { OpensPicker } from "@/features/pages/opens-picker";
-import { PageFields } from "@/features/pages/page-fields";
-import { PagePreview } from "@/features/pages/page-preview";
+import { focusPageField, PageEditor } from "@/features/pages/page-editor";
 import { createCode } from "./api";
 import { DEFAULT_LOOK, designFromLook, lookScannable, type CodeLook } from "./design";
 import {
@@ -346,41 +344,24 @@ export function CodeForm({
             {pageType ? pages.contentTitle : w.destinationTitle}
           </h2>
           {pageType && draft && workspace ? (
-            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_16rem] md:items-start lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-12">
-              <div className="flex min-w-0 flex-col gap-6">
-                <PageFields
-                  workspaceId={workspace.id}
-                  t={pages}
-                  generator={generator}
-                  type={pageType}
-                  value={draft}
-                  errors={pageErrors}
-                  onChange={(update) => {
-                    setDrafts((all) => ({ ...all, [pageType.name]: update(all[pageType.name] ?? initialContent(pageType)) }));
-                    if (Object.keys(pageErrors).length > 0) setPageErrors({});
-                    if (error) setError(null);
-                  }}
-                />
-                <fieldset className="flex min-w-0 flex-col gap-3">
-                  <legend className="mb-1.5 text-sm font-semibold">{pages.theme}</legend>
-                  <div className="flex flex-wrap gap-4">
-                    <ColorInput t={generator} label={pages.primary} value={theme.primary} onChange={(primary) => setTheme((th) => ({ ...th, primary }))} />
-                    <ColorInput t={generator} label={pages.button} value={theme.button} onChange={(button) => setTheme((th) => ({ ...th, button }))} />
-                  </div>
-                </fieldset>
-              </div>
-              <div className="md:sticky md:top-[calc(var(--header-h)+1.5rem)]">
-                <PagePreview
-                  key={pageType.name}
-                  t={pages}
-                  workspaceId={workspace.id}
-                  type={pageType.name}
-                  lang={locale}
-                  body={pageBody}
-                  onRefused={(path) => setPageErrors({ [editorPath(path, built?.ok ? built.places : undefined)]: pages.invalid })}
-                />
-              </div>
-            </div>
+            <PageEditor
+              t={pages}
+              generator={generator}
+              workspaceId={workspace.id}
+              lang={locale}
+              type={pageType}
+              draft={draft}
+              onDraft={(update) => {
+                setDrafts((all) => ({ ...all, [pageType.name]: update(all[pageType.name] ?? initialContent(pageType)) }));
+                if (Object.keys(pageErrors).length > 0) setPageErrors({});
+                if (error) setError(null);
+              }}
+              theme={theme}
+              onTheme={setTheme}
+              errors={pageErrors}
+              body={pageBody}
+              onRefused={(path) => setPageErrors({ [editorPath(path, built?.ok ? built.places : undefined)]: pages.invalid })}
+            />
           ) : (
           <DestinationFields
             t={t}
@@ -504,12 +485,3 @@ export function CodeForm({
   );
 }
 
-/**
- * Focuses the page control drawn for a path (fields and lists carry it as `data-path`); false
- * when the editor draws none.
- */
-function focusPageField(path: string): boolean {
-  const el = Array.from(document.querySelectorAll<HTMLElement>("[data-path]")).find((e) => e.dataset.path === path);
-  el?.focus();
-  return Boolean(el);
-}

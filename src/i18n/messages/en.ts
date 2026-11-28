@@ -823,6 +823,7 @@ export const en = {
       copyFailed: "Could not copy. Select the link and copy it yourself.",
       createdOn: "Created {date}",
       destination: "Destination",
+      hostedPage: "Hosted page",
       pausedOne: "Code paused.",
       resumedOne: "Code resumed.",
       deletedOne: "Code deleted.",
@@ -969,6 +970,7 @@ export const en = {
     pages: {
       contentTitle: "Edit content",
       contentIntro: "Change where the code leads and what you call it. Printed codes follow at once.",
+      pageContentIntro: "Change what the page shows, its colors and what you call the code. Printed codes open the new page at once.",
       backToCode: "Back to the code",
       saveChanges: "Save changes",
       viewerNote: "Only editors of this workspace can change the code.",

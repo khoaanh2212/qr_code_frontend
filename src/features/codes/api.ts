@@ -15,7 +15,7 @@ import type {
   DynamicCode,
 } from "@/lib/api/types";
 import type { QrFormat } from "@/lib/qr/types";
-import type { PageBody } from "@/features/pages/content";
+import type { PageBody, PageToSend } from "@/features/pages/content";
 import type { DestinationBody, SocialBody } from "./destination";
 
 /** Calls of the dynamic codes API (backend PLAN, items 35-37), always with the session. */
@@ -86,6 +86,8 @@ export interface CodeChanges {
   folder_id?: string | null;
   /** Replaces all campaign details (a null field is cleared); null clears them all. */
   campaign?: Campaign | null;
+  /** Replaces a page code's page (the type stays). */
+  page?: PageToSend;
 }
 
 export async function updateCode(workspaceId: string, id: string, body: CodeChanges): Promise<DynamicCode> {

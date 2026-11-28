@@ -48,6 +48,8 @@ const code = (over: Partial<ListedCode>): ListedCode => ({
   id: "c1",
   short_code: "Ab3dE5gH",
   short_url: "http://localhost:8180/Ab3dE5gH",
+  kind: "redirect",
+  page: null,
   name: "Menu",
   target_url: "https://example.com/menu",
   design: {},

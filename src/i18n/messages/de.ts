@@ -774,6 +774,7 @@ export const de = {
       copyFailed: "Kopieren nicht möglich. Markiere den Link und kopiere ihn selbst.",
       createdOn: "Erstellt am {date}",
       destination: "Ziel",
+      hostedPage: "Gehostete Seite",
       pausedOne: "Code pausiert.",
       resumedOne: "Code fortgesetzt.",
       deletedOne: "Code gelöscht.",
@@ -913,6 +914,7 @@ export const de = {
     pages: {
       contentTitle: "Inhalt bearbeiten",
       contentIntro: "Ändere, wohin der Code führt und wie er heißt. Gedruckte Codes folgen sofort.",
+      pageContentIntro: "Ändere, was die Seite zeigt, ihre Farben und wie der Code heißt. Gedruckte Codes öffnen sofort die neue Seite.",
       backToCode: "Zurück zum Code",
       saveChanges: "Änderungen speichern",
       viewerNote: "Nur Bearbeiter dieses Workspace können den Code ändern.",

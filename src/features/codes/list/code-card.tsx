@@ -203,9 +203,13 @@ export const CodeCard = memo(function CodeCard({
       <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
         <CornerDownRight aria-hidden="true" className="size-4 shrink-0" />
         <span className="sr-only">{l.destination}: </span>
-        <span className="truncate" title={code.target_url}>
-          {displayUrl(code.target_url)}
-        </span>
+        {code.kind === "page" ? (
+          <span className="truncate">{l.hostedPage}</span>
+        ) : (
+          <span className="truncate" title={code.target_url}>
+            {displayUrl(code.target_url)}
+          </span>
+        )}
         {editable && (
           <Link
             href={contentPage}
