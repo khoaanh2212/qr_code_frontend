@@ -4,6 +4,7 @@
  * authority on every rule; these checks only decide when a live preview is worth asking for.
  */
 
+import type { CodePage, PageTheme } from "@/lib/api/types";
 import { normalizeUrlInput } from "@/lib/qr/validate";
 
 export type PageFieldKind =
@@ -43,10 +44,12 @@ export type DraftValue = string | DraftItem[];
 export type DraftItem = { [name: string]: DraftValue };
 export type PageDraft = Record<string, DraftValue>;
 
+export type { PageTheme };
+
 /** The page as the API takes it (`page` on POST .../codes and .../pages/preview). */
 export interface PageBody {
   type: string;
-  theme: { primary: string; button: string };
+  theme: PageTheme;
   content: Record<string, unknown>;
 }
 
@@ -175,4 +178,66 @@ export function editorPath(path: string, places: ItemPlaces | undefined): string
 export function contentPath(apiField: string | undefined): string | undefined {
   const prefix = "page.content.";
   return apiField?.startsWith(prefix) ? apiField.slice(prefix.length) : undefined;
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** One level of saved content as editor values; a value of the wrong shape is taken as unset. */
+function draftLevel(fields: PageField[], saved: unknown): DraftItem {
+  const values = isRecord(saved) ? saved : {};
+  const out: DraftItem = {};
+  for (const field of editableFields(fields)) {
+    const value = values[field.name];
+    if (field.kind === "list") {
+      const items = Array.isArray(value) ? value.filter(isRecord).map((item) => draftLevel(field.items ?? [], item)) : [];
+      out[field.name] = items.length > 0 ? items : startValue(field);
+      continue;
+    }
+    out[field.name] = typeof value === "string" ? value : typeof value === "number" || typeof value === "boolean" ? String(value) : defaultValue(field);
+  }
+  return out;
+}
+
+/** A saved page's content as the editor holds it (editing a page code, item 27c). */
+export function draftFromContent(type: PageTypeInfo, saved: unknown): PageDraft {
+  return draftLevel(type.fields, saved);
+}
+
+/** JSON with object keys sorted, so two contents compare by value. */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (isRecord(value)) return Object.fromEntries(Object.keys(value).sort().map((k) => [k, canonical(value[k])]));
+  return value;
+}
+
+/** Whether two page contents (or themes) hold the same values, whatever their key order. */
+export function sameContent(a: unknown, b: unknown): boolean {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+/** A page as PATCH .../codes/{id} takes it: the content and colors, and the saved frame. */
+export interface PageToSend extends PageBody {
+  cover_upload_id?: string;
+  welcome_upload_id?: string;
+  share?: boolean;
+  button?: { label: string; url: string };
+  socials?: { network: string; username: string }[];
+}
+
+/**
+ * A saved page with new colors and content, as the API takes it. The frame goes back as saved
+ * but only in the fields the API accepts (it refuses unknown ones): a social channel is sent
+ * by network and username, without the link GET adds to it.
+ */
+export function pageToSend(saved: CodePage, theme: PageTheme, content: Record<string, unknown>): PageToSend {
+  return {
+    type: saved.type,
+    theme,
+    ...(saved.cover_upload_id ? { cover_upload_id: saved.cover_upload_id } : {}),
+    ...(saved.welcome_upload_id ? { welcome_upload_id: saved.welcome_upload_id } : {}),
+    ...(saved.share ? { share: true } : {}),
+    ...(saved.button ? { button: { label: saved.button.label, url: saved.button.url } } : {}),
+    ...(saved.socials?.length ? { socials: saved.socials.map((s) => ({ network: s.network, username: s.username ?? "" })) } : {}),
+    content,
+  };
 }

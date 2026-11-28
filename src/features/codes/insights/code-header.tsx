@@ -180,9 +180,9 @@ export function CodeHeader({
             {folderName ?? p.noFolder}
           </span>
         )}
-        <span className="max-w-full truncate" title={code.target_url}>
+        <span className="max-w-full truncate" title={code.kind === "page" ? undefined : code.target_url}>
           <span className="sr-only">{t.list.destination}: </span>
-          {displayUrl(code.target_url)}
+          {code.kind === "page" ? t.list.hostedPage : displayUrl(code.target_url)}
         </span>
       </p>
       <FormAlert message={error} />

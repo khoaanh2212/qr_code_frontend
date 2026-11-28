@@ -774,6 +774,7 @@ export const es = {
       copyFailed: "No se pudo copiar. Selecciona el enlace y cópialo tú.",
       createdOn: "Creado el {date}",
       destination: "Destino",
+      hostedPage: "Página alojada",
       pausedOne: "Código pausado.",
       resumedOne: "Código reanudado.",
       deletedOne: "Código eliminado.",
@@ -913,6 +914,7 @@ export const es = {
     pages: {
       contentTitle: "Editar contenido",
       contentIntro: "Cambia adónde lleva el código y cómo se llama. Los códigos impresos lo siguen al instante.",
+      pageContentIntro: "Cambia lo que muestra la página, sus colores y cómo se llama el código. Los códigos impresos abren la nueva página al instante.",
       backToCode: "Volver al código",
       saveChanges: "Guardar cambios",
       viewerNote: "Solo los editores de este espacio de trabajo pueden cambiar el código.",

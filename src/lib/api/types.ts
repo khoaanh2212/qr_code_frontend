@@ -84,13 +84,41 @@ export interface DesignTemplate {
 }
 
 /** A dynamic code: a short link that redirects to target_url. */
+export type CodeKind = "redirect" | "page";
+
+/** A hosted page's two colors. */
+export interface PageTheme {
+  primary: string;
+  button: string;
+}
+
+/**
+ * A page code's page: its type, colors and content, and the frame every type shares (cover,
+ * welcome screen, share, one button, social channels), which the web editor keeps as saved.
+ */
+export interface CodePage {
+  type: string;
+  theme: PageTheme;
+  content: Record<string, unknown>;
+  cover_upload_id?: string;
+  welcome_upload_id?: string;
+  share?: boolean;
+  button?: { label: string; url: string };
+  socials?: { network: string; username?: string; url?: string }[];
+}
+
 export interface DynamicCode {
   id: string;
   short_code: string;
   /** What the code's image encodes. */
   short_url: string;
   name: string;
+  /** What a scan gets: a redirect to `target_url`, or a hosted page (backend PLAN item 23). */
+  kind: CodeKind;
+  /** Empty for a page code. */
   target_url: string;
+  /** A page code's page as it was sent (upload ids included); null for a redirect and in lists. */
+  page: CodePage | null;
   design: CodeDesign;
   status: CodeStatus;
   /** The folder the code is in (backend PLAN item 54); null when it is in none. */

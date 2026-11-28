@@ -33,6 +33,8 @@ const code = (over: Partial<ListedCode>): ListedCode => ({
   id: "c1",
   short_code: "Ab3dE5gH",
   short_url: "http://localhost:8180/Ab3dE5gH",
+  kind: "redirect",
+  page: null,
   name: "Menu",
   target_url: "https://example.com/menu",
   design: {},
@@ -291,6 +293,13 @@ describe("CodesList cards", () => {
     await act(async () => void fireEvent.click(screen.getByRole("button", { name: t.loadMore })));
     expect(card(t.untitled)).toBeTruthy();
     expect(screen.queryByRole("button", { name: t.loadMore })).toBeNull();
+  });
+
+  it("names a page code's destination as a hosted page (lists carry no page)", async () => {
+    serve({ [LIST]: { codes: [code({ kind: "page", target_url: "", page: null })], next_cursor: null } });
+    show();
+    const first = await screen.findByRole("article", { name: "Menu" });
+    expect(within(first).getByText(t.list.hostedPage)).toBeTruthy();
   });
 
   it("shows each code's scans and how many codes are listed", async () => {

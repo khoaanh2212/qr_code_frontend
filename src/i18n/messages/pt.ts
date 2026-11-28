@@ -774,6 +774,7 @@ export const pt = {
       copyFailed: "Não foi possível copiar. Selecione o link e copie você mesmo.",
       createdOn: "Criado em {date}",
       destination: "Destino",
+      hostedPage: "Página hospedada",
       pausedOne: "Código pausado.",
       resumedOne: "Código retomado.",
       deletedOne: "Código excluído.",
@@ -913,6 +914,7 @@ export const pt = {
     pages: {
       contentTitle: "Editar conteúdo",
       contentIntro: "Mude para onde o código leva e como ele se chama. Os códigos impressos acompanham na hora.",
+      pageContentIntro: "Mude o que a página mostra, as cores e como o código se chama. Os códigos impressos abrem a nova página na hora.",
       backToCode: "Voltar ao código",
       saveChanges: "Salvar alterações",
       viewerNote: "Só os editores deste espaço de trabalho podem alterar o código.",

@@ -774,6 +774,7 @@ export const vi = {
       copyFailed: "Không sao chép được. Hãy tự chọn link và sao chép.",
       createdOn: "Tạo ngày {date}",
       destination: "Đích đến",
+      hostedPage: "Trang lưu trữ",
       pausedOne: "Đã tạm dừng mã.",
       resumedOne: "Đã bật lại mã.",
       deletedOne: "Đã xoá mã.",
@@ -913,6 +914,7 @@ export const vi = {
     pages: {
       contentTitle: "Sửa nội dung",
       contentIntro: "Đổi nơi mã dẫn tới và tên gọi của mã. Các mã đã in sẽ theo ngay.",
+      pageContentIntro: "Đổi nội dung trang, màu sắc và tên gọi của mã. Các mã đã in sẽ mở trang mới ngay.",
       backToCode: "Quay lại mã",
       saveChanges: "Lưu thay đổi",
       viewerNote: "Chỉ người chỉnh sửa của workspace này mới đổi được mã.",

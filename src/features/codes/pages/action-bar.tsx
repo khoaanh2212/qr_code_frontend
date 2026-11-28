@@ -1,4 +1,6 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 
 /**
  * The actions of a page that edits something, in a bar fixed to the bottom edge at every width
@@ -15,3 +17,36 @@ export function ActionBar({ children }: { children: ReactNode }) {
 
 /** Room under a page's content for the ActionBar. */
 export const ACTION_BAR_ROOM = "pb-[calc(9rem+env(safe-area-inset-bottom))]";
+
+/** "Cancel" back to the code and, for those who may edit, the submit button of `formId`. */
+export function SaveActions({
+  back,
+  cancel,
+  save,
+  formId,
+  busy,
+  canSave,
+}: {
+  back: string;
+  cancel: string;
+  save: string;
+  formId: string;
+  busy: boolean;
+  canSave: boolean;
+}) {
+  return (
+    <ActionBar>
+      <Link
+        href={back}
+        className="inline-flex min-h-11 items-center rounded-md border border-control bg-surface px-4 text-sm font-medium hover:bg-foreground/5"
+      >
+        {cancel}
+      </Link>
+      {canSave && (
+        <Button type="submit" form={formId} busy={busy}>
+          {save}
+        </Button>
+      )}
+    </ActionBar>
+  );
+}

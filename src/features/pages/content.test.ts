@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildContent, editorPath, initialContent, editableTypes, newItem, type PageTypeInfo } from "./content";
+import { buildContent, draftFromContent, editorPath, initialContent, editableTypes, newItem, pageToSend, sameContent, type PageTypeInfo } from "./content";
 
 const links: PageTypeInfo = {
   name: "links",
@@ -137,5 +137,74 @@ describe("page content", () => {
     const pdf: PageTypeInfo = { name: "pdf", fields: [{ name: "pdf_upload_id", kind: "upload_pdf", required: true }, { name: "title", kind: "text", required: true }] };
     expect(buildContent(pdf, { pdf_upload_id: "", title: "Menu" })).toEqual({ ok: false, missing: ["pdf_upload_id"] });
     expect(buildContent(pdf, { pdf_upload_id: "u1", title: "Menu" })).toEqual({ ok: true, content: { pdf_upload_id: "u1", title: "Menu" }, places: {} });
+  });
+  describe("editing a saved page", () => {
+    it("fills the editor from the saved content, empty where nothing was saved", () => {
+      const saved = { title: "Café Lan", links: [{ label: "Menu", url: "https://example.com/menu" }] };
+      expect(draftFromContent(links, saved)).toEqual({ title: "Café Lan", description: "", avatar_upload_id: "", links: [{ label: "Menu", url: "https://example.com/menu" }] });
+    });
+
+    it("starts a missing required list with one item, a missing optional list empty, and choices on their default", () => {
+      expect(draftFromContent(links, { title: "A" }).links).toEqual([{ label: "", url: "" }]);
+      expect(draftFromContent(business, { name: "Lan" })).toEqual({ name: "Lan", hours: [] });
+      expect(draftFromContent(business, { name: "Lan", hours: [{ opens: "8:00" }] }).hours).toEqual([{ day: "mon", opens: "8:00" }]);
+    });
+
+    it("fills lists inside list items", () => {
+      const saved = { title: "Café", sections: [{ name: "Drinks", items: [{ name: "Tea", price: "2" }, { name: "Coffee" }] }] };
+      expect(draftFromContent(menu, saved)).toEqual({
+        title: "Café",
+        sections: [{ name: "Drinks", items: [{ name: "Tea", price: "2" }, { name: "Coffee", price: "" }] }],
+      });
+    });
+
+    it("ignores values of the wrong shape instead of failing", () => {
+      expect(draftFromContent(links, { title: 42, links: "nope" })).toEqual({ title: "42", description: "", avatar_upload_id: "", links: [{ label: "", url: "" }] });
+      expect(draftFromContent(menu, { title: "x", sections: [null, { name: "A", items: [{ name: { x: 1 } }] }] })).toEqual({
+        title: "x",
+        sections: [{ name: "A", items: [{ name: "", price: "" }] }],
+      });
+      expect(draftFromContent(links, null)).toEqual(initialContent(links));
+    });
+
+    it("builds back the content it was filled from", () => {
+      const saved = { title: "Café", sections: [{ name: "Drinks", items: [{ name: "Tea", price: "2" }] }] };
+      const built = buildContent(menu, draftFromContent(menu, saved));
+      expect(built.ok && built.content).toEqual(saved);
+    });
+
+    it("sends back the saved frame as the API takes it: socials by network and username only", () => {
+      const saved = {
+        type: "links",
+        theme: { primary: "#000000", button: "#111111" },
+        cover_upload_id: "u1",
+        share: true,
+        button: { label: "Book", url: "https://example.com/book" },
+        socials: [{ network: "instagram", username: "proof.qr", url: "https://www.instagram.com/proof.qr/" }],
+        content: { title: "Old" },
+        future_field: "x",
+      };
+      expect(pageToSend(saved, { primary: "#222222", button: "#333333" }, { title: "New" })).toEqual({
+        type: "links",
+        theme: { primary: "#222222", button: "#333333" },
+        cover_upload_id: "u1",
+        share: true,
+        button: { label: "Book", url: "https://example.com/book" },
+        socials: [{ network: "instagram", username: "proof.qr" }],
+        content: { title: "New" },
+      });
+      expect(pageToSend({ type: "pdf", theme: { primary: "#000000", button: "#000000" }, content: {} }, { primary: "#000000", button: "#000000" }, { title: "A" })).toEqual({
+        type: "pdf",
+        theme: { primary: "#000000", button: "#000000" },
+        content: { title: "A" },
+      });
+    });
+
+    it("compares contents regardless of key order", () => {
+      expect(sameContent({ a: "1", b: [{ x: "1", y: "2" }] }, { b: [{ y: "2", x: "1" }], a: "1" })).toBe(true);
+      expect(sameContent({ a: "1" }, { a: "2" })).toBe(false);
+      expect(sameContent({ a: ["1", "2"] }, { a: ["2", "1"] })).toBe(false);
+      expect(sameContent({ a: "1" }, { a: "1", b: "" })).toBe(false);
+    });
   });
 });
