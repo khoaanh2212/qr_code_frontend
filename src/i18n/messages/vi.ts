@@ -1046,17 +1046,18 @@ export const vi = {
     },
   },
   pages: {
-    kindLegend: "Mã QR mở ra gì",
+    moreTypes: "Hoặc chọn loại khác",
+    webPreview: "Nội dung khi quét",
+    webPreviewEmpty: "Địa chỉ bạn nhập sẽ hiện ở đây.",
     kindHelp: {
       url: "Đưa người quét đến một địa chỉ web",
       social: "Mở một hồ sơ mạng xã hội",
     },
-    pageGroup: "Trang do chúng tôi lưu trữ cho bạn",
     types: {
       links: { name: "Trang liên kết", help: "Nhiều liên kết trên một trang" },
       contact: { name: "Danh thiếp số", help: "Thông tin của bạn, lưu vào điện thoại chỉ với một chạm" },
       business: { name: "Doanh nghiệp", help: "Giờ mở cửa, địa chỉ và cách liên hệ" },
-      social: { name: "Mạng xã hội", help: "Mọi kênh mạng xã hội trên một trang" },
+      social: { name: "Trang mạng xã hội", help: "Mọi kênh mạng xã hội trên một trang" },
       pdf: { name: "PDF", help: "Mở một tài liệu PDF" },
       coupon: { name: "Phiếu giảm giá", help: "Ưu đãi kèm mã và ngày hết hạn" },
       app: { name: "Ứng dụng", help: "Đưa điện thoại đến đúng kho ứng dụng" },

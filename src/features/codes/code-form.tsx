@@ -22,7 +22,9 @@ import {
   type PageDraft,
   type PageTypeInfo,
 } from "@/features/pages/content";
-import { OpensPicker } from "@/features/pages/opens-picker";
+import { OpensIcon, OpensPicker, type OpensOption } from "@/features/pages/opens-picker";
+import { PagePreview } from "@/features/pages/page-preview";
+import { socialUrl } from "@/lib/qr/social";
 import { focusPageField, PageEditor } from "@/features/pages/page-editor";
 import { createCode } from "./api";
 import { DEFAULT_LOOK, designFromLook, lookScannable, type CodeLook } from "./design";
@@ -35,6 +37,7 @@ import {
   type DestinationState,
 } from "./destination";
 import { DestinationFields } from "./destination-fields";
+import { DestinationPhone } from "./destination-phone";
 import { codeFailure, type CodeField } from "./errors";
 import { clearHandoff, readHandoff } from "./handoff";
 import { LookFields } from "./look-fields";
@@ -99,8 +102,11 @@ export function CodeForm({
     fg: handoff?.fg ?? DEFAULT_LOOK.fg,
     bg: handoff?.bg ?? DEFAULT_LOOK.bg,
   }));
-  // What the code opens: "url" or "social" (a link), or a hosted page type.
-  const [opens, setOpens] = useState<string>(() => handoff?.opens ?? initialDestination(handoff?.url ?? "").kind);
+  // What the code opens: "url" or "social" (a link), or "page:<type>" (a hosted page; a page
+  // type may share a link's name, as "social" does).
+  const [opens, setOpens] = useState<string>(() =>
+    handoff?.opens ? pageOption(handoff.opens) : initialDestination(handoff?.url ?? "").kind,
+  );
   const [pageTypes, setPageTypes] = useState<PageTypeInfo[] | null>(null);
   const [typesFailed, setTypesFailed] = useState(false);
   const [typesTry, setTypesTry] = useState(0);
@@ -134,7 +140,7 @@ export function CodeForm({
       .then((types) => {
         setPageTypes(editableTypes(types));
         // A page type handed over from the generator that the API does not offer: a website.
-        setOpens((o) => (o === "url" || o === "social" || types.some((p) => p.name === o) ? o : "url"));
+        setOpens((o) => (o === "url" || o === "social" || types.some((p) => pageOption(p.name) === o) ? o : "url"));
       })
       .catch(() => {
         if (controller.signal.aborted) return;
@@ -145,11 +151,39 @@ export function CodeForm({
     return () => controller.abort();
   }, [typesTry]);
 
-  const pageType = pageTypes?.find((p) => p.name === opens) ?? null;
+  const pageType = pageTypes?.find((p) => pageOption(p.name) === opens) ?? null;
   const blank = useMemo(() => (pageType ? initialContent(pageType) : null), [pageType]);
   const draft = pageType ? (drafts[pageType.name] ?? blank) : null;
   const built = useMemo(() => (pageType && draft ? buildContent(pageType, draft) : null), [pageType, draft]);
   const pageBody: PageBody | null = pageType && built?.ok ? { type: pageType.name, theme, content: built.content } : null;
+
+  // Every type the code can open, the chosen one on top as a card; pointing at another card peeks
+  // at it in the phone.
+  const [peek, setPeek] = useState<string | null>(null);
+  const chosenId = useId();
+  const options: OpensOption[] = [
+    { value: "url", label: generator.social.kindUrl, help: pages.kindHelp.url },
+    { value: "social", label: generator.social.kindSocial, help: pages.kindHelp.social },
+    ...(pageTypes ?? []).map((p) => {
+      const words = (pages.types as Record<string, { name: string; help: string } | undefined>)[p.name];
+      return { value: pageOption(p.name), label: words?.name ?? p.name, help: words?.help ?? "" };
+    }),
+  ];
+  const chosen = options.find((o) => o.value === opens);
+  // A page type pointed at (or focused) other than the chosen one, shown as its sample.
+  const peekedPage = peek && peek !== opens ? (pageTypes?.find((p) => pageOption(p.name) === peek) ?? null) : null;
+  // What a scan of a redirect opens, as the API will build it.
+  const address =
+    destination.kind === "social" ? (destination.link.username.trim() ? socialUrl(destination.link) : "") : destination.url.trim();
+  const refusedByPreview = (path: string) => setPageErrors({ [editorPath(path, built?.ok ? built.places : undefined)]: pages.invalid });
+
+  function pick(next: string) {
+    setOpens(next);
+    setPeek(null);
+    setError(null);
+    setPageErrors({});
+    if (next === "url" || next === "social") setDestination((d) => ({ ...d, kind: next }));
+  }
 
   // A new step starts at its heading; a refused destination goes back to its field.
   useEffect(() => {
@@ -312,90 +346,115 @@ export function CodeForm({
       </header>
 
       {step === "destination" ? (
-        // A page's editor sits beside its phone preview: the form widens for it.
-        <form id={formId} noValidate onSubmit={next} className={`flex flex-col gap-5 ${pageType ? "max-w-4xl" : "max-w-xl"}`}>
-          <OpensPicker
-            legend={pages.kindLegend}
-            pageGroup={pages.pageGroup}
-            links={[
-              { value: "url", label: generator.social.kindUrl, help: pages.kindHelp.url },
-              { value: "social", label: generator.social.kindSocial, help: pages.kindHelp.social },
-            ]}
-            pages={(pageTypes ?? []).map((p) => {
-              const words = (pages.types as Record<string, { name: string; help: string } | undefined>)[p.name];
-              return { value: p.name, label: words?.name ?? p.name, help: words?.help ?? "" };
-            })}
-            value={opens}
-            onChange={(next) => {
-              setOpens(next);
-              setError(null);
-              setPageErrors({});
-              if (next === "url" || next === "social") setDestination((d) => ({ ...d, kind: next }));
-            }}
-          />
-          {typesFailed && !pageTypes && (
-            <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted">
-              {pages.typesFailed}
-              <button
-                type="button"
-                onClick={() => {
-                  setTypesFailed(false);
-                  setTypesTry((n) => n + 1);
+        // The chosen type on top as a card with its fields, the phone beside it (below it on
+        // phones), then every other type to pick from (qr-code-generator.com's layout).
+        <form
+          id={formId}
+          noValidate
+          onSubmit={next}
+          className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-x-12"
+        >
+          <section aria-labelledby={chosenId} className="flex min-w-0 flex-col gap-5 rounded-lg border border-border bg-surface p-5 sm:p-6">
+            <header className="flex items-start gap-3">
+              <OpensIcon value={opens} className="mt-0.5 size-7 shrink-0 text-accent" />
+              <div className="flex min-w-0 flex-col gap-1">
+                <h2 id={chosenId} ref={headingRef} tabIndex={-1} className="text-xl font-semibold">
+                  {chosen?.label ?? w.destinationTitle}
+                </h2>
+                {chosen?.help && <p className="text-sm text-pretty text-muted">{chosen.help}</p>}
+              </div>
+            </header>
+            {pageType && draft && workspace ? (
+              <PageEditor
+                t={pages}
+                generator={generator}
+                workspaceId={workspace.id}
+                lang={locale}
+                type={pageType}
+                draft={draft}
+                onDraft={(update) => {
+                  setDrafts((all) => ({ ...all, [pageType.name]: update(all[pageType.name] ?? initialContent(pageType)) }));
+                  if (Object.keys(pageErrors).length > 0) setPageErrors({});
+                  if (error) setError(null);
                 }}
-                className="inline-flex min-h-11 items-center font-medium text-accent underline-offset-4 hover:underline"
-              >
-                {pages.retry}
-              </button>
-            </p>
-          )}
-          <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold">
-            {pageType ? pages.contentTitle : w.destinationTitle}
-          </h2>
-          {pageType && draft && workspace ? (
-            <PageEditor
-              t={pages}
-              generator={generator}
-              workspaceId={workspace.id}
-              lang={locale}
-              type={pageType}
-              draft={draft}
-              onDraft={(update) => {
-                setDrafts((all) => ({ ...all, [pageType.name]: update(all[pageType.name] ?? initialContent(pageType)) }));
-                if (Object.keys(pageErrors).length > 0) setPageErrors({});
-                if (error) setError(null);
-              }}
-              theme={theme}
-              onTheme={setTheme}
-              errors={pageErrors}
-              body={pageBody}
-              onRefused={(path) => setPageErrors({ [editorPath(path, built?.ok ? built.places : undefined)]: pages.invalid })}
+                theme={theme}
+                onTheme={setTheme}
+                errors={pageErrors}
+                body={pageBody}
+                preview={false}
+                onRefused={refusedByPreview}
+              />
+            ) : (
+              <DestinationFields
+                t={t}
+                generator={generator}
+                value={destination}
+                error={error}
+                urlRef={targetRef}
+                usernameRef={usernameRef}
+                textRef={textRef}
+                hideKind
+                onChange={(update) => {
+                  setDestination(update);
+                  if (error?.field === "target_url" || error?.field?.startsWith("social.")) setError(null);
+                }}
+              />
+            )}
+            <TextField
+              label={t.name}
+              help={t.nameHelp}
+              maxLength={NAME_MAX}
+              autoComplete="off"
+              value={name}
+              error={error?.field === "name" ? error.message : undefined}
+              onChange={(e) => setName(e.target.value)}
             />
-          ) : (
-          <DestinationFields
-            t={t}
-            generator={generator}
-            value={destination}
-            error={error}
-            urlRef={targetRef}
-            usernameRef={usernameRef}
-            textRef={textRef}
-            hideKind
-            onChange={(update) => {
-              setDestination(update);
-              if (error?.field === "target_url" || error?.field?.startsWith("social.")) setError(null);
-            }}
-          />
-          )}
-          <TextField
-            className={pageType ? "max-w-xl" : ""}
-            label={t.name}
-            help={t.nameHelp}
-            maxLength={NAME_MAX}
-            autoComplete="off"
-            value={name}
-            error={error?.field === "name" ? error.message : undefined}
-            onChange={(e) => setName(e.target.value)}
-          />
+          </section>
+          {/* On phones the phone frame comes last, so the type grid follows the chosen card. */}
+          <div className="order-last lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:order-none lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            {/* The chosen page keeps its preview while another card is peeked at (hidden then),
+                so pointing around never draws it again. */}
+            {pageType && (
+              <div hidden={peekedPage !== null || (peek !== null && peek !== opens)}>
+                <PagePreview
+                  key={pageType.name}
+                  t={pages}
+                  workspaceId={workspace?.id ?? ""}
+                  type={pageType.name}
+                  lang={locale}
+                  body={workspace ? pageBody : null}
+                  onRefused={refusedByPreview}
+                />
+              </div>
+            )}
+            {peekedPage && (
+              <PagePreview key={`peek-${peekedPage.name}`} t={pages} workspaceId="" type={peekedPage.name} lang={locale} body={null} />
+            )}
+            {!pageType && !peekedPage && (
+              <DestinationPhone label={pages.webPreview} empty={pages.webPreviewEmpty} address={peek && peek !== opens ? "" : address} />
+            )}
+            {pageType && !peekedPage && peek !== null && peek !== opens && (
+              <DestinationPhone label={pages.webPreview} empty={pages.webPreviewEmpty} address="" />
+            )}
+          </div>
+          <div className="flex min-w-0 flex-col gap-3">
+            <OpensPicker legend={pages.moreTypes} options={options} value={opens} onPeek={setPeek} onChange={pick} />
+            {typesFailed && !pageTypes && (
+              <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                {pages.typesFailed}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypesFailed(false);
+                    setTypesTry((n) => n + 1);
+                  }}
+                  className="inline-flex min-h-11 items-center font-medium text-accent underline-offset-4 hover:underline"
+                >
+                  {pages.retry}
+                </button>
+              </p>
+            )}
+          </div>
         </form>
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10">
@@ -493,3 +552,7 @@ export function CodeForm({
   );
 }
 
+/** A hosted page type's value among what a code opens (never a link's "url" or "social"). */
+function pageOption(type: string): string {
+  return `page:${type}`;
+}
